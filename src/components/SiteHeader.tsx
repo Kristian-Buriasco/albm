@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ThemeToggle from './ThemeToggle';
+import AdminLoginButton from './AdminLoginButton';
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
@@ -20,6 +21,7 @@ export default function SiteHeader() {
           Contact
         </Link>
         <ThemeToggle />
+        <AdminLoginButton />
       </nav>
     </header>
   );
