@@ -117,3 +117,9 @@ local `npm rebuild` (requires Xcode CLT on the host).
   no temp files, minimal memory.
 - Image processing runs in-process with concurrency 1 (`sharp.cache(false)`,
   `sharp.concurrency(1)`) to fit the 2 GB RAM host.
+
+## License
+
+[AGPL-3.0-only](LICENSE) — Copyright (C) 2026 Kristian Buriasco.
+
+A network deployment of a modified version must make its source available (AGPL network clause).

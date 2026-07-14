@@ -7,6 +7,11 @@
 
 # runtime data (SQLite DB + photos)
 /data/
+*.db
+*.db-wal
+*.db-shm
+*.bak
+*.bak-*
 
 # env
 .env
