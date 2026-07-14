@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { pendingCommentCount } from '@/lib/comments';
 import { isAdmin } from '@/lib/session';
 import ThemeToggle from '@/components/ThemeToggle';
+import UpdateBadge from '@/components/UpdateBadge';
 import LogoutButton from './LogoutButton';
 
 export default async function AdminLayout({
@@ -41,6 +42,7 @@ export default async function AdminLayout({
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <UpdateBadge />
             <ThemeToggle />
             <LogoutButton />
           </div>
