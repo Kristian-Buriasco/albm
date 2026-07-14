@@ -1,0 +1,29 @@
+services:
+  gallery:
+    # Published images (pin a version in production instead of :latest):
+    #   ghcr.io/kristian-buriasco/gallery-site:latest
+    #   kristianburiasco/gallery-site:latest
+    # Or build locally: `docker compose up --build`
+    image: ghcr.io/kristian-buriasco/gallery-site:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3200:3200"
+    environment:
+      # Required in production. Generate with: openssl rand -hex 32
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET (openssl rand -hex 32)}
+      # Optional: bcrypt hash of the admin password. If unset, a temporary
+      # password is generated and printed to the logs on first run.
+      # Generate: docker compose run --rm gallery node scripts/hash-password.mjs "pw"
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      # Public HTTPS origin (used for share links + WebAuthn/passkeys).
+      BASE_URL: ${BASE_URL:-http://localhost:3200}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Gallery}
+      # Set to 1 to disable the daily GitHub release check.
+      DISABLE_UPDATE_CHECK: ${DISABLE_UPDATE_CHECK:-}
+    volumes:
+      # Your galleries + database live here. Back this up.
+      - gallery-data:/data
+
+volumes:
+  gallery-data:

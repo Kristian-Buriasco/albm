@@ -4,6 +4,10 @@ export async function register() {
     const { sessionSecret } = await import('@/lib/env');
     sessionSecret();
 
+    // First-run onboarding: generate + log a temp admin password if none set.
+    const { ensureAdminPassword } = await import('@/lib/first-run');
+    ensureAdminPassword();
+
     // Opens the DB (applying migrations) and re-enqueues photos stuck
     // in 'processing' from a previous run.
     const { recoverStuckJobs } = await import('@/lib/queue');
