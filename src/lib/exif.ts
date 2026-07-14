@@ -1,4 +1,5 @@
 import type sharp from 'sharp';
+import exifReader from 'exif-reader';
 
 export type ExifData = {
   make?: string;
@@ -10,97 +11,95 @@ export type ExifData = {
   iso?: number;
 };
 
-/** Whitelist EXIF fields from sharp metadata. GPS is NEVER extracted or stored. */
+/**
+ * Whitelist camera EXIF fields from sharp's metadata via exif-reader.
+ * GPS is NEVER read: we only ever touch the Image and Photo IFDs, never
+ * exif-reader's GPSInfo block, so location can't leak into stored data.
+ */
 export function extractExif(meta: sharp.Metadata): {
   exif: ExifData | null;
   capturedAt: number | null;
 } {
-  const exif = meta.exif ? parseExifBuffer(meta.exif) : null;
-  const data: ExifData = {};
-  if (exif?.make) data.make = String(exif.make).slice(0, 80);
-  if (exif?.model) data.model = String(exif.model).slice(0, 80);
-  if (exif?.lens) data.lens = String(exif.lens).slice(0, 120);
-  if (exif?.focalLength) data.focalLength = String(exif.focalLength).slice(0, 40);
-  if (exif?.aperture) data.aperture = String(exif.aperture).slice(0, 20);
-  if (exif?.shutter) data.shutter = String(exif.shutter).slice(0, 20);
-  if (typeof exif?.iso === 'number' && exif.iso > 0) data.iso = exif.iso;
+  if (!meta.exif) return { exif: null, capturedAt: null };
 
-  const capturedAt = parseCaptureDate(exif?.dateTimeOriginal ?? exif?.dateTime);
+  let parsed: ReturnType<typeof exifReader> | null = null;
+  try {
+    parsed = exifReader(meta.exif);
+  } catch {
+    return { exif: null, capturedAt: null };
+  }
+
+  const image = parsed.Image ?? {};
+  const photo = parsed.Photo ?? {};
+  // NOTE: parsed.GPSInfo is intentionally never referenced.
+
+  const data: ExifData = {};
+  if (typeof image.Make === 'string') data.make = image.Make.trim().slice(0, 80);
+  if (typeof image.Model === 'string') data.model = image.Model.trim().slice(0, 80);
+  if (typeof photo.LensModel === 'string') {
+    data.lens = photo.LensModel.trim().slice(0, 120);
+  }
+  const focal = numeric(photo.FocalLength);
+  if (focal !== null) data.focalLength = `${round(focal)}mm`;
+  const fnum = numeric(photo.FNumber);
+  if (fnum !== null) data.aperture = `f/${round(fnum)}`;
+  const exp = numeric(photo.ExposureTime);
+  if (exp !== null) data.shutter = formatShutter(exp);
+  const iso = isoValue(photo.ISOSpeedRatings ?? photo.PhotographicSensitivity);
+  if (iso !== null) data.iso = iso;
+
+  const capturedAt = toTimestamp(
+    photo.DateTimeOriginal ?? photo.DateTimeDigitized ?? image.DateTime,
+  );
+
   const hasData = Object.keys(data).length > 0;
   return { exif: hasData ? data : null, capturedAt };
 }
 
-type ParsedExif = {
-  make?: string;
-  model?: string;
-  lens?: string;
-  focalLength?: string;
-  aperture?: string;
-  shutter?: string;
-  iso?: number;
-  dateTimeOriginal?: string;
-  dateTime?: string;
-};
+function numeric(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return v;
+  if (Array.isArray(v) && typeof v[0] === 'number' && v[0] > 0) return v[0];
+  return null;
+}
 
-/** Minimal EXIF tag parser — only whitelisted tags, no GPS. */
-function parseExifBuffer(buf: Buffer): ParsedExif | null {
-  try {
-    const out: ParsedExif = {};
-    // sharp embeds IFD tags; scan for known string/number tags only.
-    const str = buf.toString('binary');
-    const tags: Record<string, keyof ParsedExif> = {
-      Make: 'make',
-      Model: 'model',
-      LensModel: 'lens',
-      DateTimeOriginal: 'dateTimeOriginal',
-      DateTime: 'dateTime',
-    };
-    for (const [tag, key] of Object.entries(tags)) {
-      const idx = str.indexOf(tag);
-      if (idx >= 0) {
-        const slice = buf.subarray(Math.max(0, idx), Math.min(buf.length, idx + 256));
-        const text = slice.toString('utf8').replace(/[^\x20-\x7E]/g, ' ').trim();
-        const match = text.match(new RegExp(`${tag}[\\x00\\s]*([\\x20-\\x7E]{1,120})`));
-        if (match?.[1]) (out as Record<string, string>)[key] = match[1].trim();
-      }
-    }
-    // Numeric tags via simple patterns in binary
-    const isoMatch = str.match(/ISO[^\d]*(\d{1,5})/);
-    if (isoMatch) out.iso = parseInt(isoMatch[1], 10);
-    const fMatch = str.match(/FNumber[^\d]*(\d+\.?\d*)/);
-    if (fMatch) out.aperture = `f/${fMatch[1]}`;
-    const flMatch = str.match(/FocalLength[^\d]*(\d+\.?\d*)/);
-    if (flMatch) out.focalLength = `${flMatch[1]}mm`;
-    const expMatch = str.match(/ExposureTime[^\d]*(\d+\/?\d*\.?\d*)/);
-    if (expMatch) out.shutter = formatShutter(expMatch[1]);
-    return Object.keys(out).length > 0 ? out : null;
-  } catch {
-    return null;
+function isoValue(v: unknown): number | null {
+  if (typeof v === 'number' && v > 0) return Math.round(v);
+  if (Array.isArray(v) && typeof v[0] === 'number' && v[0] > 0) {
+    return Math.round(v[0]);
   }
+  return null;
 }
 
-function formatShutter(raw: string): string {
-  if (raw.includes('/')) return `${raw}s`;
-  const n = parseFloat(raw);
-  if (Number.isNaN(n)) return raw;
-  if (n >= 1) return `${n}s`;
-  return `1/${Math.round(1 / n)}s`;
+function round(n: number): number {
+  return Math.round(n * 10) / 10;
 }
 
-function parseCaptureDate(raw?: string): number | null {
-  if (!raw) return null;
-  const m = raw.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
-  if (!m) return null;
-  const d = new Date(
-    parseInt(m[1], 10),
-    parseInt(m[2], 10) - 1,
-    parseInt(m[3], 10),
-    parseInt(m[4], 10),
-    parseInt(m[5], 10),
-    parseInt(m[6], 10),
-  );
-  const ts = d.getTime();
-  return Number.isNaN(ts) ? null : ts;
+function formatShutter(seconds: number): string {
+  if (seconds >= 1) return `${round(seconds)}s`;
+  return `1/${Math.round(1 / seconds)}s`;
+}
+
+/** exif-reader returns datetime tags as Date objects; also accept strings. */
+function toTimestamp(v: unknown): number | null {
+  if (v instanceof Date) {
+    const t = v.getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+  if (typeof v === 'string') {
+    const m = v.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+    if (!m) return null;
+    const d = new Date(
+      Number(m[1]),
+      Number(m[2]) - 1,
+      Number(m[3]),
+      Number(m[4]),
+      Number(m[5]),
+      Number(m[6]),
+    );
+    const t = d.getTime();
+    return Number.isNaN(t) ? null : t;
+  }
+  return null;
 }
 
 export function formatExifLine(exif: ExifData): string {
