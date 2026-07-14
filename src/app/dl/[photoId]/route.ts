@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import { logDownloadEvent, isGalleryExpired } from '@/lib/downloads';
 import { originalPath } from '@/lib/paths';
 import { hasGalleryAccess, isAdmin } from '@/lib/session';
 import { contentTypeForFilename, streamFileResponse } from '@/lib/stream';
@@ -25,8 +26,9 @@ export async function GET(req: Request, { params }: Params) {
   if (!gallery) return new Response('Not found', { status: 404 });
 
   if (!(await isAdmin())) {
-    // Unpublished must be indistinguishable from nonexistent.
-    if (!gallery.published) return new Response('Not found', { status: 404 });
+    if (!gallery.published || isGalleryExpired(gallery)) {
+      return new Response('Not found', { status: 404 });
+    }
     if (
       gallery.type === 'client' &&
       gallery.passwordHash &&
@@ -40,6 +42,8 @@ export async function GET(req: Request, { params }: Params) {
       return new Response('Forbidden', { status: 403 });
     }
   }
+
+  logDownloadEvent(gallery, 'photo', photo.id, null);
 
   return streamFileResponse(req, originalPath(photo.galleryId, photo.filename), {
     contentType: contentTypeForFilename(photo.filename),

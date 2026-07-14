@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { DATA_DIR } from './env';
 
@@ -39,4 +40,15 @@ export function thumbPath(galleryId: string, filename: string): string {
 
 export function watermarkPath(): string {
   return assertInsideDataDir(path.join(DATA_DIR, 'watermark.png'));
+}
+
+export function galleryWatermarkPath(galleryId: string): string {
+  return assertInsideDataDir(path.join(galleryDir(galleryId), 'watermark.png'));
+}
+
+/** Gallery watermark if present, else global fallback. */
+export function resolveWatermarkPath(galleryId: string): string {
+  const perGallery = galleryWatermarkPath(galleryId);
+  if (fs.existsSync(perGallery)) return perGallery;
+  return watermarkPath();
 }

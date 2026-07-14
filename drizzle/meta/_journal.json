@@ -22,6 +22,41 @@
       "when": 1783983600000,
       "tag": "0002_show_like_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783987200000,
+      "tag": "0003_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783987201000,
+      "tag": "0004_photo_exif",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783987202000,
+      "tag": "0005_gallery_features",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783987203000,
+      "tag": "0006_download_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783987204000,
+      "tag": "0007_comments",
+      "breakpoints": true
     }
   ]
 }

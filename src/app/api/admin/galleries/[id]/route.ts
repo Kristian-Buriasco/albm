@@ -3,8 +3,9 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
+import { parseGalleryUpdates } from '@/lib/gallery-fields';
 import { galleryDir } from '@/lib/paths';
-import { reprocessPhoto } from '@/lib/queue';
+import { reprocessPhoto, shouldReprocessWatermark } from '@/lib/queue';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,54 +29,22 @@ export async function PATCH(req: Request, { params }: Params) {
     return errorJson('Invalid request', 400);
   }
 
-  const updates: Partial<typeof schema.galleries.$inferInsert> = {};
+  const updates = parseGalleryUpdates(body);
 
-  if (typeof body.title === 'string' && body.title.trim()) {
-    updates.title = body.title.trim();
-  }
-  if ('eventDate' in body) {
-    updates.eventDate =
-      typeof body.eventDate === 'number' ? body.eventDate : null;
-  }
   if ('password' in body) {
-    // null/empty clears the password; a non-empty string sets a new one.
     if (typeof body.password === 'string' && body.password.length > 0) {
       updates.passwordHash = await bcrypt.hash(body.password, 10);
     } else {
       updates.passwordHash = null;
     }
   }
-  if (
-    body.clientInfoMode === 'off' ||
-    body.clientInfoMode === 'optional' ||
-    body.clientInfoMode === 'required'
-  ) {
-    updates.clientInfoMode = body.clientInfoMode;
-  }
-  for (const key of [
-    'watermarkEnabled',
-    'downloadEnabled',
-    'selectionExportEnabled',
-    'published',
-    'showLikeCounts',
-  ] as const) {
-    if (typeof body[key] === 'boolean') updates[key] = body[key];
-  }
-  if ('coverPhotoId' in body) {
-    updates.coverPhotoId =
-      typeof body.coverPhotoId === 'string' ? body.coverPhotoId : null;
-  }
-  if (typeof body.sortOrder === 'number') updates.sortOrder = body.sortOrder;
 
-  const watermarkChanged =
-    'watermarkEnabled' in updates &&
-    updates.watermarkEnabled !== gallery.watermarkEnabled;
+  const needsReprocess = shouldReprocessWatermark(updates);
 
   updates.updatedAt = Date.now();
   db.update(schema.galleries).set(updates).where(eq(schema.galleries.id, id)).run();
 
-  // Toggling the watermark invalidates web derivatives; reprocess everything.
-  if (watermarkChanged) {
+  if (needsReprocess) {
     const photoRows = db
       .select({ id: schema.photos.id })
       .from(schema.photos)

@@ -75,7 +75,15 @@ export async function GET(_req: Request, { params }: Params) {
     .from(schema.selections)
     .where(eq(schema.selections.visitorId, ctx.visitor.id))
     .all();
-  return json({ photoIds: rows.map((r) => r.photoId) });
+  const limit =
+    ctx.gallery.limitSelections && ctx.gallery.selectionLimit
+      ? ctx.gallery.selectionLimit
+      : null;
+  return json({
+    photoIds: rows.map((r) => r.photoId),
+    selectionLimit: limit,
+    selectionCount: rows.length,
+  });
 }
 
 async function parsePhotoId(req: Request): Promise<string | null> {
@@ -96,6 +104,20 @@ export async function POST(req: Request, { params }: Params) {
   if (!photoId) return errorJson('photoId required', 400);
 
   const db = getDb();
+  const existing = db
+    .select({ photoId: schema.selections.photoId })
+    .from(schema.selections)
+    .where(eq(schema.selections.visitorId, ctx.visitor.id))
+    .all();
+
+  if (
+    ctx.gallery.limitSelections &&
+    ctx.gallery.selectionLimit &&
+    existing.length >= ctx.gallery.selectionLimit
+  ) {
+    return errorJson(`Selection limit reached (${ctx.gallery.selectionLimit})`, 409);
+  }
+
   const photo = db
     .select()
     .from(schema.photos)

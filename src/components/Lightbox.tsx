@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import PhotoComments from './PhotoComments';
 
 export interface LightboxPhoto {
   id: string;
   filename: string;
   width: number;
   height: number;
+  exifLine?: string | null;
 }
 
 interface Props {
@@ -20,6 +22,8 @@ interface Props {
   downloadEnabled?: boolean;
   showLikeCounts?: boolean;
   likeCounts?: Record<string, number>;
+  commentsEnabled?: boolean;
+  commentsApiBase?: string;
 }
 
 export default function Lightbox({
@@ -33,6 +37,8 @@ export default function Lightbox({
   downloadEnabled = false,
   showLikeCounts = false,
   likeCounts,
+  commentsEnabled = false,
+  commentsApiBase,
 }: Props) {
   const photo = photos[index];
   const touchStartX = useRef<number | null>(null);
@@ -63,7 +69,7 @@ export default function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-[#050505]/97 text-neutral-200"
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#050505]/97 text-neutral-200"
       role="dialog"
       aria-modal="true"
       onTouchStart={(e) => {
@@ -77,7 +83,6 @@ export default function Lightbox({
         else if (dx < -48) next();
       }}
     >
-      {/* top bar */}
       <div className="flex items-center justify-between px-4 py-3 text-xs">
         <span className="text-neutral-400">
           {index + 1} / {photos.length}
@@ -99,22 +104,13 @@ export default function Lightbox({
             </button>
           )}
           {downloadEnabled && (
-            <a
-              href={`/dl/${photo.id}`}
-              aria-label="Download photo"
-              className="p-1 text-neutral-300 hover:text-white"
-            >
+            <a href={`/dl/${photo.id}`} aria-label="Download photo" className="p-1 text-neutral-300 hover:text-white">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
               </svg>
             </a>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1 text-neutral-300 hover:text-white"
-          >
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1 text-neutral-300 hover:text-white">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
@@ -122,42 +118,26 @@ export default function Lightbox({
         </div>
       </div>
 
-      {/* image */}
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-2">
-        <button
-          type="button"
-          onClick={prev}
-          aria-label="Previous photo"
-          className="absolute left-0 top-0 z-10 hidden h-full w-1/6 cursor-w-resize items-center justify-start pl-4 text-neutral-500 hover:text-white sm:flex"
-        >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={photo.id}
           src={`/img/${photo.id}/web`}
           alt={photo.filename}
-          className="max-h-full max-w-full object-contain select-none"
+          className="max-h-[70vh] max-w-full object-contain select-none"
           draggable={false}
         />
-        <button
-          type="button"
-          onClick={next}
-          aria-label="Next photo"
-          className="absolute right-0 top-0 z-10 hidden h-full w-1/6 cursor-e-resize items-center justify-end pr-4 text-neutral-500 hover:text-white sm:flex"
-        >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
       </div>
 
-      {showFilename && (
-        <div className="pb-3 text-center text-[11px] tracking-wide text-neutral-500">
-          {photo.filename}
+      {(showFilename || photo.exifLine) && (
+        <div className="space-y-1 pb-2 text-center text-[11px] tracking-wide text-neutral-500">
+          {showFilename && <div>{photo.filename}</div>}
+          {photo.exifLine && <div>{photo.exifLine}</div>}
         </div>
+      )}
+
+      {commentsEnabled && commentsApiBase && (
+        <PhotoComments apiBase={commentsApiBase} photoId={photo.id} enabled />
       )}
     </div>
   );

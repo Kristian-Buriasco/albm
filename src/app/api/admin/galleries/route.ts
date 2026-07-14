@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
+import { applyCreateFields } from '@/lib/gallery-fields';
 
 export async function POST(req: Request) {
   const denied = await requireAdmin();
@@ -35,26 +36,10 @@ export async function POST(req: Request) {
     sortOrder:
       typeof body.sortOrder === 'number' ? body.sortOrder : maxOrder + 1,
   };
-  if (typeof body.eventDate === 'number') gallery.eventDate = body.eventDate;
   if (typeof body.password === 'string' && body.password.length > 0) {
     gallery.passwordHash = await bcrypt.hash(body.password, 10);
   }
-  if (
-    body.clientInfoMode === 'off' ||
-    body.clientInfoMode === 'optional' ||
-    body.clientInfoMode === 'required'
-  ) {
-    gallery.clientInfoMode = body.clientInfoMode;
-  }
-  for (const key of [
-    'watermarkEnabled',
-    'downloadEnabled',
-    'selectionExportEnabled',
-    'published',
-    'showLikeCounts',
-  ] as const) {
-    if (typeof body[key] === 'boolean') gallery[key] = body[key];
-  }
+  applyCreateFields(gallery, body);
   db.insert(schema.galleries).values(gallery).run();
 
   const row = db

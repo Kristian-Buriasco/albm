@@ -7,6 +7,7 @@ import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { detectImageType, resolveCollision, sanitizeFilename } from '@/lib/files';
 import { originalPath } from '@/lib/paths';
+import { extractExif } from '@/lib/exif';
 import { enqueueDerivatives } from '@/lib/queue';
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -69,14 +70,29 @@ export async function POST(req: Request, { params }: Params) {
   );
   const filename = resolveCollision(sanitized, (c) => taken.has(c));
 
+  const sectionIdRaw = form.get('sectionId');
+  let sectionId: string | null = null;
+  if (typeof sectionIdRaw === 'string' && sectionIdRaw) {
+    const sec = db
+      .select()
+      .from(schema.sections)
+      .where(eq(schema.sections.id, sectionIdRaw))
+      .get();
+    if (sec && sec.galleryId === id) sectionId = sec.id;
+  }
+
   let width = 0;
   let height = 0;
+  let exifJson: string | null = null;
+  let capturedAt: number | null = null;
   try {
     const meta = await sharp(buf).metadata();
-    // Report display dimensions (EXIF orientation applied).
     const swap = (meta.orientation ?? 1) >= 5;
     width = (swap ? meta.height : meta.width) ?? 0;
     height = (swap ? meta.width : meta.height) ?? 0;
+    const extracted = extractExif(meta);
+    exifJson = extracted.exif ? JSON.stringify(extracted.exif) : null;
+    capturedAt = extracted.capturedAt;
   } catch {
     return errorJson('Could not read image', 415);
   }
@@ -95,12 +111,15 @@ export async function POST(req: Request, { params }: Params) {
   const photo = {
     id: nanoid(),
     galleryId: id,
+    sectionId,
     filename,
     width,
     height,
     sizeBytes: buf.length,
     sortOrder: maxOrder + 1,
     status: 'processing' as const,
+    exif: exifJson,
+    capturedAt,
   };
   db.insert(schema.photos).values(photo).run();
   enqueueDerivatives(photo.id);

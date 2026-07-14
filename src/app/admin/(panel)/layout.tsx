@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { pendingCommentCount } from '@/lib/comments';
 import { isAdmin } from '@/lib/session';
 import ThemeToggle from '@/components/ThemeToggle';
 import LogoutButton from './LogoutButton';
@@ -11,6 +12,8 @@ export default async function AdminLayout({
 }) {
   if (!(await isAdmin())) redirect('/admin/login');
 
+  const pending = pendingCommentCount();
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-neutral-200 dark:border-neutral-800">
@@ -18,6 +21,11 @@ export default async function AdminLayout({
           <div className="flex items-center gap-6 text-sm">
             <Link href="/admin" className="font-medium tracking-widest uppercase">
               Admin
+              {pending > 0 && (
+                <span className="ml-2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">
+                  {pending}
+                </span>
+              )}
             </Link>
             <Link
               href="/admin/settings"

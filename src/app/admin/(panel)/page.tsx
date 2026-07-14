@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, gte, sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import { BarChart, LineChart } from '@/components/AdminCharts';
+import { pendingCommentCount } from '@/lib/comments';
 import { dirSizeBytes, formatBytes, volumeUsage } from '@/lib/disk';
+import { isGalleryExpired } from '@/lib/downloads';
 import { galleryDir } from '@/lib/paths';
 import { isAdmin } from '@/lib/session';
 import CreateGalleryButton from './CreateGalleryButton';
@@ -10,8 +13,6 @@ import CreateGalleryButton from './CreateGalleryButton';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-  // Per-page auth check: layouts don't re-run on soft navigation and render
-  // in parallel with pages, so the layout check alone is not sufficient.
   if (!(await isAdmin())) redirect('/admin/login');
 
   const db = getDb();
@@ -20,6 +21,8 @@ export default async function AdminDashboard() {
     .from(schema.galleries)
     .orderBy(asc(schema.galleries.sortOrder))
     .all();
+
+  const pendingComments = pendingCommentCount();
 
   const rows = galleries.map((g) => {
     const photoCount =
@@ -34,8 +37,38 @@ export default async function AdminDashboard() {
   const disk = volumeUsage();
   const usedPct = Math.round((disk.usedBytes / disk.totalBytes) * 100);
 
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const viewRows = db
+    .select({ day: sql<number>`date(${schema.viewEvents.createdAt} / 1000, 'unixepoch')`, c: sql<number>`count(*)` })
+    .from(schema.viewEvents)
+    .where(gte(schema.viewEvents.createdAt, thirtyDaysAgo))
+    .groupBy(sql`date(${schema.viewEvents.createdAt} / 1000, 'unixepoch')`)
+    .all();
+  const viewsOverTime = viewRows.map((r, i) => ({ x: i, y: r.c }));
+
+  const galleryViews = galleries.map((g) => ({
+    label: g.title.slice(0, 8),
+    value:
+      db
+        .select({ c: sql<number>`count(*)` })
+        .from(schema.viewEvents)
+        .where(eq(schema.viewEvents.galleryId, g.id))
+        .get()?.c ?? 0,
+  }));
+
   return (
     <div>
+      {pendingComments > 0 && (
+        <p className="mb-4 rounded border border-amber-600/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {pendingComments} comment{pendingComments > 1 ? 's' : ''} awaiting moderation
+        </p>
+      )}
+
+      <div className="mb-8 grid gap-8 md:grid-cols-2">
+        <LineChart data={viewsOverTime} title="Views (30 days)" />
+        <BarChart items={galleryViews.filter((g) => g.value > 0).slice(0, 8)} title="Views by gallery" />
+      </div>
+
       <div className="mb-8">
         <h2 className="mb-2 text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Disk usage
@@ -72,8 +105,9 @@ export default async function AdminDashboard() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{gallery.title}</p>
                   <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-                    {gallery.type === 'portfolio' ? 'Portfolio' : 'Client'} ·{' '}
-                    {photoCount} photos · {formatBytes(sizeBytes)}
+                    {gallery.type === 'portfolio' ? 'Portfolio' : 'Client'} · {photoCount} photos ·{' '}
+                    {formatBytes(sizeBytes)}
+                    {isGalleryExpired(gallery) ? ' · Expired' : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-[11px]">
@@ -85,9 +119,6 @@ export default async function AdminDashboard() {
                     <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
                       Draft
                     </span>
-                  )}
-                  {gallery.passwordHash && (
-                    <span className="text-neutral-400">🔒</span>
                   )}
                 </div>
               </Link>

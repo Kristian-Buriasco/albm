@@ -11,5 +11,8 @@ export async function register() {
 
     const { pruneOldViewEvents } = await import('@/lib/views');
     pruneOldViewEvents();
+
+    const { pruneOldDownloadEvents } = await import('@/lib/downloads');
+    pruneOldDownloadEvents();
   }
 }

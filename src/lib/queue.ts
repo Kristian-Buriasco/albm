@@ -4,9 +4,8 @@ import { eq } from 'drizzle-orm';
 import PQueue from 'p-queue';
 import sharp from 'sharp';
 import { getDb, schema } from '@/db';
-import { thumbPath, watermarkPath, webPath, originalPath } from './paths';
+import { thumbPath, resolveWatermarkPath, webPath, originalPath } from './paths';
 
-// Low-memory sharp configuration for the 2 GB production host.
 sharp.cache(false);
 sharp.concurrency(1);
 
@@ -19,10 +18,41 @@ function getQueue(): PQueue {
   return (globalForQueue.__derivativeQueue ??= new PQueue({ concurrency: 1 }));
 }
 
+type WmPosition = 'br' | 'bl' | 'tr' | 'tl' | 'center';
+
+function watermarkPlacement(
+  pos: WmPosition,
+  imgW: number,
+  imgH: number,
+  wmW: number,
+  wmH: number,
+  pad: number,
+): { left: number; top: number } {
+  switch (pos) {
+    case 'bl':
+      return { left: pad, top: Math.max(0, imgH - wmH - pad) };
+    case 'tr':
+      return { left: Math.max(0, imgW - wmW - pad), top: pad };
+    case 'tl':
+      return { left: pad, top: pad };
+    case 'center':
+      return {
+        left: Math.max(0, Math.round((imgW - wmW) / 2)),
+        top: Math.max(0, Math.round((imgH - wmH) / 2)),
+      };
+    case 'br':
+    default:
+      return {
+        left: Math.max(0, imgW - wmW - pad),
+        top: Math.max(0, imgH - wmH - pad),
+      };
+  }
+}
+
 async function generateDerivatives(photoId: string): Promise<void> {
   const db = getDb();
   const photo = db.select().from(schema.photos).where(eq(schema.photos.id, photoId)).get();
-  if (!photo) return; // deleted while queued
+  if (!photo) return;
   const gallery = db
     .select()
     .from(schema.galleries)
@@ -38,28 +68,27 @@ async function generateDerivatives(photoId: string): Promise<void> {
     fs.mkdirSync(path.dirname(webOut), { recursive: true });
     fs.mkdirSync(path.dirname(thumbOut), { recursive: true });
 
-    // Web derivative: long edge 2048, no enlargement, webp q82,
-    // optional watermark composited bottom-right at ~25% width, ~70% opacity.
     const resized = sharp(src).rotate().resize(2048, 2048, {
       fit: 'inside',
       withoutEnlargement: true,
     });
 
-    const wmPath = watermarkPath();
+    const wmPath = resolveWatermarkPath(photo.galleryId);
     if (gallery.watermarkEnabled && fs.existsSync(wmPath)) {
       const resizedBuf = await resized.toBuffer();
       const meta = await sharp(resizedBuf).metadata();
       const imgW = meta.width ?? 2048;
       const imgH = meta.height ?? 2048;
-      const targetW = Math.max(1, Math.round(imgW * 0.25));
+      const scalePct = Math.min(100, Math.max(5, gallery.watermarkScale ?? 25)) / 100;
+      const targetW = Math.max(1, Math.round(imgW * scalePct));
       const pad = Math.max(8, Math.round(imgW * 0.02));
-      // Resize the watermark and reduce its alpha to ~70%.
+      const opacity = Math.min(100, Math.max(0, gallery.watermarkOpacity ?? 70)) / 100;
       const wm = await sharp(wmPath)
         .resize(targetW, undefined, { fit: 'inside', withoutEnlargement: true })
         .ensureAlpha()
         .composite([
           {
-            input: Buffer.from([255, 255, 255, Math.round(0.7 * 255)]),
+            input: Buffer.from([255, 255, 255, Math.round(opacity * 255)]),
             raw: { width: 1, height: 1, channels: 4 },
             tile: true,
             blend: 'dest-in',
@@ -68,14 +97,12 @@ async function generateDerivatives(photoId: string): Promise<void> {
         .png()
         .toBuffer();
       const wmMeta = await sharp(wm).metadata();
+      const wmW = wmMeta.width ?? 0;
+      const wmH = wmMeta.height ?? 0;
+      const pos = (gallery.watermarkPosition ?? 'br') as WmPosition;
+      const { left, top } = watermarkPlacement(pos, imgW, imgH, wmW, wmH, pad);
       await sharp(resizedBuf)
-        .composite([
-          {
-            input: wm,
-            left: Math.max(0, imgW - (wmMeta.width ?? 0) - pad),
-            top: Math.max(0, imgH - (wmMeta.height ?? 0) - pad),
-          },
-        ])
+        .composite([{ input: wm, left, top }])
         .webp({ quality: 82 })
         .toFile(webOut);
     } else {
@@ -88,8 +115,7 @@ async function generateDerivatives(photoId: string): Promise<void> {
       .webp({ quality: 75 })
       .toFile(thumbOut);
 
-    const db2 = getDb();
-    db2
+    getDb()
       .update(schema.photos)
       .set({ status: 'ready', updatedAt: Date.now() })
       .where(eq(schema.photos.id, photoId))
@@ -108,7 +134,6 @@ export function enqueueDerivatives(photoId: string): void {
   void getQueue().add(() => generateDerivatives(photoId));
 }
 
-/** Mark a photo as processing again and enqueue derivative regeneration. */
 export function reprocessPhoto(photoId: string): void {
   getDb()
     .update(schema.photos)
@@ -118,7 +143,6 @@ export function reprocessPhoto(photoId: string): void {
   enqueueDerivatives(photoId);
 }
 
-/** On boot, re-enqueue photos stuck in 'processing' (recoverable from originals). */
 export function recoverStuckJobs(): void {
   if (globalForQueue.__bootRecoveryDone) return;
   globalForQueue.__bootRecoveryDone = true;
@@ -131,4 +155,13 @@ export function recoverStuckJobs(): void {
     console.log(`[boot] re-enqueueing ${stuck.length} stuck processing photo(s)`);
     for (const p of stuck) enqueueDerivatives(p.id);
   }
+}
+
+export function shouldReprocessWatermark(galleryUpdates: Record<string, unknown>): boolean {
+  return (
+    'watermarkEnabled' in galleryUpdates ||
+    'watermarkPosition' in galleryUpdates ||
+    'watermarkOpacity' in galleryUpdates ||
+    'watermarkScale' in galleryUpdates
+  );
 }

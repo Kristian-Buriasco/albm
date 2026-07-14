@@ -4,6 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Gallery, Photo } from '@/db/schema';
 import { HeartIcon } from '@/components/Lightbox';
+import ToggleSwitch from '@/components/ToggleSwitch';
+import SegmentedControl from '@/components/SegmentedControl';
+import {
+  AdminCommentsPanel,
+  AdminExtraSettings,
+  AdminSectionsPanel,
+} from './AdminGalleryFeatures';
 
 interface VisitorInfo {
   id: string;
@@ -105,9 +112,11 @@ export default function GalleryAdmin({
   }>({ total: 0, done: 0, currentName: null, currentPct: 0, failures: [] });
   const uploading = uploadState.total > 0 && uploadState.done < uploadState.total;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [folderSectionsEnabled, setFolderSectionsEnabled] = useState(true);
 
-  function uploadOne(file: File): Promise<Photo> {
+  function uploadOne(file: File, sectionId?: string | null): Promise<Photo> {
     // XHR gives per-file upload progress; fetch does not.
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -127,6 +136,7 @@ export default function GalleryAdmin({
       xhr.onerror = () => reject(new Error('network error'));
       const form = new FormData();
       form.append('file', file);
+      if (sectionId) form.append('sectionId', sectionId);
       xhr.send(form);
     });
   }
@@ -177,6 +187,49 @@ export default function GalleryAdmin({
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [gallery.id],
+  );
+
+  const startFolderUpload = useCallback(
+    async (files: File[]) => {
+      const imageFiles = files.filter(
+        (f) => f.type === 'image/jpeg' || f.type === 'image/png',
+      );
+      const sectionMap = new Map<string, string>();
+      if (folderSectionsEnabled) {
+        const topFolders = new Set<string>();
+        for (const f of imageFiles) {
+          const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+          const parts = rel.split('/');
+          if (parts.length > 2) topFolders.add(parts[1]);
+        }
+        for (const folder of topFolders) {
+          const res = await fetch(`/api/admin/galleries/${gallery.id}/sections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: folder }),
+          });
+          if (res.ok) {
+            const sec = await res.json();
+            sectionMap.set(folder, sec.id);
+          }
+        }
+      }
+      for (const file of imageFiles) {
+        const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+        const parts = rel.split('/');
+        const sectionId =
+          folderSectionsEnabled && parts.length > 2
+            ? sectionMap.get(parts[1]) ?? null
+            : null;
+        try {
+          const photo = await uploadOne(file, sectionId);
+          setPhotos((prev) => [...prev, photo]);
+        } catch {
+          /* individual failures ignored in folder mode */
+        }
+      }
+    },
+    [gallery.id, folderSectionsEnabled],
   );
 
   // ---- reorder (HTML5 drag & drop) ----
@@ -368,20 +421,16 @@ export default function GalleryAdmin({
                 hasPassword={!!gallery.passwordHash}
                 onSave={(pw) => patchGallery({ password: pw })}
               />
-              <label className="block text-sm">
-                <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                  Client info
-                </span>
-                <select
-                  defaultValue={gallery.clientInfoMode}
-                  onChange={(e) => patchGallery({ clientInfoMode: e.target.value })}
-                  className={inputClass}
-                >
-                  <option value="off">Off — never ask</option>
-                  <option value="optional">Optional — ask, allow skip</option>
-                  <option value="required">Required — must give name + email</option>
-                </select>
-              </label>
+              <SegmentedControl
+                label="Client info"
+                value={gallery.clientInfoMode}
+                options={[
+                  { value: 'off', label: 'Off' },
+                  { value: 'optional', label: 'Optional' },
+                  { value: 'required', label: 'Required' },
+                ]}
+                onChange={(v) => patchGallery({ clientInfoMode: v })}
+              />
             </>
           )}
         </div>
@@ -390,7 +439,7 @@ export default function GalleryAdmin({
           <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
             Toggles
           </h2>
-          <Toggle
+          <ToggleSwitch
             label="Published"
             hint={
               isClientGallery
@@ -400,7 +449,7 @@ export default function GalleryAdmin({
             checked={gallery.published}
             onChange={(v) => patchGallery({ published: v })}
           />
-          <Toggle
+          <ToggleSwitch
             label="Watermark web images"
             hint="Toggling re-generates all web derivatives"
             checked={gallery.watermarkEnabled}
@@ -408,13 +457,13 @@ export default function GalleryAdmin({
           />
           {isClientGallery && (
             <>
-              <Toggle
+              <ToggleSwitch
                 label="Allow downloads"
                 hint="Master switch for single + ZIP downloads"
                 checked={gallery.downloadEnabled}
                 onChange={(v) => patchGallery({ downloadEnabled: v })}
               />
-              <Toggle
+              <ToggleSwitch
                 label="Selection export tools"
                 hint="Show filename export in this page"
                 checked={gallery.selectionExportEnabled}
@@ -423,7 +472,7 @@ export default function GalleryAdmin({
             </>
           )}
           {!isClientGallery && (
-            <Toggle
+            <ToggleSwitch
               label="Show public like counts"
               hint="Visitors see aggregate counts next to hearts"
               checked={gallery.showLikeCounts}
@@ -432,6 +481,10 @@ export default function GalleryAdmin({
           )}
         </div>
       </section>
+
+      <AdminExtraSettings gallery={gallery} patchGallery={patchGallery} />
+      <AdminSectionsPanel galleryId={gallery.id} photos={photos} onPhotosChange={setPhotos} />
+      <AdminCommentsPanel galleryId={gallery.id} />
 
       {/* upload */}
       <section>
@@ -468,6 +521,28 @@ export default function GalleryAdmin({
               e.target.value = '';
             }}
           />
+          <input
+            ref={folderInputRef}
+            type="file"
+            // @ts-expect-error webkitdirectory is non-standard but widely supported
+            webkitdirectory=""
+            multiple
+            hidden
+            onChange={(e) => {
+              if (e.target.files) startFolderUpload([...e.target.files]);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              folderInputRef.current?.click();
+            }}
+            className="mt-3 text-xs underline"
+          >
+            Upload folder
+          </button>
         </div>
         {uploadState.total > 0 && (
           <div className="mt-3 space-y-2 text-xs text-neutral-600 dark:text-neutral-300">
@@ -711,41 +786,6 @@ export default function GalleryAdmin({
         </button>
       </section>
     </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  const [value, setValue] = useState(checked);
-  return (
-    <label className="flex cursor-pointer items-start justify-between gap-4">
-      <span>
-        <span className="block text-sm">{label}</span>
-        {hint && (
-          <span className="block text-xs text-neutral-500 dark:text-neutral-400">
-            {hint}
-          </span>
-        )}
-      </span>
-      <input
-        type="checkbox"
-        checked={value}
-        onChange={(e) => {
-          setValue(e.target.checked);
-          onChange(e.target.checked);
-        }}
-        className="mt-1 h-4 w-4 accent-neutral-900 dark:accent-neutral-100"
-      />
-    </label>
   );
 }
 

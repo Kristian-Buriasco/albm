@@ -1,17 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Lightbox, { HeartIcon, type LightboxPhoto } from './Lightbox';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import SectionedGalleryGrid, { type SectionGroup } from '@/components/SectionedGalleryGrid';
+import Lightbox, { HeartIcon } from '@/components/Lightbox';
 
 export default function PortfolioGrid({
-  photos,
+  sections,
   slug,
   showLikeCounts = false,
+  commentsEnabled = false,
 }: {
-  photos: LightboxPhoto[];
+  sections: SectionGroup[];
   slug: string;
   showLikeCounts?: boolean;
+  commentsEnabled?: boolean;
 }) {
+  const photos = useMemo(() => sections.flatMap((s) => s.photos), [sections]);
   const [open, setOpen] = useState<number | null>(null);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -25,9 +29,7 @@ export default function PortfolioGrid({
         if (data.photoIds) setLiked(new Set(data.photoIds));
         if (data.counts) setCounts(data.counts);
       })
-      .catch(() => {
-        /* likes are non-essential */
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -73,41 +75,24 @@ export default function PortfolioGrid({
 
   return (
     <>
-      <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 [&>div]:mb-3">
-        {photos.map((p, i) => (
-          <div key={p.id} className="group relative">
-            <button
-              type="button"
-              onClick={() => setOpen(i)}
-              className="block w-full cursor-zoom-in"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/img/${p.id}/thumb`}
-                alt={p.filename}
-                loading="lazy"
-                width={p.width}
-                height={p.height}
-                className="w-full"
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleLike(p.id)}
-              aria-label={liked.has(p.id) ? 'Unlike photo' : 'Like photo'}
-              className={`absolute right-2 bottom-2 hidden items-center gap-1 rounded-full p-1.5 text-xs text-white drop-shadow transition-opacity sm:flex ${
-                liked.has(p.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'
-              }`}
-            >
-              <HeartIcon filled={liked.has(p.id)} className="h-5 w-5" />
-              {showLikeCounts && (
-                <span className="tabular-nums">{counts[p.id] ?? 0}</span>
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
-      {open !== null && (
+      <SectionedGalleryGrid
+        sections={sections}
+        commentsEnabled={commentsEnabled}
+        onOpenLightbox={setOpen}
+        renderTileOverlay={(p) => (
+          <button
+            type="button"
+            onClick={() => toggleLike(p.id)}
+            className={`absolute right-2 bottom-2 hidden items-center gap-1 rounded-full p-1.5 text-xs text-white drop-shadow transition-opacity sm:flex ${
+              liked.has(p.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'
+            }`}
+          >
+            <HeartIcon filled={liked.has(p.id)} className="h-5 w-5" />
+            {showLikeCounts && <span className="tabular-nums">{counts[p.id] ?? 0}</span>}
+          </button>
+        )}
+      />
+      {open !== null && photos.length > 0 && (
         <Lightbox
           photos={photos}
           index={open}
@@ -117,6 +102,8 @@ export default function PortfolioGrid({
           onToggleSelect={toggleLike}
           showLikeCounts={showLikeCounts}
           likeCounts={counts}
+          commentsEnabled={commentsEnabled}
+          commentsApiBase={`/api/portfolio/${slug}/comments`}
         />
       )}
     </>

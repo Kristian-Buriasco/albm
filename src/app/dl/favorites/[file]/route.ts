@@ -3,9 +3,10 @@ import { PassThrough, Readable } from 'node:stream';
 import archiver from 'archiver';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { isGalleryExpired, logDownloadEvent } from '@/lib/downloads';
+import { logDownloadEvent } from '@/lib/downloads';
+import { canViewGallery } from '@/lib/gallery-auth';
 import { zipEntriesForGallery } from '@/lib/sections';
-import { hasGalleryAccess, isAdmin } from '@/lib/session';
+import { getVisitorSession } from '@/lib/session';
 
 type Params = { params: Promise<{ file: string }> };
 
@@ -29,32 +30,40 @@ export async function GET(_req: Request, { params }: Params) {
     .from(schema.galleries)
     .where(eq(schema.galleries.slug, slug))
     .get();
-  if (!gallery) return new Response('Not found', { status: 404 });
-
-  if (!(await isAdmin())) {
-    if (!gallery.published || isGalleryExpired(gallery)) {
-      return new Response('Not found', { status: 404 });
-    }
-    if (
-      gallery.type === 'client' &&
-      gallery.passwordHash &&
-      !(await hasGalleryAccess(gallery.id))
-    ) {
-      return new Response('Forbidden', { status: 403 });
-    }
-    if (gallery.type === 'portfolio' || !gallery.downloadEnabled) {
-      return new Response('Forbidden', { status: 403 });
-    }
+  if (!gallery || gallery.type !== 'client') return new Response('Not found', { status: 404 });
+  if (!(await canViewGallery(gallery))) return new Response('Not found', { status: 404 });
+  if (!gallery.downloadEnabled || !gallery.favoritesDownloadEnabled) {
+    return new Response('Forbidden', { status: 403 });
   }
 
-  const photos = db
+  const session = await getVisitorSession(gallery.id);
+  if (!session.token) return new Response('Unauthorized', { status: 401 });
+  const visitor = db
     .select()
-    .from(schema.photos)
+    .from(schema.visitors)
+    .where(eq(schema.visitors.sessionToken, session.token))
+    .get();
+  if (!visitor || visitor.galleryId !== gallery.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const selected = db
+    .select({ photo: schema.photos })
+    .from(schema.selections)
+    .innerJoin(schema.photos, eq(schema.selections.photoId, schema.photos.id))
     .where(
-      and(eq(schema.photos.galleryId, gallery.id), eq(schema.photos.status, 'ready')),
+      and(
+        eq(schema.selections.visitorId, visitor.id),
+        eq(schema.photos.status, 'ready'),
+      ),
     )
     .orderBy(asc(schema.photos.sortOrder))
-    .all();
+    .all()
+    .map((r) => r.photo);
+
+  if (selected.length === 0) {
+    return new Response('No selections to download', { status: 400 });
+  }
 
   const sections = db
     .select()
@@ -63,19 +72,18 @@ export async function GET(_req: Request, { params }: Params) {
     .orderBy(asc(schema.sections.sortOrder))
     .all();
 
-  const entries = zipEntriesForGallery(gallery.id, photos, sections);
+  const entries = zipEntriesForGallery(gallery.id, selected, sections);
 
   const archive = archiver('zip', { store: true });
   const out = new PassThrough();
   archive.pipe(out);
 
   const abort = (err: Error) => {
-    console.error('[zip] stream error:', err.message);
+    console.error('[favorites-zip] stream error:', err.message);
     archive.destroy();
     out.destroy(err);
   };
   archive.on('error', abort);
-  archive.on('warning', (err) => console.warn('[zip] warning:', err.message));
   out.on('error', () => {});
 
   for (const entry of entries) {
@@ -85,13 +93,13 @@ export async function GET(_req: Request, { params }: Params) {
   }
   archive.finalize().catch(abort);
 
-  logDownloadEvent(gallery, 'zip', null, null);
+  logDownloadEvent(gallery, 'favorites_zip', null, visitor.id);
 
   return new Response(Readable.toWeb(out) as ReadableStream, {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="${titleSlug(gallery.title)}.zip"`,
+      'Content-Disposition': `attachment; filename="${titleSlug(gallery.title)}-selections.zip"`,
       'Cache-Control': 'no-store',
     },
   });
