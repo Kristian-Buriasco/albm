@@ -81,7 +81,11 @@ export async function POST(req: Request) {
   }
 
   const { newCounter } = verification.authenticationInfo;
-  if (newCounter <= stored.counter) {
+  // Clone detection via signature counter only applies to authenticators that
+  // actually implement one. Synced passkeys (iCloud, Google Password Manager)
+  // always report 0 — treat a regression as suspicious ONLY when the counter
+  // is in use (newCounter > 0), otherwise a 0/0 authenticator can never log in.
+  if (newCounter > 0 && newCounter <= stored.counter) {
     recordFailure(RL_SCOPE, ip);
     return errorJson('Passkey verification failed', 401);
   }
