@@ -90,6 +90,10 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
     updates.coverPhotoId =
       typeof body.coverPhotoId === 'string' ? body.coverPhotoId : null;
   }
+  if ('previewPhotoId' in body) {
+    updates.previewPhotoId =
+      typeof body.previewPhotoId === 'string' ? body.previewPhotoId : null;
+  }
   if (typeof body.sortOrder === 'number') updates.sortOrder = body.sortOrder;
   return updates;
 }

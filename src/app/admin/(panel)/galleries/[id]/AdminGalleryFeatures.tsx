@@ -62,6 +62,82 @@ function AdminSelectableThumb({
   );
 }
 
+function PreviewPhotoPicker({
+  galleryId,
+  currentId,
+  patchGallery,
+}: {
+  galleryId: string;
+  currentId: string | null;
+  patchGallery: (body: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [selected, setSelected] = useState<string | null>(currentId);
+
+  useEffect(() => {
+    fetch(`/api/admin/galleries/${galleryId}/photos`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Photo[]) =>
+        setPhotos(Array.isArray(data) ? data.filter((p) => p.status === 'ready') : []),
+      )
+      .catch(() => {});
+  }, [galleryId]);
+
+  async function pick(id: string | null) {
+    const ok = await patchGallery({ previewPhotoId: id });
+    if (ok) setSelected(id);
+  }
+
+  if (photos.length === 0) return null;
+
+  return (
+    <div className="mt-1">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-xs text-neutral-500">Preview photo</span>
+        {selected && (
+          <button
+            type="button"
+            onClick={() => pick(null)}
+            className="text-[11px] text-accent dark:text-accent-dark"
+          >
+            Use cover
+          </button>
+        )}
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {photos.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => pick(p.id)}
+            className={`relative aspect-square w-16 shrink-0 overflow-hidden rounded border-2 transition-all ${
+              selected === p.id
+                ? 'border-accent ring-2 ring-accent/40 dark:border-accent-dark'
+                : 'border-transparent hover:border-neutral-300 dark:hover:border-neutral-600'
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/img/${p.id}/thumb?v=${p.updatedAt}`}
+              alt=""
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+            {selected === p.id && (
+              <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-white dark:bg-accent-dark">
+                ✓
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-neutral-400">
+        Pick which photo shows when the link is shared. Defaults to the cover.
+      </p>
+    </div>
+  );
+}
+
 export function AdminGalleryTags({
   galleryId,
 }: {
@@ -240,6 +316,13 @@ export function AdminExtraSettings({
           published galleries without a password (the gallery still isn&apos;t
           search-indexed).
         </p>
+      )}
+      {gallery.socialPreview && (
+        <PreviewPhotoPicker
+          galleryId={gallery.id}
+          currentId={gallery.previewPhotoId}
+          patchGallery={patchGallery}
+        />
       )}
       {isClient && (
         <>

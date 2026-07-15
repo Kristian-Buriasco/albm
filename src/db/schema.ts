@@ -80,6 +80,7 @@ export const galleries = sqliteTable('galleries', {
     .notNull()
     .default(false),
   coverPhotoId: text('cover_photo_id'),
+  previewPhotoId: text('preview_photo_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   ...timestamps,
 });

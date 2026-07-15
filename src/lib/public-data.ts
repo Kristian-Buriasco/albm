@@ -45,3 +45,13 @@ export function coverPhotoId(gallery: {
   const first = getReadyPhotos(gallery.id)[0];
   return first?.id ?? null;
 }
+
+/** Photo id used for the link/OG preview: explicit preview, else cover. */
+export function previewPhotoId(gallery: {
+  id: string;
+  coverPhotoId: string | null;
+  previewPhotoId: string | null;
+}): string | null {
+  if (gallery.previewPhotoId) return gallery.previewPhotoId;
+  return coverPhotoId(gallery);
+}

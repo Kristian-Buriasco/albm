@@ -13,6 +13,10 @@ export function deletePhotoById(id: string): boolean {
     .set({ coverPhotoId: null, updatedAt: Date.now() })
     .where(eq(schema.galleries.coverPhotoId, id))
     .run();
+  db.update(schema.galleries)
+    .set({ previewPhotoId: null, updatedAt: Date.now() })
+    .where(eq(schema.galleries.previewPhotoId, id))
+    .run();
 
   for (const p of [
     originalPath(photo.galleryId, photo.filename),

@@ -8,7 +8,7 @@ import AdminEditLink from '@/components/AdminEditLink';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
-import { coverPhotoId, getReadyPhotos } from '@/lib/public-data';
+import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
 import { isAdmin } from '@/lib/session';
 import { recordGalleryView } from '@/lib/views';
 
@@ -26,9 +26,9 @@ export async function generateMetadata({
     .where(and(eq(schema.galleries.slug, slug), eq(schema.galleries.type, 'portfolio')))
     .get();
   if (!gallery || !gallery.published || !gallery.socialPreview) return {};
-  const cover = coverPhotoId(gallery);
-  if (!cover) return { title: gallery.title };
-  const imageUrl = `${BASE_URL}/img/${cover}/web`;
+  const preview = previewPhotoId(gallery);
+  if (!preview) return { title: gallery.title };
+  const imageUrl = `${BASE_URL}/img/${preview}/web`;
   return {
     title: gallery.title,
     openGraph: {
