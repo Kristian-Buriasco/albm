@@ -442,7 +442,7 @@ export function AdminSectionsPanel({
     await fetch(`/api/admin/galleries/${galleryId}/sections`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, title }),
+      body: JSON.stringify({ sectionId: id, title }),
     });
     await load();
   }
@@ -452,7 +452,7 @@ export function AdminSectionsPanel({
     await fetch(`/api/admin/galleries/${galleryId}/sections`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ sectionId: id }),
     });
     const res = await fetch(`/api/admin/galleries/${galleryId}/photos`);
     if (res.ok) onPhotosChange(await res.json());

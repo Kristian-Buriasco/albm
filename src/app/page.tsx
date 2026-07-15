@@ -3,22 +3,76 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import Reveal from '@/components/Reveal';
 import { getSetting } from '@/lib/settings';
-import { coverPhotoId, getPublishedPortfolioGalleries, getSelectedWorkGalleries } from '@/lib/public-data';
+import {
+  coverPhotoId,
+  getPublishedPortfolioGalleries,
+  getSelectedWorkGalleries,
+} from '@/lib/public-data';
+import type { Gallery } from '@/db/schema';
 
 export const dynamic = 'force-dynamic';
 
+type Item = { gallery: Gallery; cover: string | null };
+
+function WorkGrid({ items, startIndex = 0 }: { items: Item[]; startIndex?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map(({ gallery, cover }, i) => (
+        <Reveal key={gallery.id} delay={((startIndex + i) % 3) * 80}>
+          <Link href={`/portfolio/${gallery.slug}`} className="group block">
+            <div className="aspect-[4/3] overflow-hidden bg-line/60 dark:bg-line-dark/50">
+              {cover && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={`/img/${cover}/thumb`}
+                  alt={gallery.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                />
+              )}
+            </div>
+            <div className="mt-3 flex items-baseline justify-between gap-3">
+              <p className="text-[15px] font-medium tracking-tight transition-colors group-hover:text-accent dark:group-hover:text-accent-dark">
+                {gallery.title}
+              </p>
+              {gallery.eventDate && (
+                <span className="shrink-0 text-[12px] text-muted tabular-nums dark:text-muted-dark">
+                  {new Date(gallery.eventDate).getFullYear()}
+                </span>
+              )}
+            </div>
+            {gallery.showLocation && gallery.locationName && (
+              <p className="mt-0.5 text-[12px] text-muted dark:text-muted-dark">
+                {gallery.locationName}
+              </p>
+            )}
+          </Link>
+        </Reveal>
+      ))}
+    </div>
+  );
+}
+
 export default function HomePage() {
-  const galleries = getSelectedWorkGalleries();
-  const withCovers = galleries.map((g) => ({ gallery: g, cover: coverPhotoId(g) }));
-  const heroSource = getPublishedPortfolioGalleries();
-  const heroWithCovers = heroSource.map((g) => ({ gallery: g, cover: coverPhotoId(g) }));
-  const hero = heroWithCovers.find((g) => g.cover !== null);
+  const featured = getSelectedWorkGalleries();
+  const featuredIds = new Set(featured.map((g) => g.id));
+  const others = getPublishedPortfolioGalleries().filter((g) => !featuredIds.has(g.id));
+
+  const toItems = (gs: Gallery[]): Item[] =>
+    gs.map((g) => ({ gallery: g, cover: coverPhotoId(g) }));
+  const featuredItems = toItems(featured);
+  const otherItems = toItems(others);
+
+  const heroItem =
+    featuredItems.find((g) => g.cover) ?? otherItems.find((g) => g.cover) ?? null;
 
   const eyebrow = getSetting('homeEyebrow') || 'Photographer';
   const headline = getSetting('homeHeadline') || 'The moment, kept.';
   const intro =
     getSetting('homeIntro') ||
     'Editorial, event, and portrait photography — with private, proof-ready galleries for clients.';
+
+  const hasFeatured = featuredItems.length > 0;
 
   return (
     <div>
@@ -52,55 +106,48 @@ export default function HomePage() {
           </div>
         </div>
         <div className="relative min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
-          {hero?.cover && (
+          {heroItem?.cover && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={`/img/${hero.cover}/web`}
-              alt={hero.gallery.title}
+              src={`/img/${heroItem.cover}/web`}
+              alt={heroItem.gallery.title}
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
         </div>
       </section>
 
-      {withCovers.length > 0 && (
+      {(hasFeatured || otherItems.length > 0) && (
         <section id="work" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-          <div className="mb-10 flex items-baseline justify-between">
-            <h2 className="display text-2xl font-semibold">Selected Work</h2>
-            <span className="text-[12px] text-muted dark:text-muted-dark">
-              {withCovers.length} {withCovers.length === 1 ? 'project' : 'projects'}
-            </span>
-          </div>
+          {hasFeatured && (
+            <>
+              <div className="mb-10 flex items-baseline justify-between">
+                <h2 className="display text-2xl font-semibold">Selected Work</h2>
+                <span className="text-[12px] text-muted dark:text-muted-dark">
+                  {featuredItems.length}{' '}
+                  {featuredItems.length === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
+              <WorkGrid items={featuredItems} />
+            </>
+          )}
 
-          <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-            {withCovers.map(({ gallery, cover }, i) => (
-              <Reveal key={gallery.id} delay={(i % 3) * 80}>
-                <Link href={`/portfolio/${gallery.slug}`} className="group block">
-                  <div className="aspect-[4/3] overflow-hidden bg-line/60 dark:bg-line-dark/50">
-                    {cover && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={`/img/${cover}/thumb`}
-                        alt={gallery.title}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                      />
-                    )}
-                  </div>
-                  <div className="mt-3 flex items-baseline justify-between gap-3">
-                    <p className="text-[15px] font-medium tracking-tight transition-colors group-hover:text-accent dark:group-hover:text-accent-dark">
-                      {gallery.title}
-                    </p>
-                    {gallery.eventDate && (
-                      <span className="shrink-0 text-[12px] text-muted tabular-nums dark:text-muted-dark">
-                        {new Date(gallery.eventDate).getFullYear()}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
+          {otherItems.length > 0 && (
+            <>
+              <div
+                className={`mb-10 flex items-baseline justify-between ${hasFeatured ? 'mt-24' : ''}`}
+              >
+                <h2 className="display text-2xl font-semibold">
+                  {hasFeatured ? 'More Work' : 'Work'}
+                </h2>
+                <span className="text-[12px] text-muted dark:text-muted-dark">
+                  {otherItems.length}{' '}
+                  {otherItems.length === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
+              <WorkGrid items={otherItems} startIndex={featuredItems.length} />
+            </>
+          )}
         </section>
       )}
       <SiteFooter />
