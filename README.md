@@ -1,21 +1,47 @@
+<div align="center">
+
 # gallery-site
 
-Self-hosted photography **portfolio + client proofing galleries** — a
-Pic-Time replacement you own. One Next.js app: a public portfolio, private
-client galleries at unguessable URLs (optional per-gallery password), photo
-selections/favorites, comments, downloads (incl. streaming ZIPs), EXIF,
-tournament-style sections, and a single-admin panel with passkey login.
-SQLite + local filesystem. **No external services.**
+**Self-hosted photography portfolio + client proofing galleries — a Pic-Time replacement you own.**
+
+One Next.js app: a public portfolio, private client galleries at unguessable URLs, photo proofing (favorites, comments, downloads), passkey admin login, and safe self-hosted upgrades. SQLite + local files. No external services.
+
+[![Release](https://img.shields.io/github/v/release/Kristian-Buriasco/gallery-site?color=111)](https://github.com/Kristian-Buriasco/gallery-site/releases)
+[![CI](https://github.com/Kristian-Buriasco/gallery-site/actions/workflows/ci.yml/badge.svg)](https://github.com/Kristian-Buriasco/gallery-site/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![Container: GHCR](https://img.shields.io/badge/ghcr.io-gallery--site-2496ED?logo=docker&logoColor=white)](https://github.com/Kristian-Buriasco/gallery-site/pkgs/container/gallery-site)
+
+</div>
+
+---
+
+## Screenshots
+
+Drop PNGs into [`docs/screenshots/`](docs/screenshots) named `portfolio.png`,
+`client-gallery.png`, `admin.png`, `security.png` and uncomment the block below
+— they'll render automatically. (See that folder's README for how to capture a
+consistent set.)
+
+<!-- Uncomment once the images exist:
+|  |  |
+|---|---|
+| **Public portfolio** | **Client gallery** (proofing) |
+| ![Portfolio](docs/screenshots/portfolio.png) | ![Client gallery](docs/screenshots/client-gallery.png) |
+| **Admin dashboard** | **Security** (passkeys + recovery) |
+| ![Admin](docs/screenshots/admin.png) | ![Security](docs/screenshots/security.png) |
+-->
 
 ## Features
 
-- Public portfolio + private client galleries (unguessable slug, optional password)
-- Client proofing: favorites/selections, per-gallery selection limits, comments (moderated)
-- Downloads: per-photo, full-gallery ZIP, or favorites-only ZIP (streamed)
-- Sections (group photos by game/team/round), folder upload, drag-reorder & sort
-- Per-gallery watermark, EXIF display (GPS never stored), optional shoot location
-- Admin: passkeys (WebAuthn) + recovery codes + optional password, stats, bulk actions
-- Safe upgrades: DB is backed up before every migration; a failed migration aborts boot
+- 🖼️ **Public portfolio** + private **client galleries** (unguessable slug, optional password, expiry)
+- ✅ **Proofing**: favorites/selections, per-gallery selection limits, moderated comments
+- ⬇️ **Downloads**: per-photo, full-gallery ZIP, or favorites-only ZIP — all streamed
+- 🗂️ **Sections** (group by game/team/round), folder upload, drag-reorder & sort
+- 💧 **Per-gallery watermark**, EXIF display (**GPS is never stored**), optional shoot location
+- 🔑 **Passkey admin login** (WebAuthn) + recovery codes + optional password
+- 📊 Admin **stats**, disk usage, bulk actions, likes (portfolio)
+- 🛟 **Safe upgrades**: the database is backed up before every migration; a failed migration aborts boot instead of serving a half-migrated DB
+- 🎨 Minimal, responsive, **light/dark**, self-contained (no external CDN/fonts/trackers)
 
 ## Quick start (Docker)
 
@@ -27,16 +53,20 @@ export SESSION_SECRET=$(openssl rand -hex 32)
 export BASE_URL=https://gallery.example.com   # your real https origin
 
 docker compose up -d --build
-docker compose logs -f    # first run prints a temporary admin password
+docker compose logs -f            # first run prints a temporary admin password
 ```
 
 Open the site, log in at `/admin/login` with the printed password, then add a
-passkey under **Settings → Security**. Set `ADMIN_PASSWORD_HASH` (see below) to
-keep a stable password. Put a reverse proxy (Caddy, nginx, NPM) in front for
-HTTPS — passkeys require a secure origin.
+passkey under **Settings → Security**. Put a reverse proxy (Caddy, nginx, NPM)
+in front for HTTPS — passkeys require a secure origin.
 
-Prebuilt images: `ghcr.io/kristian-buriasco/gallery-site` (pin a version in
+Prebuilt images: **`ghcr.io/kristian-buriasco/gallery-site`** (pin a version in
 production instead of `:latest`).
+
+```bash
+docker run -e SESSION_SECRET=$(openssl rand -hex 32) -v gallery:/data \
+  -p 3200:3200 ghcr.io/kristian-buriasco/gallery-site:latest
+```
 
 ## Configuration
 
@@ -67,8 +97,8 @@ DATA_DIR/
 
 ## Updating
 
-- **Docker:** `docker compose pull && docker compose up -d` (pin a version, or
-  use `:latest`). Migrations apply on boot after backing up the DB.
+- **Docker:** `docker compose pull && docker compose up -d`. Migrations apply
+  on boot after backing up the DB.
 - The admin panel shows a badge when a newer release exists (opt out with
   `DISABLE_UPDATE_CHECK=1`).
 
@@ -80,11 +110,10 @@ npm ci && npm run build
 SESSION_SECRET=… BASE_URL=… DATA_DIR=/var/lib/gallery/data node server.js
 ```
 
-Templates in [`deploy/`](deploy): a `systemd` unit (`gallery.service`) and an
-`update.sh` helper (backs up the DB, swaps files, restarts). Native modules
-(`sharp`, `better-sqlite3`) must be built for the host platform (`npm rebuild`
-there). On older toolchains that can't compile `better-sqlite3` v12 (needs
-C++20), pin `better-sqlite3@11.10.0`.
+Templates in [`deploy/`](deploy): a `systemd` unit and an `update.sh` helper.
+Native modules (`sharp`, `better-sqlite3`) must be built for the host platform
+(`npm rebuild`). On older toolchains that can't compile `better-sqlite3` v12
+(needs C++20), pin `better-sqlite3@11.10.0`.
 
 ## Development
 
