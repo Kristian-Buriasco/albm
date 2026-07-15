@@ -8,9 +8,9 @@ export default function AboutPage() {
   return (
     <div>
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-6 py-16">
-        <h1 className="mb-8 text-sm font-light tracking-[0.3em] uppercase">About</h1>
-        <div className="text-sm leading-7 whitespace-pre-wrap text-neutral-700 dark:text-neutral-300">
+      <main className="mx-auto max-w-2xl px-6 py-20">
+        <h1 className="mb-10 font-serif text-4xl font-medium tracking-tight">About</h1>
+        <div className="text-[15px] leading-8 whitespace-pre-wrap text-ink/80 dark:text-ink-dark/80">
           {content || 'Nothing here yet.'}
         </div>
       </main>

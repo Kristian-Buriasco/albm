@@ -140,13 +140,13 @@ export default function GalleryClient({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-neutral-200/60 bg-[#fafafa]/90 backdrop-blur dark:border-neutral-800/60 dark:bg-[#0a0a0a]/90">
+      <header className="sticky top-0 z-20 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-medium tracking-widest uppercase">
+            <h1 className="truncate font-serif text-xl font-medium tracking-tight">
               {title}
             </h1>
-            <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+            <p className="mt-0.5 text-[11px] text-muted dark:text-muted-dark">
               {eventDate
                 ? new Date(eventDate).toLocaleDateString('en-GB', {
                     day: 'numeric',

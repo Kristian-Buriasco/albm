@@ -75,11 +75,11 @@ export default async function PortfolioGalleryPage({
     <div>
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-6 pb-24">
-        <h1 className="py-10 text-center text-sm font-light tracking-[0.3em] uppercase">
+        <h1 className="pt-12 pb-3 text-center font-serif text-4xl font-medium tracking-tight md:text-5xl">
           {gallery.title}
         </h1>
         {gallery.showLocation && gallery.locationName && (
-          <p className="-mt-6 mb-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="mb-8 text-center text-xs tracking-wide text-muted dark:text-muted-dark">
             {gallery.locationName}
             {gallery.locationLat && gallery.locationLng && (
               <>
@@ -96,8 +96,9 @@ export default async function PortfolioGalleryPage({
             )}
           </p>
         )}
+        <div className="mx-auto mb-12 h-px w-16 bg-line dark:bg-line-dark" />
         {sectionGroups.every((s) => s.photos.length === 0) ? (
-          <p className="py-24 text-center text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="py-24 text-center text-sm text-muted dark:text-muted-dark">
             No photos yet.
           </p>
         ) : (
