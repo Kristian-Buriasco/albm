@@ -12,7 +12,7 @@ export default function SiteHeader() {
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-7">
       <Link
         href="/"
-        className="font-serif text-xl leading-none font-medium tracking-tight"
+        className="text-[15px] leading-none font-semibold tracking-tight"
       >
         {SITE_NAME}
       </Link>

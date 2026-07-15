@@ -75,7 +75,7 @@ export default async function PortfolioGalleryPage({
     <div>
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-6 pb-24">
-        <h1 className="pt-12 pb-3 text-center font-serif text-4xl font-medium tracking-tight md:text-5xl">
+        <h1 className="display pt-14 pb-3 text-center text-3xl font-semibold md:text-4xl">
           {gallery.title}
         </h1>
         {gallery.showLocation && gallery.locationName && (

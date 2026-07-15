@@ -1,83 +1,98 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import Reveal from '@/components/Reveal';
+import { getSetting } from '@/lib/settings';
 import { coverPhotoId, getPublishedPortfolioGalleries } from '@/lib/public-data';
 
 export const dynamic = 'force-dynamic';
-
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 export default function HomePage() {
   const galleries = getPublishedPortfolioGalleries();
   const withCovers = galleries.map((g) => ({ gallery: g, cover: coverPhotoId(g) }));
   const hero = withCovers.find((g) => g.cover !== null);
 
+  const eyebrow = getSetting('homeEyebrow') || 'Photographer';
+  const headline = getSetting('homeHeadline') || 'The moment, kept.';
+  const intro =
+    getSetting('homeIntro') ||
+    'Editorial, event, and portrait photography — with private, proof-ready galleries for clients.';
+
   return (
     <div>
       <SiteHeader />
 
-      {hero ? (
-        <section className="relative h-[82vh] w-full overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/img/${hero.cover}/web`}
-            alt={hero.gallery.title}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/20" />
-          <div className="absolute inset-0 flex flex-col items-center justify-end px-6 pb-16 text-center text-white">
-            <p className="mb-3 text-[11px] tracking-[0.35em] text-white/70 uppercase">
-              Photography
-            </p>
-            <h1 className="font-serif text-5xl leading-[0.95] font-medium tracking-tight sm:text-6xl md:text-7xl">
-              {SITE_NAME}
-            </h1>
-          </div>
-        </section>
-      ) : (
-        <section className="mx-auto max-w-6xl px-6 py-32 text-center">
-          <h1 className="font-serif text-6xl font-medium tracking-tight">
-            {SITE_NAME}
-          </h1>
-          <p className="mt-5 text-sm text-muted dark:text-muted-dark">
-            Portfolio coming soon.
+      {/* Split hero: positioning left, photo right */}
+      <section className="mx-auto grid max-w-6xl grid-cols-1 items-stretch gap-px overflow-hidden border-y border-line md:grid-cols-2 dark:border-line-dark">
+        <div className="flex flex-col justify-center px-6 py-16 md:py-24">
+          <p className="mb-5 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
+            {eyebrow}
           </p>
-        </section>
-      )}
+          <h1 className="display text-4xl leading-[1.02] font-semibold text-balance sm:text-5xl">
+            {headline}
+          </h1>
+          <p className="mt-6 max-w-[36ch] text-[15px] leading-relaxed text-muted dark:text-muted-dark">
+            {intro}
+          </p>
+          <div className="mt-9 flex items-center gap-6 text-[13px]">
+            <Link
+              href="#work"
+              className="border-b border-ink pb-0.5 transition-colors hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
+            >
+              View work
+            </Link>
+            <Link
+              href="/contact"
+              className="text-muted transition-colors hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark"
+            >
+              Get in touch
+            </Link>
+          </div>
+        </div>
+        <div className="relative min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
+          {hero?.cover && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={`/img/${hero.cover}/web`}
+              alt={hero.gallery.title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+        </div>
+      </section>
 
       {withCovers.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-          <div className="mb-10 flex items-baseline justify-between border-b border-line pb-4 dark:border-line-dark">
-            <h2 className="font-serif text-2xl font-medium tracking-tight">
-              Selected Work
-            </h2>
-            <span className="text-[11px] tracking-[0.25em] text-muted uppercase dark:text-muted-dark">
-              {String(withCovers.length).padStart(2, '0')} projects
+        <section id="work" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="mb-10 flex items-baseline justify-between">
+            <h2 className="display text-2xl font-semibold">Selected Work</h2>
+            <span className="text-[12px] text-muted dark:text-muted-dark">
+              {withCovers.length} {withCovers.length === 1 ? 'project' : 'projects'}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {withCovers.map(({ gallery, cover }, i) => (
-              <Reveal key={gallery.id} delay={(i % 3) * 90}>
+              <Reveal key={gallery.id} delay={(i % 3) * 80}>
                 <Link href={`/portfolio/${gallery.slug}`} className="group block">
-                  <div className="aspect-[4/5] overflow-hidden bg-line/60 dark:bg-line-dark/60">
+                  <div className="aspect-[4/3] overflow-hidden bg-line/60 dark:bg-line-dark/50">
                     {cover && (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={`/img/${cover}/thumb`}
                         alt={gallery.title}
                         loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
+                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                       />
                     )}
                   </div>
-                  <div className="mt-4 flex items-baseline justify-between">
-                    <p className="font-serif text-lg tracking-tight transition-colors group-hover:text-accent dark:group-hover:text-accent-dark">
+                  <div className="mt-3 flex items-baseline justify-between gap-3">
+                    <p className="text-[15px] font-medium tracking-tight transition-colors group-hover:text-accent dark:group-hover:text-accent-dark">
                       {gallery.title}
                     </p>
-                    <span className="text-[11px] tracking-[0.2em] text-muted tabular-nums dark:text-muted-dark">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
+                    {gallery.eventDate && (
+                      <span className="shrink-0 text-[12px] text-muted tabular-nums dark:text-muted-dark">
+                        {new Date(gallery.eventDate).getFullYear()}
+                      </span>
+                    )}
                   </div>
                 </Link>
               </Reveal>
