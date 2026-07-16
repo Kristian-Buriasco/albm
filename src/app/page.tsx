@@ -84,12 +84,6 @@ export default function HomePage() {
 
   const hasFeatured = workItems.length > 0;
   const hasOthers = otherItems.length > 0;
-  // "More Work" only gets its own heading when it sits under a Selected Work
-  // section; if nothing is featured, the non-featured work is the only grid
-  // and carries the main "Selected Work" heading instead.
-  const primaryItems = hasFeatured ? workItems : otherItems;
-  const primaryLabel = 'Selected Work';
-  const secondaryItems = hasFeatured ? otherItems : [];
 
   return (
     <div>
@@ -158,25 +152,27 @@ export default function HomePage() {
 
       {(hasFeatured || hasOthers) && (
         <section id="work" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-          <div className="mb-10 flex items-baseline justify-between">
-            <h2 className="display text-2xl font-semibold">{primaryLabel}</h2>
-            <span className="text-[12px] text-muted dark:text-muted-dark">
-              {primaryItems.length}{' '}
-              {primaryItems.length === 1 ? 'project' : 'projects'}
-            </span>
-          </div>
-          <WorkGrid items={primaryItems} />
+          {hasFeatured && (
+            <div className={hasOthers ? 'mb-20 md:mb-28' : ''}>
+              <div className="mb-10 flex items-baseline justify-between">
+                <h2 className="display text-2xl font-semibold">Selected Work</h2>
+                <span className="text-[12px] text-muted dark:text-muted-dark">
+                  {workItems.length} {workItems.length === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
+              <WorkGrid items={workItems} />
+            </div>
+          )}
 
-          {secondaryItems.length > 0 && (
-            <div className="mt-20 md:mt-28">
+          {hasOthers && (
+            <div>
               <div className="mb-10 flex items-baseline justify-between">
                 <h2 className="display text-2xl font-semibold">More Work</h2>
                 <span className="text-[12px] text-muted dark:text-muted-dark">
-                  {secondaryItems.length}{' '}
-                  {secondaryItems.length === 1 ? 'project' : 'projects'}
+                  {otherItems.length} {otherItems.length === 1 ? 'project' : 'projects'}
                 </span>
               </div>
-              <WorkGrid items={secondaryItems} startIndex={primaryItems.length} />
+              <WorkGrid items={otherItems} startIndex={hasFeatured ? workItems.length : 0} />
             </div>
           )}
         </section>
