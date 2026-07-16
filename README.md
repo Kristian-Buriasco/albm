@@ -28,7 +28,7 @@ One Next.js app: a public portfolio, private client galleries at unguessable URL
 
 ### Public portfolio
 
-- Homepage with **Selected Work** and **More Work** grids; per-card shoot location
+- Homepage with **Featured Work** and **More Work** grids; per-card shoot location
 - Editable hero, about, contact, and footer copy from the admin panel
 - Portfolio lightbox with optional anonymous likes; admin can sort by like count
 - Open Graph previews for portfolio galleries when enabled
@@ -55,7 +55,7 @@ One Next.js app: a public portfolio, private client galleries at unguessable URL
 
 - Passkeys (WebAuthn), one-time recovery codes, optional password login
 - Stats with inline SVG charts, disk usage, bulk photo actions
-- **Show in Selected Work** picker for the homepage
+- **Show in Featured Work** picker for the homepage
 - CSV and filename export for client selections
 
 ### Operations
@@ -63,6 +63,32 @@ One Next.js app: a public portfolio, private client galleries at unguessable URL
 - **Safe upgrades:** database backed up before every migration; a failed migration aborts boot instead of serving a half-migrated DB
 - Self-contained UI (no external CDN, fonts, or trackers)
 - Optional daily GitHub release check — disable with `DISABLE_UPDATE_CHECK=1` (the app’s only outbound request)
+
+## Roadmap
+
+Phases are ordered by dependency, not calendar. Detailed build specs live in `FIXES-6.md` (near-term) and `FIXES-7.md` (later phases).
+
+**Shipped** — client proofing, portfolio galleries, passkey admin auth, password/6-digit-PIN gates, watermarking, sections, EXIF (GPS excluded), cover/link-preview/focal pickers, shift-select, CSV export, QR share, LQIP blur-up, retina `srcset`, slideshow, swipe nav, storage + most-viewed dashboards, PWA, sitemap/feeds/JSON-LD, EN/NL/IT, Docker + GHCR releases.
+
+**In progress — foundation & product depth** (`FIXES-6.md`)
+
+- Safety net: end-to-end test suite, admin audit log
+- Gallery presets, external-publish API (Lightroom / Capture One / curl), folder→sections mapping, admin gallery folders, work-tab search, multiple favorite lists, magic-link client accounts (cross-device favorites)
+- Hardening: persistent rate-limit store, admin session management, consent notice
+
+**Planned — delivery & protection** (`FIXES-7.md`, Phase 2)
+
+- Live upload during events (auto-publish), RAW/DNG ingest, invisible forensic watermark, multi-resolution download, GPS strip on download
+
+**Planned — event self-service** (Phase 3)
+
+- Bib-number search, face search (batch), public event page with venue QR
+
+**Later — scale-out** (Phase 4, when needed)
+
+- Object-storage backend, multi-photographer / studio mode
+
+Explicitly out of scope for now: automated backups, email/SMTP notifications.
 
 ## Quick start (Docker)
 
