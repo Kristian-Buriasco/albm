@@ -47,6 +47,12 @@ async function main() {
 
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1200);
+  // Dismiss cookie banner if present (keeps screenshots clean).
+  const decline = page.getByRole('button', { name: /essential only|decline|reject/i });
+  if (await decline.isVisible().catch(() => false)) {
+    await decline.click().catch(() => {});
+    await page.waitForTimeout(300);
+  }
   // Scroll-reveal uses IntersectionObserver; below-fold items stay at
   // opacity 0 in a full-page screenshot. Force them visible before capture.
   await page.evaluate(() =>
