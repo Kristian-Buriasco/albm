@@ -615,8 +615,8 @@ export default function GalleryAdmin({
                 onChange={(v) => patchGallery({ showLikeCounts: v })}
               />
               <ToggleSwitch
-                label="Show in Selected Work"
-                hint="Featured on the homepage Selected Work grid"
+                label="Show in Featured Work"
+                hint="Featured on the homepage Featured Work grid"
                 checked={gallery.featured}
                 onChange={(v) => patchGallery({ featured: v })}
               />

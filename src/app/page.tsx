@@ -155,7 +155,7 @@ export default function HomePage() {
           {hasFeatured && (
             <div className={hasOthers ? 'mb-20 md:mb-28' : ''}>
               <div className="mb-10 flex items-baseline justify-between">
-                <h2 className="display text-2xl font-semibold">Selected Work</h2>
+                <h2 className="display text-2xl font-semibold">Featured Work</h2>
                 <span className="text-[12px] text-muted dark:text-muted-dark">
                   {workItems.length} {workItems.length === 1 ? 'project' : 'projects'}
                 </span>
