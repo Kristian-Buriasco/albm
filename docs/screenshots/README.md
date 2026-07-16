@@ -1,25 +1,42 @@
 # Screenshots
 
-PNG captures for the top-level `README.md`:
+PNG captures for the top-level `README.md` (≈1440×900 viewport, light theme):
 
 | File | What to capture |
 |---|---|
-| `portfolio.png` | Albm public homepage (`/`) |
-| `client-gallery.png` | A client gallery grid or lightbox with proofing controls |
+| `portfolio.png` | Public homepage (`/`) |
+| `client-gallery.png` | Client proofing grid (`/g/[slug]`) |
+| `client-lightbox.png` | Lightbox with favorites / slideshow controls |
+| `contact.png` | Contact page with Instagram / WhatsApp |
 | `admin.png` | Admin dashboard (`/admin`) — stats + galleries |
-| `security.png` | Admin → Settings → Security (passkeys + recovery codes) |
+| `admin-gallery.png` | Gallery detail — sections, tags, bulk select |
+| `security.png` | Settings → Security (passkeys + recovery) |
+| `audit.png` | Audit log (`/admin/audit`) |
+| `event-page.png` | Public event page (`/g/[slug]/event`) |
 
 ## Capturing a consistent set
 
-Run the app locally with demo content, then screenshot at ~1440px wide (browser zoom 100%, light theme):
-
 ```bash
+# Kill anything on :3200 first
+lsof -ti:3200 | xargs kill -9 2>/dev/null
+
 npm ci && npm run build
 cp -r .next/static .next/standalone/.next/static
-HASH=$(node scripts/hash-password.mjs demo1234)
+cp -r public .next/standalone/public 2>/dev/null || true
+
+rm -rf demo-data && mkdir demo-data
+HASH=$(node scripts/hash-password.mjs demo123)
 SESSION_SECRET=$(openssl rand -hex 32) \
 ADMIN_PASSWORD_HASH="$HASH" \
-DATA_DIR=./demo-data node .next/standalone/server.js
+DATA_DIR=./demo-data \
+BASE_URL=http://localhost:3200 \
+PORT=3200 \
+node .next/standalone/server.js &
+
+# Wait for healthy, then seed + capture
+curl -sf http://localhost:3200/api/health
+DEMO_PASSWORD=demo123 node scripts/seed-demo.mjs
+DEMO_PASSWORD=demo123 node scripts/capture-screenshots.mjs
 ```
 
-Create a portfolio gallery and a client gallery, upload a few photos, then capture PNGs (~1600×1000 or full page). Set `localStorage.theme = 'light'` for a consistent light theme.
+Seed images are sharp-generated named gradient JPEGs (not demo1/2/3). Do not commit `demo-data/`, `.env`, or `.next/`.

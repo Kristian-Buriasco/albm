@@ -89,6 +89,30 @@ const GRADIENTS = [
     x2: '0',
     y2: '1',
   },
+  {
+    name: 'indigo-dusk.jpg',
+    stops: [
+      { offset: '0%', color: 'rgb(22, 24, 58)' },
+      { offset: '50%', color: 'rgb(68, 72, 140)' },
+      { offset: '100%', color: 'rgb(168, 148, 198)' },
+    ],
+    x1: '0',
+    y1: '0',
+    x2: '1',
+    y2: '1',
+  },
+  {
+    name: 'copper-glow.jpg',
+    stops: [
+      { offset: '0%', color: 'rgb(48, 28, 18)' },
+      { offset: '40%', color: 'rgb(160, 88, 42)' },
+      { offset: '100%', color: 'rgb(228, 176, 120)' },
+    ],
+    x1: '0.2',
+    y1: '0',
+    x2: '0.8',
+    y2: '1',
+  },
 ];
 
 function curlLogin() {
@@ -113,7 +137,7 @@ function galleryId(g) {
 }
 
 async function apiWithCookie(method, urlPath, body) {
-  const tmp = `/tmp/gallery-body-${Date.now()}.json`;
+  const tmp = `/tmp/gallery-body-${Date.now()}-${Math.random().toString(36).slice(2)}.json`;
   if (body !== undefined) fs.writeFileSync(tmp, JSON.stringify(body));
   const dataFlag = body !== undefined ? `-d @${tmp}` : '';
   const out = execSync(
@@ -193,6 +217,7 @@ async function main() {
     footerContent: '© Kristian Buriasco · Leuven, Belgium',
     contactEmail: 'hello@example.com',
     contactInstagram: 'kristianburiasco',
+    contactWhatsapp: '+32470123456',
   });
 
   const y2025 = Date.UTC(2025, 5, 14);
@@ -245,20 +270,39 @@ async function main() {
     downloadOfferOriginal: true,
   });
 
+  const event = await apiWithCookie('POST', '/api/admin/galleries', {
+    title: 'Leuven City Run 2026',
+    type: 'client',
+    published: true,
+    eventPage: true,
+    bibSearch: true,
+    faceSearch: false,
+    downloadEnabled: true,
+    favoritesDownloadEnabled: true,
+    showLocation: true,
+    locationName: 'Leuven city centre',
+    eventDate: y2026,
+  });
+
+  const clientPhotoIds = [];
+  const eventPhotoIds = [];
+
   const galleries = [
-    { g: portfolio1, count: 4 },
-    { g: portfolio2, count: 3 },
-    { g: portfolio3, count: 2 },
-    { g: client, count: 6 },
+    { g: portfolio1, count: 4, collect: null },
+    { g: portfolio2, count: 3, collect: null },
+    { g: portfolio3, count: 2, collect: null },
+    { g: client, count: 8, collect: clientPhotoIds },
+    { g: event, count: 4, collect: eventPhotoIds },
   ];
 
-  for (const { g, count } of galleries) {
+  for (const { g, count, collect } of galleries) {
     const id = galleryId(g);
     console.log(`Uploading to ${g.title ?? id}…`);
     const ids = [];
     for (let i = 0; i < count; i++) {
       const photo = await uploadPhoto(id, images[i % images.length]);
       ids.push(photo.id);
+      if (collect) collect.push(photo.id);
     }
     console.log(`Waiting for processing (${id})…`);
     await waitForPhotos(id);
@@ -272,6 +316,7 @@ async function main() {
   const p1 = galleryId(portfolio1);
   const p2 = galleryId(portfolio2);
   const clientId = galleryId(client);
+  const eventId = galleryId(event);
 
   await apiWithCookie('PATCH', `/api/admin/galleries/${p1}`, {
     featured: true,
@@ -280,6 +325,44 @@ async function main() {
   await apiWithCookie('PATCH', `/api/admin/galleries/${p2}`, {
     featured: true,
     published: true,
+  });
+  await apiWithCookie('PATCH', `/api/admin/galleries/${eventId}`, {
+    eventPage: true,
+    bibSearch: true,
+    published: true,
+  });
+
+  console.log('Creating sections + tags for client gallery…');
+  const secPortraits = await apiWithCookie('POST', `/api/admin/galleries/${clientId}/sections`, {
+    title: 'Portraits',
+  });
+  const secGroup = await apiWithCookie('POST', `/api/admin/galleries/${clientId}/sections`, {
+    title: 'Group shots',
+  });
+
+  if (clientPhotoIds.length >= 4) {
+    await apiWithCookie('POST', `/api/admin/galleries/${clientId}/photos/bulk`, {
+      action: 'move',
+      photoIds: clientPhotoIds.slice(0, 4),
+      sectionId: secPortraits.id,
+    });
+    await apiWithCookie('POST', `/api/admin/galleries/${clientId}/photos/bulk`, {
+      action: 'move',
+      photoIds: clientPhotoIds.slice(4),
+      sectionId: secGroup.id,
+    });
+  }
+
+  await apiWithCookie('POST', `/api/admin/galleries/${clientId}/tags`, {
+    tagName: 'team',
+  });
+  await apiWithCookie('POST', '/api/admin/photos/tags', {
+    photoIds: clientPhotoIds.slice(0, 3),
+    tagName: 'portrait',
+  });
+  await apiWithCookie('POST', '/api/admin/photos/tags', {
+    photoIds: clientPhotoIds.slice(4, 6),
+    tagName: 'group',
   });
 
   fs.writeFileSync(
@@ -290,14 +373,27 @@ async function main() {
         portfolio2: portfolio2.slug,
         client: client.slug,
         clientId,
+        event: event.slug,
+        eventId,
       },
       null,
       2,
     ),
   );
 
-  console.log('Done. Client slug saved to demo-data/seed-info.json');
-  console.log(JSON.stringify({ portfolio1, portfolio2, client }, null, 2));
+  console.log('Done. Seed info saved to demo-data/seed-info.json');
+  console.log(
+    JSON.stringify(
+      {
+        portfolio1: portfolio1.slug,
+        portfolio2: portfolio2.slug,
+        client: client.slug,
+        event: event.slug,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((err) => {
