@@ -175,7 +175,7 @@ test('client favorites appear in admin CSV export', async ({ playwright }) => {
   );
   expect(csvRes.ok()).toBeTruthy();
   const csv = await csvRes.text();
-  expect(csv).toContain('filename,visitor_name,visitor_email,selected_at');
+  expect(csv).toContain('filename,visitor_name,visitor_email,list_name,selected_at');
   expect(csv).toContain(clientFilename);
   await admin.dispose();
 });

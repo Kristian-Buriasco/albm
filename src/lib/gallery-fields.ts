@@ -102,6 +102,10 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
   if (typeof body.coverFocusY === 'number') {
     updates.coverFocusY = Math.min(100, Math.max(0, Math.round(body.coverFocusY)));
   }
+  if ('folderId' in body) {
+    updates.folderId =
+      typeof body.folderId === 'string' && body.folderId ? body.folderId : null;
+  }
   return updates;
 }
 

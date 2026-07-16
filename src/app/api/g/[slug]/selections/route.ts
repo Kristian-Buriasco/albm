@@ -1,10 +1,20 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '@/db';
 import type { Gallery, Visitor } from '@/db/schema';
 import { errorJson, json } from '@/lib/api';
 import { canViewGallery } from '@/lib/gallery-auth';
+import { DEFAULT_LIST_NAME } from '@/lib/selection-constants';
+import {
+  createSelectionList,
+  listSelectionLists,
+  MAX_LISTS_PER_VISITOR,
+  resolveListId,
+} from '@/lib/selection-lists';
 import { getVisitorSession } from '@/lib/session';
+import { ipFromRequest, writeAllowed } from '@/lib/rate-limit';
+
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -65,33 +75,58 @@ async function resolveContext(
   return { gallery, visitor };
 }
 
-export async function GET(_req: Request, { params }: Params) {
+function activeListId(
+  visitorId: string,
+  galleryId: string,
+  queryListId: string | null,
+): string | null {
+  return resolveListId(visitorId, galleryId, queryListId);
+}
+
+export async function GET(req: Request, { params }: Params) {
   const { slug } = await params;
   const ctx = await resolveContext(slug);
   if (ctx instanceof Response) return ctx;
 
-  const rows = getDb()
+  const url = new URL(req.url);
+  const listId = activeListId(
+    ctx.visitor.id,
+    ctx.gallery.id,
+    url.searchParams.get('listId'),
+  );
+
+  const db = getDb();
+  const where =
+    listId === null
+      ? and(eq(schema.selections.visitorId, ctx.visitor.id), isNull(schema.selections.listId))
+      : and(eq(schema.selections.visitorId, ctx.visitor.id), eq(schema.selections.listId, listId));
+
+  const rows = db
     .select({ photoId: schema.selections.photoId })
     .from(schema.selections)
-    .where(eq(schema.selections.visitorId, ctx.visitor.id))
+    .where(where)
     .all();
+
+  const lists = listSelectionLists(ctx.visitor.id, ctx.gallery.id);
   const limit =
     ctx.gallery.limitSelections && ctx.gallery.selectionLimit
       ? ctx.gallery.selectionLimit
       : null;
+
   return json({
     photoIds: rows.map((r) => r.photoId),
     selectionLimit: limit,
     selectionCount: rows.length,
+    lists: lists.map((l) => ({ id: l.id, name: l.name })),
+    activeListId: listId,
   });
 }
 
-async function parsePhotoId(req: Request): Promise<string | null> {
+async function parseBody(req: Request): Promise<Record<string, unknown>> {
   try {
-    const body = await req.json();
-    return typeof body.photoId === 'string' ? body.photoId : null;
+    return await req.json();
   } catch {
-    return null;
+    return {};
   }
 }
 
@@ -100,14 +135,26 @@ export async function POST(req: Request, { params }: Params) {
   const ctx = await resolveContext(slug);
   if (ctx instanceof Response) return ctx;
 
-  const photoId = await parsePhotoId(req);
+  const body = await parseBody(req);
+  const photoId = typeof body.photoId === 'string' ? body.photoId : null;
   if (!photoId) return errorJson('photoId required', 400);
 
+  const listId = activeListId(
+    ctx.visitor.id,
+    ctx.gallery.id,
+    typeof body.listId === 'string' ? body.listId : null,
+  );
+
   const db = getDb();
+  const existingWhere =
+    listId === null
+      ? and(eq(schema.selections.visitorId, ctx.visitor.id), isNull(schema.selections.listId))
+      : and(eq(schema.selections.visitorId, ctx.visitor.id), eq(schema.selections.listId, listId));
+
   const existing = db
     .select({ photoId: schema.selections.photoId })
     .from(schema.selections)
-    .where(eq(schema.selections.visitorId, ctx.visitor.id))
+    .where(existingWhere)
     .all();
 
   if (
@@ -128,7 +175,7 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   db.insert(schema.selections)
-    .values({ photoId, visitorId: ctx.visitor.id })
+    .values({ photoId, visitorId: ctx.visitor.id, listId })
     .onConflictDoNothing()
     .run();
   return json({ ok: true });
@@ -139,17 +186,50 @@ export async function DELETE(req: Request, { params }: Params) {
   const ctx = await resolveContext(slug);
   if (ctx instanceof Response) return ctx;
 
-  const photoId = await parsePhotoId(req);
+  const body = await parseBody(req);
+  const photoId = typeof body.photoId === 'string' ? body.photoId : null;
   if (!photoId) return errorJson('photoId required', 400);
 
-  getDb()
-    .delete(schema.selections)
-    .where(
-      and(
-        eq(schema.selections.photoId, photoId),
-        eq(schema.selections.visitorId, ctx.visitor.id),
-      ),
-    )
-    .run();
+  const listId = activeListId(
+    ctx.visitor.id,
+    ctx.gallery.id,
+    typeof body.listId === 'string' ? body.listId : null,
+  );
+
+  const db = getDb();
+  const conditions = [
+    eq(schema.selections.photoId, photoId),
+    eq(schema.selections.visitorId, ctx.visitor.id),
+  ];
+  if (listId === null) {
+    conditions.push(isNull(schema.selections.listId));
+  } else {
+    conditions.push(eq(schema.selections.listId, listId));
+  }
+
+  db.delete(schema.selections).where(and(...conditions)).run();
   return json({ ok: true });
+}
+
+/** Create a named selection list (max 5 per visitor/gallery). */
+export async function PUT(req: Request, { params }: Params) {
+  const { slug } = await params;
+  const ctx = await resolveContext(slug);
+  if (ctx instanceof Response) return ctx;
+
+  const ip = ipFromRequest(req);
+  if (!writeAllowed('selection-list-create', ip, 20, 15 * 60 * 1000)) {
+    return errorJson('Too many requests', 429);
+  }
+
+  const body = await parseBody(req);
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name) return errorJson('name required', 400);
+  if (name === DEFAULT_LIST_NAME) return errorJson('Reserved name', 400);
+
+  const list = createSelectionList(ctx.visitor.id, ctx.gallery.id, name);
+  if (!list) {
+    return errorJson(`Maximum ${MAX_LISTS_PER_VISITOR} lists per gallery`, 409);
+  }
+  return json({ id: list.id, name: list.name }, 201);
 }

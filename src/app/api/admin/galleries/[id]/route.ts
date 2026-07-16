@@ -11,6 +11,19 @@ import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
 
+export async function GET(_req: Request, { params }: Params) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  const { id } = await params;
+  const gallery = getDb()
+    .select()
+    .from(schema.galleries)
+    .where(eq(schema.galleries.id, id))
+    .get();
+  if (!gallery) return errorJson('Not found', 404);
+  return json(gallery);
+}
+
 export async function PATCH(req: Request, { params }: Params) {
   const denied = await requireAdmin();
   if (denied) return denied;

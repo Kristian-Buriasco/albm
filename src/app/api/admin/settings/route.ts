@@ -1,9 +1,10 @@
-import fs from 'node:fs';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { detectImageType } from '@/lib/files';
+import { getGalleryDefaults, parseGalleryDefaults, saveGalleryDefaults } from '@/lib/gallery-defaults';
 import { watermarkPath } from '@/lib/paths';
 import { getSetting, setSetting } from '@/lib/settings';
 import { logAdmin } from '@/lib/audit-log';
+import fs from 'node:fs';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ export async function GET() {
     contactWhatsapp: getSetting('contactWhatsapp') ?? '',
     footerContent: getSetting('footerContent') ?? '',
     defaultLanguage: getSetting('defaultLanguage') ?? 'en',
+    galleryDefaults: getGalleryDefaults(),
     hasWatermark: fs.existsSync(watermarkPath()),
   });
 }
@@ -96,6 +98,10 @@ export async function POST(req: Request) {
   if (typeof body.defaultLanguage === 'string') {
     const lang = body.defaultLanguage === 'nl' || body.defaultLanguage === 'it' ? body.defaultLanguage : 'en';
     setSetting('defaultLanguage', lang);
+  }
+  if (body.galleryDefaults !== undefined) {
+    const store = parseGalleryDefaults(JSON.stringify(body.galleryDefaults));
+    saveGalleryDefaults(store);
   }
   logAdmin('settings.update', {
     targetType: 'settings',

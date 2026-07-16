@@ -85,8 +85,18 @@ export const galleries = sqliteTable('galleries', {
   coverFocusY: integer('cover_focus_y').notNull().default(50),
   pinEnabled: integer('pin_enabled', { mode: 'boolean' }).notNull().default(false),
   pinHash: text('pin_hash'),
+  folderId: text('folder_id').references(() => galleryFolders.id, { onDelete: 'set null' }),
   sortOrder: integer('sort_order').notNull().default(0),
   ...timestamps,
+});
+
+export const galleryFolders = sqliteTable('gallery_folders', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
 });
 
 export const sections = sqliteTable('sections', {
@@ -134,11 +144,30 @@ export const visitors = sqliteTable('visitors', {
   galleryId: text('gallery_id')
     .notNull()
     .references(() => galleries.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').references(() => clientAccounts.id, { onDelete: 'set null' }),
   name: text('name'),
   email: text('email'),
   sessionToken: text('session_token').notNull().unique(),
   ...timestamps,
 });
+
+export const selectionLists = sqliteTable(
+  'selection_lists',
+  {
+    id: text('id').primaryKey(),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    visitorId: text('visitor_id')
+      .notNull()
+      .references(() => visitors.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [index('selection_lists_gallery_visitor_idx').on(t.galleryId, t.visitorId)],
+);
 
 export const selections = sqliteTable(
   'selections',
@@ -149,11 +178,18 @@ export const selections = sqliteTable(
     visitorId: text('visitor_id')
       .notNull()
       .references(() => visitors.id, { onDelete: 'cascade' }),
+    listId: text('list_id').references(() => selectionLists.id, { onDelete: 'cascade' }),
     createdAt: integer('created_at')
       .notNull()
       .$defaultFn(() => Date.now()),
   },
-  (t) => [primaryKey({ columns: [t.photoId, t.visitorId] })],
+  (t) => [
+    unique('selections_photo_visitor_list_idx').on(
+      t.photoId,
+      t.visitorId,
+      t.listId,
+    ),
+  ],
 );
 
 export const likes = sqliteTable(
@@ -304,9 +340,51 @@ export const auditLog = sqliteTable(
   ],
 );
 
+export const uploadTokens = sqliteTable('upload_tokens', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  lastUsedAt: integer('last_used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
+export const clientAccounts = sqliteTable(
+  'client_accounts',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    lastLoginAt: integer('last_login_at'),
+  },
+  (t) => [unique().on(t.email)],
+);
+
+export const magicLinks = sqliteTable('magic_links', {
+  id: text('id').primaryKey(),
+  accountId: text('account_id')
+    .notNull()
+    .references(() => clientAccounts.id, { onDelete: 'cascade' }),
+  galleryId: text('gallery_id')
+    .notNull()
+    .references(() => galleries.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  usedAt: integer('used_at'),
+});
+
+export type GalleryFolder = typeof galleryFolders.$inferSelect;
+
 export type Gallery = typeof galleries.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type Photo = typeof photos.$inferSelect;
 export type Visitor = typeof visitors.$inferSelect;
 export type Selection = typeof selections.$inferSelect;
+export type SelectionList = typeof selectionLists.$inferSelect;
+export type ClientAccount = typeof clientAccounts.$inferSelect;
+export type UploadToken = typeof uploadTokens.$inferSelect;
 export type Comment = typeof comments.$inferSelect;

@@ -1,18 +1,8 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-import { asc, eq, and, sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
-import sharp from 'sharp';
+import { asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
-import { detectImageType, resolveCollision, sanitizeFilename } from '@/lib/files';
-import { originalPath } from '@/lib/paths';
-import { extractExif } from '@/lib/exif';
-import { enqueueDerivatives } from '@/lib/queue';
+import { ingestGalleryPhoto } from '@/lib/photo-upload';
 import { getPhotoTagsForGallery } from '@/lib/tags';
-
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,14 +31,6 @@ export async function POST(req: Request, { params }: Params) {
   if (denied) return denied;
   const { id } = await params;
 
-  const db = getDb();
-  const gallery = db
-    .select()
-    .from(schema.galleries)
-    .where(eq(schema.galleries.id, id))
-    .get();
-  if (!gallery) return errorJson('Gallery not found', 404);
-
   let form: FormData;
   try {
     form = await req.formData();
@@ -57,100 +39,17 @@ export async function POST(req: Request, { params }: Params) {
   }
   const file = form.get('file');
   if (!(file instanceof File)) return errorJson('Missing file', 400);
-  if (file.size > MAX_UPLOAD_BYTES) return errorJson('File too large (max 50 MB)', 413);
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  if (!detectImageType(buf)) {
-    return errorJson('Only JPEG and PNG files are accepted', 415);
-  }
-
-  const sanitized = sanitizeFilename(file.name);
-  if (!sanitized) return errorJson('Invalid filename', 400);
-
-  const contentHash = crypto.createHash('sha256').update(buf).digest('hex');
-  const duplicate = db
-    .select({ filename: schema.photos.filename })
-    .from(schema.photos)
-    .where(
-      and(
-        eq(schema.photos.galleryId, id),
-        eq(schema.photos.contentHash, contentHash),
-      ),
-    )
-    .get();
-  if (duplicate) {
-    return json({ duplicate: true, existingFilename: duplicate.filename });
-  }
-
-  const taken = new Set(
-    db
-      .select({ filename: schema.photos.filename })
-      .from(schema.photos)
-      .where(eq(schema.photos.galleryId, id))
-      .all()
-      .map((r) => r.filename),
-  );
-  const filename = resolveCollision(sanitized, (c) => taken.has(c));
 
   const sectionIdRaw = form.get('sectionId');
-  let sectionId: string | null = null;
-  if (typeof sectionIdRaw === 'string' && sectionIdRaw) {
-    const sec = db
-      .select()
-      .from(schema.sections)
-      .where(eq(schema.sections.id, sectionIdRaw))
-      .get();
-    if (sec && sec.galleryId === id) sectionId = sec.id;
+  const sectionId = typeof sectionIdRaw === 'string' ? sectionIdRaw : null;
+
+  const result = await ingestGalleryPhoto(id, file, sectionId);
+  if (!result.ok) return errorJson(result.error, result.status);
+  if ('duplicate' in result && result.duplicate) {
+    return json({ duplicate: true, existingFilename: result.existingFilename });
   }
-
-  let width = 0;
-  let height = 0;
-  let exifJson: string | null = null;
-  let capturedAt: number | null = null;
-  try {
-    const meta = await sharp(buf).metadata();
-    const swap = (meta.orientation ?? 1) >= 5;
-    width = (swap ? meta.height : meta.width) ?? 0;
-    height = (swap ? meta.width : meta.height) ?? 0;
-    const extracted = extractExif(meta);
-    exifJson = extracted.exif ? JSON.stringify(extracted.exif) : null;
-    capturedAt = extracted.capturedAt;
-  } catch {
-    return errorJson('Could not read image', 415);
+  if (result.ok && result.created) {
+    return json(result.photo, 201);
   }
-
-  const dest = originalPath(id, filename);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, buf);
-
-  const maxOrder =
-    db
-      .select({ m: sql<number>`coalesce(max(${schema.photos.sortOrder}), 0)` })
-      .from(schema.photos)
-      .where(eq(schema.photos.galleryId, id))
-      .get()?.m ?? 0;
-
-  const photo = {
-    id: nanoid(),
-    galleryId: id,
-    sectionId,
-    filename,
-    width,
-    height,
-    sizeBytes: buf.length,
-    sortOrder: maxOrder + 1,
-    status: 'processing' as const,
-    exif: exifJson,
-    capturedAt,
-    contentHash,
-  };
-  db.insert(schema.photos).values(photo).run();
-  enqueueDerivatives(photo.id);
-
-  const row = db
-    .select()
-    .from(schema.photos)
-    .where(eq(schema.photos.id, photo.id))
-    .get();
-  return json(row, 201);
+  return errorJson('Upload failed', 500);
 }

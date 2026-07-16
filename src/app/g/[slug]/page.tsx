@@ -12,6 +12,8 @@ import { getDistinctPhotoTagsForClientGallery, getPhotoTagMapForClient } from '@
 import { getSetting } from '@/lib/settings';
 import { parseLang } from '@/lib/i18n';
 import { needsAccessGate, galleryUsesPin } from '@/lib/gallery-auth';
+import { listSelectionLists } from '@/lib/selection-lists';
+import { getAccountEmail } from '@/lib/magic-links';
 import AdminEditLink from '@/components/AdminEditLink';
 import PasswordGate from './PasswordGate';
 import PinGate from './PinGate';
@@ -99,6 +101,8 @@ export default async function ClientGalleryPage({
   const visitorSession = await getVisitorSession(gallery.id);
   let hasVisitor = false;
   let selectedIds: string[] = [];
+  let accountEmail: string | null = null;
+  let selectionLists: { id: string; name: string }[] = [];
   if (visitorSession.token) {
     const visitor = db
       .select()
@@ -107,6 +111,13 @@ export default async function ClientGalleryPage({
       .get();
     if (visitor && visitor.galleryId === gallery.id) {
       hasVisitor = true;
+      if (visitor.accountId) {
+        accountEmail = getAccountEmail(visitor.accountId);
+      }
+      selectionLists = listSelectionLists(visitor.id, gallery.id).map((l) => ({
+        id: l.id,
+        name: l.name,
+      }));
       selectedIds = db
         .select({ photoId: schema.selections.photoId })
         .from(schema.selections)
@@ -140,6 +151,8 @@ export default async function ClientGalleryPage({
       sections={sectionGroups}
       hasVisitor={hasVisitor}
       initialSelectedIds={selectedIds}
+      initialLists={selectionLists}
+      accountEmail={accountEmail}
       commentsEnabled={gallery.commentsMode !== 'off'}
       showExif={gallery.showExif}
       showLocation={gallery.showLocation}

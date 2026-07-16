@@ -34,6 +34,7 @@ export default async function AdminDashboard() {
     type: g.type,
     published: g.published,
     expiresAt: g.expiresAt,
+    folderId: g.folderId,
     photoCount:
       db
         .select({ c: sql<number>`count(*)` })
@@ -43,6 +44,12 @@ export default async function AdminDashboard() {
     sizeBytes: storage.galleries.find((s) => s.id === g.id)?.sizeBytes ?? 0,
     expired: isGalleryExpired(g),
   }));
+
+  const folders = db
+    .select()
+    .from(schema.galleryFolders)
+    .orderBy(asc(schema.galleryFolders.sortOrder))
+    .all();
 
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const viewRows = db
@@ -134,7 +141,7 @@ export default async function AdminDashboard() {
       </div>
 
       <Suspense fallback={<p className="text-sm text-neutral-500">Loading…</p>}>
-        <AdminGalleryList rows={listRows} />
+        <AdminGalleryList rows={listRows} initialFolders={folders} />
       </Suspense>
     </div>
   );

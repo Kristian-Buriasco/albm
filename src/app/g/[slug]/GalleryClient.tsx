@@ -12,6 +12,13 @@ import type { Lang } from '@/lib/i18n';
 import { formatMsg, t } from '@/lib/i18n';
 import LanguageSwitcher, { getStoredLang } from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
+import ShareTools from '@/components/ShareTools';
+import { DEFAULT_LIST_NAME } from '@/lib/selection-constants';
+
+interface SelectionListInfo {
+  id: string;
+  name: string;
+}
 
 interface Props {
   slug: string;
@@ -23,6 +30,8 @@ interface Props {
   sections: SectionGroup[];
   hasVisitor: boolean;
   initialSelectedIds: string[];
+  initialLists?: SelectionListInfo[];
+  accountEmail?: string | null;
   commentsEnabled: boolean;
   showExif: boolean;
   showLocation: boolean;
@@ -45,6 +54,8 @@ export default function GalleryClient({
   sections,
   hasVisitor,
   initialSelectedIds,
+  initialLists = [],
+  accountEmail = null,
   commentsEnabled,
   showLocation,
   locationName,
@@ -69,6 +80,32 @@ export default function GalleryClient({
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [downloadConfirm, setDownloadConfirm] = useState<'all' | 'favorites' | null>(null);
   const [downloadInfo, setDownloadInfo] = useState<{ count: number; sizeLabel: string } | null>(null);
+  const [lists, setLists] = useState<SelectionListInfo[]>(initialLists);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [showMagicLink, setShowMagicLink] = useState(false);
+  const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
+  const [linkedEmail, setLinkedEmail] = useState<string | null>(accountEmail);
+  const [newListName, setNewListName] = useState('');
+
+  const reloadSelections = useCallback(async (listId: string | null) => {
+    const q = listId ? `?listId=${encodeURIComponent(listId)}` : '';
+    const res = await fetch(`/api/g/${slug}/selections${q}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setSelected(new Set(data.photoIds ?? []));
+    if (data.lists) setLists(data.lists);
+  }, [slug]);
+
+  useEffect(() => {
+    if (!visitorReady) return;
+    reloadSelections(activeListId);
+  }, [activeListId, visitorReady, reloadSelections]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('linked') === '1') setLinkedEmail(accountEmail);
+  }, [accountEmail]);
 
   useEffect(() => {
     if (!commentsEnabled) return;
@@ -115,7 +152,7 @@ export default function GalleryClient({
       const res = await fetch(`/api/g/${slug}/selections`, {
         method: isSelected ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoId }),
+        body: JSON.stringify({ photoId, listId: activeListId }),
       });
       if (!res.ok) {
         setSelected((prev) => {
@@ -126,8 +163,37 @@ export default function GalleryClient({
         });
       }
     },
-    [selected, slug, ensureVisitor, atLimit],
+    [selected, slug, ensureVisitor, atLimit, activeListId],
   );
+
+  async function createList() {
+    if (!newListName.trim()) return;
+    if (!(await ensureVisitor())) return;
+    const res = await fetch(`/api/g/${slug}/selections`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newListName.trim() }),
+    });
+    if (res.ok) {
+      const list = await res.json();
+      setLists((prev) => [...prev, list]);
+      setActiveListId(list.id);
+      setNewListName('');
+      await reloadSelections(list.id);
+    }
+  }
+
+  async function requestMagicLink(email: string) {
+    const res = await fetch(`/api/g/${slug}/magic-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setMagicLinkUrl(data.url);
+    }
+  }
 
   const filteredSections = useMemo(() => {
     if (!onlyMine) return sections;
@@ -189,6 +255,11 @@ export default function GalleryClient({
                 ? ` · ${selected.size} ${t(lang, 'selectedOf')} ${selectionLimit} ${t(lang, 'selected')}`
                 : ''}
             </p>
+            {linkedEmail && (
+              <p className="mt-0.5 text-[11px] text-accent dark:text-accent-dark">
+                {t(lang, 'selectionsSaved')} · {linkedEmail}
+              </p>
+            )}
             {showLocation && locationName && (
               <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
                 {locationName}
@@ -209,6 +280,46 @@ export default function GalleryClient({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-muted dark:text-muted-dark">{t(lang, 'selectionLists')}:</span>
+              <button
+                type="button"
+                onClick={() => setActiveListId(null)}
+                className={`rounded-full border px-2 py-0.5 ${
+                  activeListId === null ? 'border-ink dark:border-ink-dark' : 'border-line'
+                }`}
+              >
+                {DEFAULT_LIST_NAME}
+              </button>
+              {lists.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  onClick={() => setActiveListId(list.id)}
+                  className={`rounded-full border px-2 py-0.5 ${
+                    activeListId === list.id ? 'border-ink dark:border-ink-dark' : 'border-line'
+                  }`}
+                >
+                  {list.name}
+                </button>
+              ))}
+              <input
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                placeholder={t(lang, 'newList')}
+                className="w-20 border-b border-line bg-transparent py-0.5 dark:border-line-dark"
+              />
+              <button type="button" onClick={createList} className="underline">
+                +
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMagicLink(true)}
+              className="underline"
+            >
+              {linkedEmail ? t(lang, 'switchDevice') : t(lang, 'saveSelections')}
+            </button>
             <button
               type="button"
               onClick={() => setOnlyMine((v) => !v)}
@@ -323,7 +434,9 @@ export default function GalleryClient({
                 href={
                   downloadConfirm === 'all'
                     ? `/dl/gallery/${slug}.zip`
-                    : `/dl/favorites/${slug}.zip`
+                    : `/dl/favorites/${slug}.zip${
+                        activeListId ? `?listId=${encodeURIComponent(activeListId)}` : ''
+                      }`
                 }
                 className="flex-1 border border-neutral-900 py-2 text-center text-xs uppercase dark:border-neutral-100"
                 onClick={() => setDownloadConfirm(null)}
@@ -333,6 +446,18 @@ export default function GalleryClient({
             </div>
           </div>
         </div>
+      )}
+
+      {showMagicLink && (
+        <MagicLinkModal
+          lang={lang}
+          initialUrl={magicLinkUrl}
+          onClose={() => {
+            setShowMagicLink(false);
+            setMagicLinkUrl(null);
+          }}
+          onRequest={requestMagicLink}
+        />
       )}
 
       {showInfoModal && (
@@ -346,6 +471,64 @@ export default function GalleryClient({
           }}
         />
       )}
+    </div>
+  );
+}
+
+function MagicLinkModal({
+  lang,
+  initialUrl,
+  onClose,
+  onRequest,
+}: {
+  lang: Lang;
+  initialUrl: string | null;
+  onClose: () => void;
+  onRequest: (email: string) => Promise<void>;
+}) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState(initialUrl);
+
+  useEffect(() => {
+    setUrl(initialUrl);
+  }, [initialUrl]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setBusy(true);
+    await onRequest(email.trim());
+    setBusy(false);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+      <div className="w-full max-w-md bg-paper p-6 dark:bg-paper-dark">
+        <h2 className="text-sm font-medium">{t(lang, 'saveSelections')}</h2>
+        {!url ? (
+          <form onSubmit={submit} className="mt-4 space-y-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t(lang, 'email')}
+              className="w-full border-b border-line bg-transparent py-2 text-sm dark:border-line-dark"
+            />
+            <button type="submit" disabled={busy} className="w-full border py-2 text-xs uppercase">
+              {t(lang, 'continue')}
+            </button>
+          </form>
+        ) : (
+          <div className="mt-4">
+            <p className="text-xs text-muted dark:text-muted-dark">{t(lang, 'magicLinkInstructions')}</p>
+            <ShareTools url={url} />
+          </div>
+        )}
+        <button type="button" onClick={onClose} className="mt-4 text-xs underline">
+          {t(lang, 'close')}
+        </button>
+      </div>
     </div>
   );
 }

@@ -38,6 +38,17 @@ export type I18nDict = {
   allSections: string;
   language: string;
   pinHint: string;
+  workSearchPlaceholder: string;
+  workClearFilters: string;
+  workResults: string;
+  workNoMatches: string;
+  selectionLists: string;
+  newList: string;
+  saveSelections: string;
+  selectionsSaved: string;
+  switchDevice: string;
+  magicLinkCopy: string;
+  magicLinkInstructions: string;
 };
 
 const en: I18nDict = {
@@ -76,6 +87,17 @@ const en: I18nDict = {
   allSections: 'All',
   language: 'Language',
   pinHint: 'Enter the gallery PIN',
+  workSearchPlaceholder: 'Search projects…',
+  workClearFilters: 'Clear filters',
+  workResults: 'Results',
+  workNoMatches: 'No work matches your filters.',
+  selectionLists: 'Lists',
+  newList: 'New list',
+  saveSelections: 'Save my selections',
+  selectionsSaved: 'Selections saved',
+  switchDevice: 'Switch device',
+  magicLinkCopy: 'Copy link',
+  magicLinkInstructions: 'Open this link on another device within 15 minutes:',
 };
 
 const nl: I18nDict = {
@@ -114,6 +136,17 @@ const nl: I18nDict = {
   allSections: 'Alles',
   language: 'Taal',
   pinHint: 'Voer de PIN van het album in',
+  workSearchPlaceholder: 'Zoek projecten…',
+  workClearFilters: 'Filters wissen',
+  workResults: 'Resultaten',
+  workNoMatches: 'Geen werk komt overeen met je filters.',
+  selectionLists: 'Lijsten',
+  newList: 'Nieuwe lijst',
+  saveSelections: 'Mijn selectie opslaan',
+  selectionsSaved: 'Selectie opgeslagen',
+  switchDevice: 'Ander apparaat',
+  magicLinkCopy: 'Link kopiëren',
+  magicLinkInstructions: 'Open deze link binnen 15 minuten op een ander apparaat:',
 };
 
 const it: I18nDict = {
@@ -152,6 +185,17 @@ const it: I18nDict = {
   allSections: 'Tutte',
   language: 'Lingua',
   pinHint: 'Inserisci il PIN della galleria',
+  workSearchPlaceholder: 'Cerca progetti…',
+  workClearFilters: 'Cancella filtri',
+  workResults: 'Risultati',
+  workNoMatches: 'Nessun lavoro corrisponde ai filtri.',
+  selectionLists: 'Liste',
+  newList: 'Nuova lista',
+  saveSelections: 'Salva le mie selezioni',
+  selectionsSaved: 'Selezioni salvate',
+  switchDevice: 'Cambia dispositivo',
+  magicLinkCopy: 'Copia link',
+  magicLinkInstructions: 'Apri questo link su un altro dispositivo entro 15 minuti:',
 };
 
 export const dictionaries: Record<Lang, I18nDict> = { en, nl, it };

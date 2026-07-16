@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { applyCreateFields } from '@/lib/gallery-fields';
+import { applyGalleryDefaults } from '@/lib/gallery-defaults';
 import { logAdmin } from '@/lib/audit-log';
 
 export async function POST(req: Request) {
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
   if (typeof body.password === 'string' && body.password.length > 0) {
     gallery.passwordHash = await bcrypt.hash(body.password, 10);
   }
+  applyGalleryDefaults(gallery, type);
   applyCreateFields(gallery, body);
   db.insert(schema.galleries).values(gallery).run();
 

@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, requireAdmin } from '@/lib/api';
+import { listNameForSelection } from '@/lib/selection-lists';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,7 @@ export async function GET(_req: Request, { params }: Params) {
       name: schema.visitors.name,
       email: schema.visitors.email,
       selectedAt: schema.selections.createdAt,
+      listId: schema.selections.listId,
     })
     .from(schema.selections)
     .innerJoin(schema.photos, eq(schema.selections.photoId, schema.photos.id))
@@ -38,13 +40,14 @@ export async function GET(_req: Request, { params }: Params) {
     .orderBy(asc(schema.photos.filename))
     .all();
 
-  const lines = ['filename,visitor_name,visitor_email,selected_at'];
+  const lines = ['filename,visitor_name,visitor_email,list_name,selected_at'];
   for (const r of rows) {
     lines.push(
       [
         csvEscape(r.filename),
         csvEscape(r.name ?? ''),
         csvEscape(r.email ?? ''),
+        csvEscape(listNameForSelection(r.listId)),
         csvEscape(new Date(r.selectedAt).toISOString()),
       ].join(','),
     );

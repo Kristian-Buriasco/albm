@@ -25,6 +25,10 @@ export type GalleryRow = {
   id: string;
   slug: string;
   title: string;
+  watermarkEnabled?: boolean;
+  downloadEnabled?: boolean;
+  showExif?: boolean;
+  folderId?: string | null;
 };
 
 export type PhotoRow = {

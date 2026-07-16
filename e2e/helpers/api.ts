@@ -107,13 +107,29 @@ export async function favoritePhoto(
   baseUrl: string,
   slug: string,
   photoId: string,
+  listId?: string | null,
 ): Promise<void> {
   const res = await request.post(`${baseUrl}/api/g/${slug}/selections`, {
-    data: { photoId },
+    data: { photoId, ...(listId ? { listId } : {}) },
   });
   if (!res.ok()) {
     throw new Error(`Favorite failed: ${res.status()} ${await res.text()}`);
   }
+}
+
+export async function createUploadToken(
+  request: APIRequestContext,
+  baseUrl: string,
+  name: string,
+): Promise<{ id: string; token: string }> {
+  const res = await request.post(`${baseUrl}/api/admin/upload-tokens`, {
+    data: { name },
+  });
+  if (!res.ok()) {
+    throw new Error(`Create token failed: ${res.status()} ${await res.text()}`);
+  }
+  const data = await res.json();
+  return { id: data.id, token: data.token };
 }
 
 export function tempImagePath(name: string): string {

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { PassThrough, Readable } from 'node:stream';
 import archiver from 'archiver';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { logDownloadEvent } from '@/lib/downloads';
 import { canViewGallery } from '@/lib/gallery-auth';
@@ -19,7 +19,7 @@ function titleSlug(title: string): string {
   );
 }
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
   const { file } = await params;
   if (!file.endsWith('.zip')) return new Response('Not found', { status: 404 });
   const slug = file.slice(0, -4);
@@ -47,6 +47,12 @@ export async function GET(_req: Request, { params }: Params) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const listIdParam = new URL(req.url).searchParams.get('listId');
+  const listFilter =
+    listIdParam && listIdParam.length > 0
+      ? eq(schema.selections.listId, listIdParam)
+      : isNull(schema.selections.listId);
+
   const selected = db
     .select({ photo: schema.photos })
     .from(schema.selections)
@@ -55,6 +61,7 @@ export async function GET(_req: Request, { params }: Params) {
       and(
         eq(schema.selections.visitorId, visitor.id),
         eq(schema.photos.status, 'ready'),
+        listFilter,
       ),
     )
     .orderBy(asc(schema.photos.sortOrder))

@@ -1,21 +1,24 @@
 import fs from 'node:fs';
 import { redirect } from 'next/navigation';
+import { getGalleryDefaults } from '@/lib/gallery-defaults';
 import { getSetting } from '@/lib/settings';
 import { watermarkPath } from '@/lib/paths';
 import { isAdmin } from '@/lib/session';
 import SettingsForm from './SettingsForm';
 import SecuritySettings from './SecuritySettings';
+import GalleryDefaultsForm from './GalleryDefaultsForm';
+import UploadTokensPanel from './UploadTokensPanel';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminSettingsPage() {
-  // Per-page auth check: the layout check alone is bypassable via RSC
-  // segment requests (layouts render in parallel with pages).
   if (!(await isAdmin())) redirect('/admin/login');
 
   return (
     <div className="space-y-16">
       <SecuritySettings />
+      <GalleryDefaultsForm initialDefaults={getGalleryDefaults()} />
+      <UploadTokensPanel />
       <SettingsForm
         initialAbout={getSetting('aboutContent') ?? ''}
         initialContact={getSetting('contactContent') ?? ''}

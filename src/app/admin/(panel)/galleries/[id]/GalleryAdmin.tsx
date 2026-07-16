@@ -312,10 +312,19 @@ export default function GalleryAdmin({
         const topFolders = new Set<string>();
         for (const f of imageFiles) {
           const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
-          const parts = rel.split('/');
-          if (parts.length > 2) topFolders.add(parts[1]);
+          const parts = rel.split('/').filter(Boolean);
+          if (parts.length >= 2) topFolders.add(parts[0]);
         }
+        const existingRes = await fetch(`/api/admin/galleries/${gallery.id}/sections`);
+        const existing: { id: string; title: string }[] = existingRes.ok
+          ? await existingRes.json()
+          : [];
         for (const folder of topFolders) {
+          const match = existing.find((s) => s.title === folder);
+          if (match) {
+            sectionMap.set(folder, match.id);
+            continue;
+          }
           const res = await fetch(`/api/admin/galleries/${gallery.id}/sections`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -329,10 +338,10 @@ export default function GalleryAdmin({
       }
       for (const file of imageFiles) {
         const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
-        const parts = rel.split('/');
+        const parts = rel.split('/').filter(Boolean);
         const sectionId =
-          folderSectionsEnabled && parts.length > 2
-            ? sectionMap.get(parts[1]) ?? null
+          folderSectionsEnabled && parts.length >= 2
+            ? sectionMap.get(parts[0]) ?? null
             : null;
         try {
           const photo = await uploadOne(file, sectionId);
@@ -663,7 +672,13 @@ export default function GalleryAdmin({
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
-            startUpload([...e.dataTransfer.files]);
+            const files = [...e.dataTransfer.files];
+            const hasSubfolders = files.some((f) => {
+              const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+              return rel.split('/').filter(Boolean).length >= 2;
+            });
+            if (hasSubfolders) startFolderUpload(files);
+            else startUpload(files);
           }}
           onClick={() => fileInputRef.current?.click()}
           className={`cursor-pointer border border-dashed px-6 py-10 text-center text-sm transition-colors ${
@@ -673,6 +688,13 @@ export default function GalleryAdmin({
           }`}
         >
           Drop JPEG/PNG files here, or click to choose
+          <p className="mt-2">
+            <ToggleSwitch
+              label="Map subfolders to sections"
+              checked={folderSectionsEnabled}
+              onChange={setFolderSectionsEnabled}
+            />
+          </p>
           <input
             ref={fileInputRef}
             type="file"
