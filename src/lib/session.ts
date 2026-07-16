@@ -24,6 +24,11 @@ export interface AdminSessionData {
   sessionId?: string;
 }
 
+/** Who is acting in the admin surface. Owner = the site owner (full trust). */
+export type Principal =
+  | { role: 'owner' }
+  | { role: 'collaborator'; collaboratorId: string };
+
 export interface GalleryAccessData {
   /** Gallery IDs this browser has unlocked with a password. */
   unlocked?: string[];
@@ -49,16 +54,24 @@ export async function getAdminSession(): Promise<IronSession<AdminSessionData>> 
   );
 }
 
-export async function isAdmin(): Promise<boolean> {
+/**
+ * Resolve the acting principal from the session, validated against the
+ * authoritative admin_sessions row (collaboratorId null = owner). Returns null
+ * when there is no valid session.
+ */
+export async function getPrincipal(): Promise<Principal | null> {
   const session = await getAdminSession();
-  if (!session.isAdmin || !session.sessionId) return false;
-  if (!touchAdminSession(session.sessionId)) return false;
-  try {
-    await session.save();
-  } catch {
-    /* read-only rendering context */
-  }
-  return true;
+  if (!session.isAdmin || !session.sessionId) return null;
+  const row = touchAdminSession(session.sessionId);
+  if (!row) return null;
+  return row.collaboratorId
+    ? { role: 'collaborator', collaboratorId: row.collaboratorId }
+    : { role: 'owner' };
+}
+
+/** True only for the OWNER. Collaborators are never "admin". */
+export async function isAdmin(): Promise<boolean> {
+  return (await getPrincipal())?.role === 'owner';
 }
 
 export async function getAdminSessionId(): Promise<string | null> {
@@ -68,12 +81,17 @@ export async function getAdminSessionId(): Promise<string | null> {
   return session.sessionId;
 }
 
-export async function issueAdminSession(meta: {
-  userAgent?: string | null;
-  ip?: string | null;
-} = {}): Promise<void> {
+export async function issueAdminSession(
+  meta: {
+    userAgent?: string | null;
+    ip?: string | null;
+  } = {},
+  principal: Principal = { role: 'owner' },
+): Promise<void> {
   const session = await getAdminSession();
-  const sessionId = createAdminSession(meta);
+  const collaboratorId =
+    principal.role === 'collaborator' ? principal.collaboratorId : null;
+  const sessionId = createAdminSession({ ...meta, collaboratorId });
   session.isAdmin = true;
   session.sessionId = sessionId;
   await session.save();

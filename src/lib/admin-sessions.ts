@@ -10,6 +10,7 @@ function hashCoarse(value: string): string {
 export function createAdminSession(meta: {
   userAgent?: string | null;
   ip?: string | null;
+  collaboratorId?: string | null;
 }): string {
   const id = nanoid();
   const now = Date.now();
@@ -21,25 +22,32 @@ export function createAdminSession(meta: {
       lastSeenAt: now,
       userAgentHash: meta.userAgent ? hashCoarse(meta.userAgent) : null,
       ipHash: meta.ip ? hashCoarse(meta.ip) : null,
+      collaboratorId: meta.collaboratorId ?? null,
     })
     .run();
   return id;
 }
 
-/** Returns true when the session id is active (exists and not revoked). */
-export function touchAdminSession(id: string): boolean {
+/**
+ * Validate an active session id. Returns the authoritative principal from the
+ * DB row (collaboratorId null = owner), or null if the session is
+ * missing/revoked. Bumps lastSeenAt as a side effect.
+ */
+export function touchAdminSession(
+  id: string,
+): { collaboratorId: string | null } | null {
   const db = getDb();
   const row = db
     .select()
     .from(schema.adminSessions)
     .where(and(eq(schema.adminSessions.id, id), isNull(schema.adminSessions.revokedAt)))
     .get();
-  if (!row) return false;
+  if (!row) return null;
   db.update(schema.adminSessions)
     .set({ lastSeenAt: Date.now() })
     .where(eq(schema.adminSessions.id, id))
     .run();
-  return true;
+  return { collaboratorId: row.collaboratorId ?? null };
 }
 
 export function revokeAdminSession(id: string): boolean {

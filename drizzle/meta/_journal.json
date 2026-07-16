@@ -127,6 +127,13 @@
       "when": 1784023200000,
       "tag": "0017_fixes7_phase3",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1784026800000,
+      "tag": "0018_collaborators",
+      "breakpoints": true
     }
   ]
 }

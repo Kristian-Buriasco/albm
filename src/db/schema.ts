@@ -173,6 +173,8 @@ export const photos = sqliteTable(
     contentHash: text('content_hash'),
     isRaw: integer('is_raw', { mode: 'boolean' }).notNull().default(false),
     format: text('format'),
+    /** Principal who uploaded: null = owner, else a collaborators.id. */
+    uploadedBy: text('uploaded_by'),
     ...timestamps,
   },
   (t) => [unique().on(t.galleryId, t.filename)],
@@ -387,6 +389,8 @@ export const adminCredentials = sqliteTable(
     counter: integer('counter').notNull().default(0),
     transports: text('transports'),
     label: text('label').notNull(),
+    /** null = owner credential; else the collaborators.id it authenticates. */
+    collaboratorId: text('collaborator_id'),
     createdAt: integer('created_at')
       .notNull()
       .$defaultFn(() => Date.now()),
@@ -447,6 +451,10 @@ export const auditLog = sqliteTable(
     targetType: text('target_type'),
     targetId: text('target_id'),
     summary: text('summary').notNull(),
+    /** Who acted: 'owner' (default, incl. legacy rows) or 'collaborator'. */
+    actorType: text('actor_type').notNull().default('owner'),
+    /** collaborators.id when actorType='collaborator'; null for owner. */
+    actorId: text('actor_id'),
   },
   (t) => [
     index('audit_log_at_idx').on(t.at),
@@ -513,10 +521,72 @@ export const adminSessions = sqliteTable(
       .$defaultFn(() => Date.now()),
     userAgentHash: text('user_agent_hash'),
     ipHash: text('ip_hash'),
+    /** null = owner session; else the collaborators.id acting. */
+    collaboratorId: text('collaborator_id'),
     revokedAt: integer('revoked_at'),
   },
   (t) => [index('admin_sessions_revoked_idx').on(t.revokedAt)],
 );
+
+/** A person granted scoped access to specific galleries (not the owner). */
+export const collaborators = sqliteTable('collaborators', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  name: text('name'),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  lastLoginAt: integer('last_login_at'),
+  /** When set, the collaborator is hard-disabled and cannot authenticate. */
+  disabledAt: integer('disabled_at'),
+});
+
+/**
+ * A grant on one gallery. kind='collaborator' → collaboratorId set (account);
+ * kind='contributor' → tokenHash set (account-less link, Contributor tier —
+ * schema present now, feature built later). capabilities is a JSON string array.
+ */
+export const galleryGrants = sqliteTable(
+  'gallery_grants',
+  {
+    id: text('id').primaryKey(),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['collaborator', 'contributor'] }).notNull(),
+    collaboratorId: text('collaborator_id').references(() => collaborators.id, {
+      onDelete: 'cascade',
+    }),
+    tokenHash: text('token_hash'),
+    capabilities: text('capabilities').notNull().default('["upload","organize"]'),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    createdBy: text('created_by'),
+    revokedAt: integer('revoked_at'),
+  },
+  (t) => [
+    index('gallery_grants_gallery_idx').on(t.galleryId),
+    index('gallery_grants_collaborator_idx').on(t.collaboratorId),
+  ],
+);
+
+/** Single-use invite tokens for onboarding a collaborator (hashed). */
+export const collaboratorInvites = sqliteTable('collaborator_invites', {
+  id: text('id').primaryKey(),
+  collaboratorId: text('collaborator_id')
+    .notNull()
+    .references(() => collaborators.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  usedAt: integer('used_at'),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+});
+
+export type Collaborator = typeof collaborators.$inferSelect;
+export type GalleryGrant = typeof galleryGrants.$inferSelect;
 
 export type GalleryFolder = typeof galleryFolders.$inferSelect;
 

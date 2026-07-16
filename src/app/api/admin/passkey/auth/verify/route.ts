@@ -14,6 +14,7 @@ import {
 import { consumeAuthChallenge } from '@/lib/passkey-challenge';
 import { expectedOrigin, rpId } from '@/lib/webauthn-config';
 import { issueAdminSession } from '@/lib/session';
+import { getCollaborator, markCollaboratorLogin } from '@/lib/collaborators';
 
 const RL_SCOPE = 'admin-passkey-auth';
 
@@ -90,11 +91,23 @@ export async function POST(req: Request) {
     return errorJson('Passkey verification failed', 401);
   }
 
+  // Resolve the credential's principal. A collaborator credential logs in the
+  // collaborator (never the owner); a disabled collaborator is refused.
+  const collaboratorId = stored.collaboratorId ?? null;
+  if (collaboratorId) {
+    const collab = getCollaborator(collaboratorId);
+    if (!collab || collab.disabledAt) {
+      recordFailure(RL_SCOPE, ip);
+      return errorJson('Passkey verification failed', 401);
+    }
+  }
+
   clearFailures(RL_SCOPE, ip);
   updatePasskeyAfterAuth(stored.id, newCounter, Date.now());
-  await issueAdminSession({
-    userAgent: req.headers.get('user-agent'),
-    ip,
-  });
-  return json({ ok: true });
+  if (collaboratorId) markCollaboratorLogin(collaboratorId);
+  await issueAdminSession(
+    { userAgent: req.headers.get('user-agent'), ip },
+    collaboratorId ? { role: 'collaborator', collaboratorId } : { role: 'owner' },
+  );
+  return json({ ok: true, role: collaboratorId ? 'collaborator' : 'owner' });
 }
