@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { applyCreateFields } from '@/lib/gallery-fields';
+import { logAdmin } from '@/lib/audit-log';
 
 export async function POST(req: Request) {
   const denied = await requireAdmin();
@@ -41,6 +42,12 @@ export async function POST(req: Request) {
   }
   applyCreateFields(gallery, body);
   db.insert(schema.galleries).values(gallery).run();
+
+  logAdmin('gallery.create', {
+    targetType: 'gallery',
+    targetId: gallery.id,
+    summary: `Created ${type} gallery "${title}"`,
+  });
 
   const row = db
     .select()

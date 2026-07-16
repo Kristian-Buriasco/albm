@@ -4,6 +4,7 @@ import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { isGalleryExpired } from '@/lib/downloads';
 import { galleryDir, originalPath, thumbPath, webPath } from '@/lib/paths';
+import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -36,6 +37,11 @@ export async function POST(req: Request, { params }: Params) {
       .set({ published: false, updatedAt: Date.now() })
       .where(eq(schema.galleries.id, id))
       .run();
+    logAdmin('gallery.cleanup.unpublish', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Unpublished expired gallery "${gallery.title}"`,
+    });
     return json({ ok: true, action });
   }
 
@@ -54,12 +60,22 @@ export async function POST(req: Request, { params }: Params) {
         fs.rmSync(path, { force: true });
       }
     }
+    logAdmin('gallery.cleanup.delete-photos', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Deleted photo files from expired gallery "${gallery.title}" (${photos.length} photos)`,
+    });
     return json({ ok: true, action, removed: photos.length });
   }
 
   if (action === 'delete') {
     db.delete(schema.galleries).where(eq(schema.galleries.id, id)).run();
     fs.rmSync(galleryDir(id), { recursive: true, force: true });
+    logAdmin('gallery.cleanup.delete', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Deleted expired gallery "${gallery.title}" via cleanup`,
+    });
     return json({ ok: true, action });
   }
 

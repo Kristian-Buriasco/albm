@@ -288,6 +288,22 @@ export const galleryTags = sqliteTable(
   (t) => [primaryKey({ columns: [t.galleryId, t.tagId] })],
 );
 
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    at: integer('at').notNull(),
+    action: text('action').notNull(),
+    targetType: text('target_type'),
+    targetId: text('target_id'),
+    summary: text('summary').notNull(),
+  },
+  (t) => [
+    index('audit_log_at_idx').on(t.at),
+    index('audit_log_action_idx').on(t.action),
+  ],
+);
+
 export type Gallery = typeof galleries.$inferSelect;
 export type Section = typeof sections.$inferSelect;
 export type Photo = typeof photos.$inferSelect;

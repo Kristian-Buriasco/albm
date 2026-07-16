@@ -6,6 +6,7 @@ import { insertPasskey, passkeyCount } from '@/lib/passkey-store';
 import { consumeRegisterChallenge } from '@/lib/passkey-challenge';
 import { expectedOrigin, rpId } from '@/lib/webauthn-config';
 import { regenerateRecoveryCodes } from '@/lib/recovery-codes';
+import { logAdmin } from '@/lib/audit-log';
 
 const LABEL_MAX = 100;
 
@@ -76,6 +77,12 @@ export async function POST(req: Request) {
   if (isFirst) {
     recoveryCodes = await regenerateRecoveryCodes();
   }
+
+  logAdmin('passkey.add', {
+    targetType: 'passkey',
+    targetId: credential.id.slice(0, 16),
+    summary: `Registered passkey "${trimmedLabel}"`,
+  });
 
   return json({ ok: true, recoveryCodes });
 }

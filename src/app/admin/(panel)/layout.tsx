@@ -29,6 +29,12 @@ export default async function AdminLayout({
               )}
             </Link>
             <Link
+              href="/admin/audit"
+              className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+            >
+              Audit
+            </Link>
+            <Link
               href="/admin/settings"
               className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
             >

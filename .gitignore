@@ -26,3 +26,11 @@ graphify-out
 
 # demo/screenshot generation
 demo-data/
+
+# e2e throwaway runtime
+/e2e/.data/
+/e2e/.tmp/
+/e2e/.test-env.json
+/e2e/.server-pid/
+/test-results/
+/playwright-report/

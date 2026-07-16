@@ -3,6 +3,9 @@ import { errorJson, json, requireAdmin } from '@/lib/api';
 import { detectImageType } from '@/lib/files';
 import { watermarkPath } from '@/lib/paths';
 import { getSetting, setSetting } from '@/lib/settings';
+import { logAdmin } from '@/lib/audit-log';
+
+export const dynamic = 'force-dynamic';
 
 const SHORT_MAX = 200;
 const INTRO_MAX = 2000;
@@ -46,6 +49,10 @@ export async function POST(req: Request) {
       return errorJson('Watermark must be a PNG', 415);
     }
     fs.writeFileSync(watermarkPath(), buf);
+    logAdmin('settings.watermark.upload', {
+      targetType: 'settings',
+      summary: 'Uploaded site watermark PNG',
+    });
     return json({ ok: true });
   }
 
@@ -90,6 +97,10 @@ export async function POST(req: Request) {
     const lang = body.defaultLanguage === 'nl' || body.defaultLanguage === 'it' ? body.defaultLanguage : 'en';
     setSetting('defaultLanguage', lang);
   }
+  logAdmin('settings.update', {
+    targetType: 'settings',
+    summary: 'Updated site settings',
+  });
   return json({ ok: true });
 }
 
@@ -97,5 +108,9 @@ export async function DELETE() {
   const denied = await requireAdmin();
   if (denied) return denied;
   fs.rmSync(watermarkPath(), { force: true });
+  logAdmin('settings.watermark.remove', {
+    targetType: 'settings',
+    summary: 'Removed site watermark PNG',
+  });
   return json({ ok: true });
 }

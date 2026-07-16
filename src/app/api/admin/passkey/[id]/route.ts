@@ -5,6 +5,7 @@ import {
   getPasskeyById,
   renamePasskey,
 } from '@/lib/passkey-store';
+import { logAdmin } from '@/lib/audit-log';
 
 const LABEL_MAX = 100;
 
@@ -56,5 +57,10 @@ export async function DELETE(
   }
 
   deletePasskey(id);
+  logAdmin('passkey.remove', {
+    targetType: 'passkey',
+    targetId: id,
+    summary: `Removed passkey "${passkey.label}"`,
+  });
   return json({ ok: true });
 }

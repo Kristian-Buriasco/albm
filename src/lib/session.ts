@@ -7,9 +7,9 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 const baseCookieOptions = {
   httpOnly: true,
   sameSite: 'lax' as const,
-  // TLS is terminated upstream, but `secure` governs browser behavior and
-  // production browsers only ever see HTTPS. Plain http stays allowed in dev.
-  secure: process.env.NODE_ENV === 'production',
+  // TLS is terminated upstream in production; allow COOKIE_SECURE=0 for local E2E over http.
+  secure:
+    process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== '0',
   path: '/',
 };
 

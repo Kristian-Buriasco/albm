@@ -7,6 +7,7 @@ import { parseGalleryUpdates } from '@/lib/gallery-fields';
 import { galleryDir } from '@/lib/paths';
 import { hashPin, isValidPinFormat } from '@/lib/pin';
 import { reprocessPhoto, shouldReprocessWatermark } from '@/lib/queue';
+import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -56,6 +57,40 @@ export async function PATCH(req: Request, { params }: Params) {
   updates.updatedAt = Date.now();
   db.update(schema.galleries).set(updates).where(eq(schema.galleries.id, id)).run();
 
+  if ('published' in body && typeof body.published === 'boolean') {
+    logAdmin(body.published ? 'gallery.publish' : 'gallery.unpublish', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `${body.published ? 'Published' : 'Unpublished'} gallery "${gallery.title}"`,
+    });
+  }
+  if ('password' in body) {
+    const cleared =
+      body.password === null ||
+      body.password === '' ||
+      (typeof body.password === 'string' && body.password.length === 0);
+    logAdmin(cleared ? 'gallery.password.clear' : 'gallery.password.set', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `${cleared ? 'Cleared' : 'Set'} password for "${gallery.title}"`,
+    });
+  }
+  if ('pin' in body) {
+    const cleared = body.pin === null || body.pin === '';
+    logAdmin(cleared ? 'gallery.pin.clear' : 'gallery.pin.set', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `${cleared ? 'Cleared' : 'Set'} PIN for "${gallery.title}"`,
+    });
+  }
+  if ('pinEnabled' in body && typeof body.pinEnabled === 'boolean') {
+    logAdmin('gallery.pin.toggle', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `PIN access ${body.pinEnabled ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
+
   if (needsReprocess) {
     const photoRows = db
       .select({ id: schema.photos.id })
@@ -88,6 +123,12 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   db.delete(schema.galleries).where(eq(schema.galleries.id, id)).run();
   fs.rmSync(galleryDir(id), { recursive: true, force: true });
+
+  logAdmin('gallery.delete', {
+    targetType: 'gallery',
+    targetId: id,
+    summary: `Deleted gallery "${gallery.title}"`,
+  });
 
   return json({ ok: true });
 }
