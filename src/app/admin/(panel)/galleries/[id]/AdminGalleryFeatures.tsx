@@ -63,13 +63,21 @@ function AdminSelectableThumb({
   );
 }
 
-function PreviewPhotoPicker({
+function PhotoPicker({
   galleryId,
+  field,
   currentId,
+  label,
+  hint,
+  clearLabel,
   patchGallery,
 }: {
   galleryId: string;
+  field: 'coverPhotoId' | 'previewPhotoId';
   currentId: string | null;
+  label: string;
+  hint: string;
+  clearLabel: string;
   patchGallery: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -85,7 +93,7 @@ function PreviewPhotoPicker({
   }, [galleryId]);
 
   async function pick(id: string | null) {
-    const ok = await patchGallery({ previewPhotoId: id });
+    const ok = await patchGallery({ [field]: id });
     if (ok) setSelected(id);
   }
 
@@ -94,14 +102,14 @@ function PreviewPhotoPicker({
   return (
     <div className="mt-1">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs text-neutral-500">Preview photo</span>
+        <span className="text-xs text-neutral-500">{label}</span>
         {selected && (
           <button
             type="button"
             onClick={() => pick(null)}
             className="text-[11px] text-accent dark:text-accent-dark"
           >
-            Use cover
+            {clearLabel}
           </button>
         )}
       </div>
@@ -132,9 +140,7 @@ function PreviewPhotoPicker({
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-neutral-400">
-        Pick which photo shows when the link is shared. Defaults to the cover.
-      </p>
+      <p className="text-[11px] text-neutral-400">{hint}</p>
     </div>
   );
 }
@@ -303,6 +309,15 @@ export function AdminExtraSettings({
       <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
         Extended settings
       </h2>
+      <PhotoPicker
+        galleryId={gallery.id}
+        field="coverPhotoId"
+        currentId={gallery.coverPhotoId}
+        label="Cover photo (shown on the site)"
+        hint="Pick which photo represents this gallery on the homepage and grids. Defaults to the first photo."
+        clearLabel="Use first photo"
+        patchGallery={patchGallery}
+      />
       <CoverFocusPicker gallery={gallery} photos={photos} patchGallery={patchGallery} />
       <AdminGalleryTags galleryId={gallery.id} />
       <SegmentedControl
@@ -372,9 +387,13 @@ export function AdminExtraSettings({
         </p>
       )}
       {gallery.socialPreview && (
-        <PreviewPhotoPicker
+        <PhotoPicker
           galleryId={gallery.id}
+          field="previewPhotoId"
           currentId={gallery.previewPhotoId}
+          label="Link preview photo"
+          hint="Pick which photo shows when the link is shared. Defaults to the cover."
+          clearLabel="Use cover"
           patchGallery={patchGallery}
         />
       )}

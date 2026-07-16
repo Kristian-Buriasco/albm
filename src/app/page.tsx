@@ -7,7 +7,6 @@ import { getSetting } from '@/lib/settings';
 import {
   coverPhotoId,
   getPublishedPortfolioGalleries,
-  getSelectedWorkGalleries,
 } from '@/lib/public-data';
 import { coverObjectPosition } from '@/lib/cover-focus';
 import { sitePersonName } from '@/lib/feed-data';
@@ -64,13 +63,18 @@ function WorkGrid({ items, startIndex = 0 }: { items: Item[]; startIndex?: numbe
 }
 
 export default function HomePage() {
-  const featured = getSelectedWorkGalleries();
+  const allPortfolios = getPublishedPortfolioGalleries();
+  const featured = allPortfolios.filter((g) => g.featured);
   const toItems = (gs: Gallery[]): Item[] =>
     gs.map((g) => ({ gallery: g, cover: coverPhotoId(g) }));
   const workItems = toItems(featured);
-  const heroSource = getPublishedPortfolioGalleries();
+  // Everything published that isn't featured still shows, under "More Work" —
+  // so a portfolio nobody has curated as featured is never invisible.
+  const otherItems = toItems(allPortfolios.filter((g) => !g.featured));
   const heroItem =
-    toItems(heroSource).find((g) => g.cover) ?? workItems.find((g) => g.cover) ?? null;
+    toItems(allPortfolios).find((g) => g.cover) ??
+    workItems.find((g) => g.cover) ??
+    null;
 
   const eyebrow = getSetting('homeEyebrow') || 'Photographer';
   const headline = getSetting('homeHeadline') || 'The moment, kept.';
@@ -79,6 +83,13 @@ export default function HomePage() {
     'Editorial, event, and portrait photography — with private, proof-ready galleries for clients.';
 
   const hasFeatured = workItems.length > 0;
+  const hasOthers = otherItems.length > 0;
+  // "More Work" only gets its own heading when it sits under a Selected Work
+  // section; if nothing is featured, the non-featured work is the only grid
+  // and carries the main "Selected Work" heading instead.
+  const primaryItems = hasFeatured ? workItems : otherItems;
+  const primaryLabel = 'Selected Work';
+  const secondaryItems = hasFeatured ? otherItems : [];
 
   return (
     <div>
@@ -145,15 +156,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      {hasFeatured && (
+      {(hasFeatured || hasOthers) && (
         <section id="work" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
           <div className="mb-10 flex items-baseline justify-between">
-            <h2 className="display text-2xl font-semibold">Selected Work</h2>
+            <h2 className="display text-2xl font-semibold">{primaryLabel}</h2>
             <span className="text-[12px] text-muted dark:text-muted-dark">
-              {workItems.length} {workItems.length === 1 ? 'project' : 'projects'}
+              {primaryItems.length}{' '}
+              {primaryItems.length === 1 ? 'project' : 'projects'}
             </span>
           </div>
-          <WorkGrid items={workItems} />
+          <WorkGrid items={primaryItems} />
+
+          {secondaryItems.length > 0 && (
+            <div className="mt-20 md:mt-28">
+              <div className="mb-10 flex items-baseline justify-between">
+                <h2 className="display text-2xl font-semibold">More Work</h2>
+                <span className="text-[12px] text-muted dark:text-muted-dark">
+                  {secondaryItems.length}{' '}
+                  {secondaryItems.length === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
+              <WorkGrid items={secondaryItems} startIndex={primaryItems.length} />
+            </div>
+          )}
         </section>
       )}
       <SiteFooter />
