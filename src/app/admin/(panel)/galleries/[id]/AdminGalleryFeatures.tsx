@@ -63,6 +63,98 @@ function AdminSelectableThumb({
   );
 }
 
+function FaceBatchPanel({
+  galleryId,
+  initialStatus,
+}: {
+  galleryId: string;
+  initialStatus: string;
+}) {
+  const [status, setStatus] = useState(initialStatus);
+  const [done, setDone] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [faceCount, setFaceCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const res = await fetch(`/api/admin/galleries/${galleryId}/face-batch`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setStatus(data.status);
+    setDone(data.done ?? 0);
+    setTotal(data.total ?? 0);
+    setFaceCount(data.faceCount ?? 0);
+    setError(data.error ?? null);
+  }, [galleryId]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (status !== 'running') return;
+    const id = setInterval(() => void refresh(), 2000);
+    return () => clearInterval(id);
+  }, [status, refresh]);
+
+  async function startBatch() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/galleries/${galleryId}/face-batch`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Failed to start');
+        return;
+      }
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function purge() {
+    if (!confirm('Purge all face embeddings for this gallery?')) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/admin/galleries/${galleryId}/face-batch`, { method: 'DELETE' });
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+      <p className="text-xs font-medium text-neutral-500">Face embedding batch</p>
+      <p className="text-[11px] text-neutral-400">
+        Status: {status}
+        {total > 0 ? ` · ${done}/${total}` : ''}
+        {` · ${faceCount} face vector(s)`}
+      </p>
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={busy || status === 'running'}
+          onClick={() => void startBatch()}
+          className="border border-neutral-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-neutral-700"
+        >
+          Run batch
+        </button>
+        <button
+          type="button"
+          disabled={busy || faceCount === 0}
+          onClick={() => void purge()}
+          className="border border-neutral-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-neutral-700"
+        >
+          Purge embeddings
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PhotoPicker({
   galleryId,
   field,
@@ -512,6 +604,35 @@ export function AdminExtraSettings({
           <p className="-mt-1 text-[11px] text-neutral-400">
             GPS is stripped by default. Enable both keep-EXIF and allow-GPS only when clients need
             location metadata.
+          </p>
+          <ToggleSwitch
+            label="Bib-number search"
+            checked={gallery.bibSearch}
+            onChange={(v) => patchGallery({ bibSearch: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            OCR digit detection at upload (derivative queue). Public search at /g/…/find. Copy says
+            “photos matching #N” — never asserts identity.
+          </p>
+          <ToggleSwitch
+            label="Face search (batch)"
+            checked={gallery.faceSearch}
+            onChange={(v) => patchGallery({ faceSearch: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            Overnight/manual embedding batch. Selfies are never stored. Attendees see a biometric
+            notice. Purge embeddings anytime below.
+          </p>
+          {gallery.faceSearch && (
+            <FaceBatchPanel galleryId={gallery.id} initialStatus={gallery.faceBatchStatus} />
+          )}
+          <ToggleSwitch
+            label="Public event page"
+            checked={gallery.eventPage}
+            onChange={(v) => patchGallery({ eventPage: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            Venue landing at /g/…/event with bib/selfie search. ShareTools QR can point at it.
           </p>
         </>
       )}

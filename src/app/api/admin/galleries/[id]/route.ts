@@ -120,6 +120,27 @@ export async function PATCH(req: Request, { params }: Params) {
       summary: `Auto-publish on upload ${body.autoPublishOnUpload ? 'enabled' : 'disabled'} for "${gallery.title}"`,
     });
   }
+  if ('bibSearch' in body && typeof body.bibSearch === 'boolean') {
+    logAdmin('gallery.bib_search.toggle', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Bib search ${body.bibSearch ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
+  if ('faceSearch' in body && typeof body.faceSearch === 'boolean') {
+    logAdmin('gallery.face_search.toggle', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Face search ${body.faceSearch ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
+  if ('eventPage' in body && typeof body.eventPage === 'boolean') {
+    logAdmin('gallery.event_page.toggle', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Event page ${body.eventPage ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
 
   if (needsReprocess) {
     const photoRows = db

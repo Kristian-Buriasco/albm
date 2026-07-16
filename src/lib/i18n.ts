@@ -61,6 +61,23 @@ export type I18nDict = {
   downloadSizePrint: string;
   downloadSizeOriginal: string;
   downloadSizeLabel: string;
+  findYourPhotos: string;
+  bibSearchLabel: string;
+  bibSearchPlaceholder: string;
+  bibSearchButton: string;
+  bibMatching: string;
+  bibNoMatches: string;
+  faceSearchLabel: string;
+  faceSearchHint: string;
+  faceSearchButton: string;
+  faceSearching: string;
+  faceNoMatches: string;
+  faceNotice: string;
+  saveMatches: string;
+  matchesSaved: string;
+  eventGetPhotos: string;
+  browseGallery: string;
+  findNearbyHint: string;
 };
 
 const en: I18nDict = {
@@ -123,6 +140,24 @@ const en: I18nDict = {
   downloadSizePrint: 'Print',
   downloadSizeOriginal: 'Original',
   downloadSizeLabel: 'Download size',
+  findYourPhotos: 'Find your photos',
+  bibSearchLabel: 'Bib number',
+  bibSearchPlaceholder: 'e.g. 247',
+  bibSearchButton: 'Search',
+  bibMatching: 'Photos matching #{number}',
+  bibNoMatches: 'No photos matching #{number}',
+  faceSearchLabel: 'Find by selfie',
+  faceSearchHint: 'Your selfie is processed in memory and never stored.',
+  faceSearchButton: 'Search with selfie',
+  faceSearching: 'Searching…',
+  faceNoMatches: 'No matching photos found.',
+  faceNotice:
+    'This gallery uses face matching. Embeddings are stored only for photos in this gallery and are deleted when the gallery is removed.',
+  saveMatches: 'Save to my favorites',
+  matchesSaved: 'Saved to your favorites',
+  eventGetPhotos: 'Get your photos',
+  browseGallery: 'Browse full gallery',
+  findNearbyHint: 'OCR can miss numbers — try nearby bibs if nothing shows up.',
 };
 
 const nl: I18nDict = {
@@ -185,6 +220,24 @@ const nl: I18nDict = {
   downloadSizePrint: 'Print',
   downloadSizeOriginal: 'Origineel',
   downloadSizeLabel: 'Downloadgrootte',
+  findYourPhotos: 'Vind je foto’s',
+  bibSearchLabel: 'Startnummer',
+  bibSearchPlaceholder: 'bijv. 247',
+  bibSearchButton: 'Zoeken',
+  bibMatching: 'Foto’s met #{number}',
+  bibNoMatches: 'Geen foto’s met #{number}',
+  faceSearchLabel: 'Zoeken met selfie',
+  faceSearchHint: 'Je selfie wordt alleen in het geheugen verwerkt en niet opgeslagen.',
+  faceSearchButton: 'Zoek met selfie',
+  faceSearching: 'Zoeken…',
+  faceNoMatches: 'Geen overeenkomende foto’s gevonden.',
+  faceNotice:
+    'Deze galerij gebruikt gezichtsherkenning. Embeddings blijven alleen bij foto’s in deze galerij en worden verwijderd als de galerij wordt gewist.',
+  saveMatches: 'Opslaan in favorieten',
+  matchesSaved: 'Opgeslagen in je favorieten',
+  eventGetPhotos: 'Haal je foto’s op',
+  browseGallery: 'Bekijk volledige galerij',
+  findNearbyHint: 'OCR kan nummers missen — probeer een dichtbijgelegen nummer.',
 };
 
 const it: I18nDict = {
@@ -247,6 +300,24 @@ const it: I18nDict = {
   downloadSizePrint: 'Stampa',
   downloadSizeOriginal: 'Originale',
   downloadSizeLabel: 'Dimensione download',
+  findYourPhotos: 'Trova le tue foto',
+  bibSearchLabel: 'Numero di pettorale',
+  bibSearchPlaceholder: 'es. 247',
+  bibSearchButton: 'Cerca',
+  bibMatching: 'Foto con #{number}',
+  bibNoMatches: 'Nessuna foto con #{number}',
+  faceSearchLabel: 'Cerca con selfie',
+  faceSearchHint: 'Il selfie viene elaborato solo in memoria e non viene salvato.',
+  faceSearchButton: 'Cerca con selfie',
+  faceSearching: 'Ricerca…',
+  faceNoMatches: 'Nessuna foto corrispondente.',
+  faceNotice:
+    'Questa galleria usa il riconoscimento facciale. Gli embedding restano solo per le foto di questa galleria e vengono eliminati quando la galleria viene rimossa.',
+  saveMatches: 'Salva nei preferiti',
+  matchesSaved: 'Salvato nei preferiti',
+  eventGetPhotos: 'Ottieni le tue foto',
+  browseGallery: 'Sfoglia la galleria',
+  findNearbyHint: 'L’OCR può sbagliare — prova un numero vicino se non trovi nulla.',
 };
 
 export const dictionaries: Record<Lang, I18nDict> = { en, nl, it };

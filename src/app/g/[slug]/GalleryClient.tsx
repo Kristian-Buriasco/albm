@@ -31,6 +31,9 @@ interface Props {
   downloadOfferWeb?: boolean;
   downloadOfferPrint?: boolean;
   downloadOfferOriginal?: boolean;
+  bibSearch?: boolean;
+  faceSearch?: boolean;
+  eventPage?: boolean;
   sections: SectionGroup[];
   hasVisitor: boolean;
   initialSelectedIds: string[];
@@ -59,6 +62,9 @@ export default function GalleryClient({
   downloadOfferWeb = false,
   downloadOfferPrint = false,
   downloadOfferOriginal = true,
+  bibSearch = false,
+  faceSearch = false,
+  eventPage = false,
   sections: initialSections,
   hasVisitor,
   initialSelectedIds,
@@ -310,6 +316,16 @@ export default function GalleryClient({
                   }`}
                 />
                 {t(lang, 'liveUpdating')}
+              </p>
+            )}
+            {(bibSearch || faceSearch || eventPage) && (
+              <p className="mt-0.5 text-[11px]">
+                <a
+                  href={eventPage ? `/g/${slug}/event` : `/g/${slug}/find`}
+                  className="text-muted underline underline-offset-2 hover:text-ink dark:text-muted-dark"
+                >
+                  {t(lang, 'findYourPhotos')}
+                </a>
               </p>
             )}
             <p className="mt-0.5 text-[11px] text-muted dark:text-muted-dark">

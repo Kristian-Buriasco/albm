@@ -131,6 +131,17 @@ async function generateDerivatives(photoId: string): Promise<void> {
       /* optional */
     }
 
+    // 3A: bib OCR in derivative queue (soft-fail). Keep before ready so search
+    // sees digits as soon as the photo is ready when bibSearch is on.
+    if (gallery.bibSearch) {
+      try {
+        const { detectAndStoreBibs } = await import('@/lib/bib-ocr');
+        await detectAndStoreBibs(photoId, photo.galleryId, webOut);
+      } catch (err) {
+        console.error(`[bib-ocr] soft-fail photo ${photoId}:`, err);
+      }
+    }
+
     getDb()
       .update(schema.photos)
       .set({

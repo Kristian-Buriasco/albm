@@ -498,7 +498,20 @@ export default function GalleryAdmin({
             {shareUrl}
           </code>
           {isClientGallery ? (
-            <ShareTools url={shareUrl} />
+            <>
+              <ShareTools url={shareUrl} />
+              {gallery.eventPage && (
+                <div className="mt-2 w-full border-t border-neutral-200 pt-2 dark:border-neutral-800">
+                  <p className="mb-1 text-[10px] tracking-wide text-neutral-500 uppercase">
+                    Event page QR
+                  </p>
+                  <code className="mb-1 block max-w-[16rem] truncate rounded bg-neutral-100 px-2 py-1 dark:bg-neutral-900">
+                    {`${shareUrl}/event`}
+                  </code>
+                  <ShareTools url={`${shareUrl}/event`} />
+                </div>
+              )}
+            </>
           ) : (
             <button
               type="button"

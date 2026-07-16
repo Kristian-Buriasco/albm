@@ -25,6 +25,9 @@ const BOOL_KEYS = [
   'downloadOfferOriginal',
   'keepExifOnDownload',
   'allowGpsInDownload',
+  'bibSearch',
+  'faceSearch',
+  'eventPage',
 ] as const;
 
 export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInsert {

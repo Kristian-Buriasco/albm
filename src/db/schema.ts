@@ -109,6 +109,21 @@ export const galleries = sqliteTable('galleries', {
   allowGpsInDownload: integer('allow_gps_in_download', { mode: 'boolean' })
     .notNull()
     .default(false),
+  /** [option] OCR bib-number detection at upload. Default off. */
+  bibSearch: integer('bib_search', { mode: 'boolean' }).notNull().default(false),
+  /** [option] Face embedding batch + selfie search. Default off. */
+  faceSearch: integer('face_search', { mode: 'boolean' }).notNull().default(false),
+  /** [option] Public event landing page + venue QR. Default off. */
+  eventPage: integer('event_page', { mode: 'boolean' }).notNull().default(false),
+  faceBatchStatus: text('face_batch_status', {
+    enum: ['idle', 'running', 'done', 'error'],
+  })
+    .notNull()
+    .default('idle'),
+  faceBatchDone: integer('face_batch_done').notNull().default(0),
+  faceBatchTotal: integer('face_batch_total').notNull().default(0),
+  faceBatchError: text('face_batch_error'),
+  faceBatchUpdatedAt: integer('face_batch_updated_at'),
   ...timestamps,
 });
 
@@ -281,6 +296,57 @@ export const downloadMarks = sqliteTable(
     unique().on(t.markKey),
     index('download_marks_photo_idx').on(t.photoId),
     index('download_marks_at_idx').on(t.at),
+  ],
+);
+
+/** Detected bib / race numbers from OCR (3A). */
+export const photoBibs = sqliteTable(
+  'photo_bibs',
+  {
+    id: text('id').primaryKey(),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => photos.id, { onDelete: 'cascade' }),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    number: text('number').notNull(),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [
+    index('photo_bibs_gallery_number_idx').on(t.galleryId, t.number),
+    index('photo_bibs_photo_idx').on(t.photoId),
+    unique('photo_bibs_photo_number_idx').on(t.photoId, t.number),
+  ],
+);
+
+/** Face embeddings from overnight batch (3B). Biometric — purge on gallery delete. */
+export const photoFaces = sqliteTable(
+  'photo_faces',
+  {
+    id: text('id').primaryKey(),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => photos.id, { onDelete: 'cascade' }),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    faceIdx: integer('face_idx').notNull(),
+    embedding: blob('embedding', { mode: 'buffer' }).notNull(),
+    bboxX: integer('bbox_x').notNull(),
+    bboxY: integer('bbox_y').notNull(),
+    bboxW: integer('bbox_w').notNull(),
+    bboxH: integer('bbox_h').notNull(),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [
+    index('photo_faces_gallery_idx').on(t.galleryId),
+    index('photo_faces_photo_idx').on(t.photoId),
+    unique('photo_faces_photo_face_idx').on(t.photoId, t.faceIdx),
   ],
 );
 

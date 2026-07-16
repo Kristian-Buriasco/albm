@@ -152,6 +152,9 @@ export default async function ClientGalleryPage({
       downloadOfferWeb={gallery.downloadOfferWeb}
       downloadOfferPrint={gallery.downloadOfferPrint}
       downloadOfferOriginal={gallery.downloadOfferOriginal}
+      bibSearch={gallery.bibSearch}
+      faceSearch={gallery.faceSearch}
+      eventPage={gallery.eventPage}
       sections={sectionGroups}
       hasVisitor={hasVisitor}
       initialSelectedIds={selectedIds}

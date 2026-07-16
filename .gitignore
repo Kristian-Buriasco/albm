@@ -34,3 +34,6 @@ demo-data/
 /e2e/.server-pid/
 /test-results/
 /playwright-report/
+
+# tesseract.js lang data (cached under DATA_DIR at runtime)
+*.traineddata
