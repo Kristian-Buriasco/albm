@@ -17,6 +17,14 @@ const BOOL_KEYS = [
   'trackDownloads',
   'socialPreview',
   'pinEnabled',
+  'autoPublishOnUpload',
+  'deliverRaw',
+  'forensicWatermark',
+  'downloadOfferWeb',
+  'downloadOfferPrint',
+  'downloadOfferOriginal',
+  'keepExifOnDownload',
+  'allowGpsInDownload',
 ] as const;
 
 export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInsert {

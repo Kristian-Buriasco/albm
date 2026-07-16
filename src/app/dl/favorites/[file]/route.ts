@@ -3,10 +3,19 @@ import { PassThrough, Readable } from 'node:stream';
 import archiver from 'archiver';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import {
+  defaultDownloadSize,
+  parseDownloadSize,
+  preparePhotoDownload,
+  sizeAllowed,
+  type DownloadSize,
+} from '@/lib/download-delivery';
 import { logDownloadEvent } from '@/lib/downloads';
 import { canViewGallery } from '@/lib/gallery-auth';
-import { zipEntriesForGallery } from '@/lib/sections';
+import { sanitizeSectionFolder } from '@/lib/sections';
 import { getVisitorSession } from '@/lib/session';
+
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ file: string }> };
 
@@ -23,6 +32,8 @@ export async function GET(req: Request, { params }: Params) {
   const { file } = await params;
   if (!file.endsWith('.zip')) return new Response('Not found', { status: 404 });
   const slug = file.slice(0, -4);
+  const url = new URL(req.url);
+  const sizeParam = parseDownloadSize(url.searchParams.get('size'));
 
   const db = getDb();
   const gallery = db
@@ -36,6 +47,11 @@ export async function GET(req: Request, { params }: Params) {
     return new Response('Forbidden', { status: 403 });
   }
 
+  const size: DownloadSize = sizeParam ?? defaultDownloadSize(gallery);
+  if (!sizeAllowed(gallery, size)) {
+    return new Response('Size not available', { status: 403 });
+  }
+
   const session = await getVisitorSession(gallery.id);
   if (!session.token) return new Response('Unauthorized', { status: 401 });
   const visitor = db
@@ -47,7 +63,7 @@ export async function GET(req: Request, { params }: Params) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const listIdParam = new URL(req.url).searchParams.get('listId');
+  const listIdParam = url.searchParams.get('listId');
   const listFilter =
     listIdParam && listIdParam.length > 0
       ? eq(schema.selections.listId, listIdParam)
@@ -78,8 +94,8 @@ export async function GET(req: Request, { params }: Params) {
     .where(eq(schema.sections.galleryId, gallery.id))
     .orderBy(asc(schema.sections.sortOrder))
     .all();
-
-  const entries = zipEntriesForGallery(gallery.id, selected, sections);
+  const sectionMap = new Map(sections.map((s) => [s.id, s.title]));
+  const hasSections = sections.length > 0;
 
   const archive = archiver('zip', { store: true });
   const out = new PassThrough();
@@ -93,9 +109,27 @@ export async function GET(req: Request, { params }: Params) {
   archive.on('error', abort);
   out.on('error', () => {});
 
-  for (const entry of entries) {
-    if (fs.existsSync(entry.filePath)) {
-      archive.file(entry.filePath, { name: entry.path });
+  for (const photo of selected) {
+    try {
+      const prepared = await preparePhotoDownload({
+        gallery,
+        photo,
+        size,
+        visitorId: visitor.id,
+        accountId: visitor.accountId ?? null,
+      });
+      let zipName = prepared.downloadName;
+      if (hasSections && photo.sectionId) {
+        const folder = sanitizeSectionFolder(sectionMap.get(photo.sectionId) ?? 'section');
+        zipName = `${folder}/${prepared.downloadName}`;
+      }
+      if (prepared.streamFile && prepared.filePath && fs.existsSync(prepared.filePath)) {
+        archive.file(prepared.filePath, { name: zipName });
+      } else if (prepared.body) {
+        archive.append(prepared.body, { name: zipName });
+      }
+    } catch (err) {
+      console.warn('[favorites-zip] skip photo', photo.id, err);
     }
   }
   archive.finalize().catch(abort);

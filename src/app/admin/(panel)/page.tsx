@@ -115,13 +115,18 @@ export default async function AdminDashboard() {
             Expired galleries
           </h2>
           <ul className="space-y-2 text-xs">
-            {expiredRows.map((r) => (
+            {expiredRows.map((r) => {
+              const stor = storage.galleries.find((s) => s.id === r.id);
+              return (
               <li key={r.id} className="flex flex-wrap items-center gap-3">
                 <Link href={`/admin/galleries/${r.id}`} className="font-medium underline">
                   {r.title}
                 </Link>
                 <span className="text-neutral-500">
                   {r.photoCount} photos · {formatBytes(r.sizeBytes)}
+                  {stor && stor.rawCount > 0
+                    ? ` · ${stor.rawCount} RAW (${formatBytes(stor.rawBytes)})`
+                    : ''}
                 </span>
                 <ExpiredGalleryActions
                   id={r.id}
@@ -130,7 +135,8 @@ export default async function AdminDashboard() {
                   sizeBytes={r.sizeBytes}
                 />
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       )}

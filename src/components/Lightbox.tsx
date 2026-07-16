@@ -22,6 +22,8 @@ interface Props {
   selectedIds?: Set<string>;
   onToggleSelect?: (photoId: string) => void;
   downloadEnabled?: boolean;
+  downloadSizes?: Array<'web' | 'print' | 'original'>;
+  downloadSizeLabels?: { web: string; print: string; original: string; label: string };
   showLikeCounts?: boolean;
   likeCounts?: Record<string, number>;
   commentsEnabled?: boolean;
@@ -41,6 +43,8 @@ export default function Lightbox({
   selectedIds,
   onToggleSelect,
   downloadEnabled = false,
+  downloadSizes = ['original'],
+  downloadSizeLabels,
   showLikeCounts = false,
   likeCounts,
   commentsEnabled = false,
@@ -155,12 +159,29 @@ export default function Lightbox({
               )}
             </button>
           )}
-          {downloadEnabled && (
-            <a href={`/dl/${photo.id}`} aria-label="Download photo" className="p-1 text-neutral-300 hover:text-white">
+          {downloadEnabled && downloadSizes.length === 1 && (
+            <a
+              href={`/dl/${photo.id}?size=${downloadSizes[0]}`}
+              aria-label={downloadSizeLabels?.label ?? 'Download photo'}
+              className="p-1 text-neutral-300 hover:text-white"
+            >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
               </svg>
             </a>
+          )}
+          {downloadEnabled && downloadSizes.length > 1 && (
+            <div className="relative flex items-center gap-1">
+              {downloadSizes.map((sz) => (
+                <a
+                  key={sz}
+                  href={`/dl/${photo.id}?size=${sz}`}
+                  className="rounded border border-white/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-300 hover:text-white"
+                >
+                  {downloadSizeLabels?.[sz] ?? sz}
+                </a>
+              ))}
+            </div>
           )}
           <button type="button" onClick={onClose} aria-label="Close" className="p-1 text-neutral-300 hover:text-white">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">

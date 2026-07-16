@@ -87,6 +87,28 @@ export const galleries = sqliteTable('galleries', {
   pinHash: text('pin_hash'),
   folderId: text('folder_id').references(() => galleryFolders.id, { onDelete: 'set null' }),
   sortOrder: integer('sort_order').notNull().default(0),
+  autoPublishOnUpload: integer('auto_publish_on_upload', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  deliverRaw: integer('deliver_raw', { mode: 'boolean' }).notNull().default(false),
+  forensicWatermark: integer('forensic_watermark', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  downloadOfferWeb: integer('download_offer_web', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  downloadOfferPrint: integer('download_offer_print', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  downloadOfferOriginal: integer('download_offer_original', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  keepExifOnDownload: integer('keep_exif_on_download', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  allowGpsInDownload: integer('allow_gps_in_download', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   ...timestamps,
 });
 
@@ -134,6 +156,8 @@ export const photos = sqliteTable(
     placeholder: text('placeholder'),
     altText: text('alt_text'),
     contentHash: text('content_hash'),
+    isRaw: integer('is_raw', { mode: 'boolean' }).notNull().default(false),
+    format: text('format'),
     ...timestamps,
   },
   (t) => [unique().on(t.galleryId, t.filename)],
@@ -235,6 +259,30 @@ export const downloadEvents = sqliteTable('download_events', {
     .notNull()
     .$defaultFn(() => Date.now()),
 });
+
+export const downloadMarks = sqliteTable(
+  'download_marks',
+  {
+    id: text('id').primaryKey(),
+    markKey: text('mark_key').notNull(),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => photos.id, { onDelete: 'cascade' }),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    visitorId: text('visitor_id'),
+    accountId: text('account_id'),
+    at: integer('at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [
+    unique().on(t.markKey),
+    index('download_marks_photo_idx').on(t.photoId),
+    index('download_marks_at_idx').on(t.at),
+  ],
+);
 
 export const comments = sqliteTable('comments', {
   id: text('id').primaryKey(),

@@ -56,6 +56,11 @@ export type I18nDict = {
   cookieSettings: string;
   cookieAnalyticsOn: string;
   cookieAnalyticsOff: string;
+  liveUpdating: string;
+  downloadSizeWeb: string;
+  downloadSizePrint: string;
+  downloadSizeOriginal: string;
+  downloadSizeLabel: string;
 };
 
 const en: I18nDict = {
@@ -113,6 +118,11 @@ const en: I18nDict = {
   cookieSettings: 'Cookie settings',
   cookieAnalyticsOn: 'Analytics cookies are on.',
   cookieAnalyticsOff: 'Only essential cookies are used.',
+  liveUpdating: 'Live — updating',
+  downloadSizeWeb: 'Web',
+  downloadSizePrint: 'Print',
+  downloadSizeOriginal: 'Original',
+  downloadSizeLabel: 'Download size',
 };
 
 const nl: I18nDict = {
@@ -170,6 +180,11 @@ const nl: I18nDict = {
   cookieSettings: 'Cookie-instellingen',
   cookieAnalyticsOn: 'Analysecookies staan aan.',
   cookieAnalyticsOff: 'Alleen essentiële cookies worden gebruikt.',
+  liveUpdating: 'Live — wordt bijgewerkt',
+  downloadSizeWeb: 'Web',
+  downloadSizePrint: 'Print',
+  downloadSizeOriginal: 'Origineel',
+  downloadSizeLabel: 'Downloadgrootte',
 };
 
 const it: I18nDict = {
@@ -227,6 +242,11 @@ const it: I18nDict = {
   cookieSettings: 'Impostazioni cookie',
   cookieAnalyticsOn: 'I cookie analitici sono attivi.',
   cookieAnalyticsOff: 'Vengono usati solo cookie essenziali.',
+  liveUpdating: 'Live — aggiornamento',
+  downloadSizeWeb: 'Web',
+  downloadSizePrint: 'Stampa',
+  downloadSizeOriginal: 'Originale',
+  downloadSizeLabel: 'Dimensione download',
 };
 
 export const dictionaries: Record<Lang, I18nDict> = { en, nl, it };

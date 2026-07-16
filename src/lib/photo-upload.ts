@@ -5,10 +5,16 @@ import { and, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
 import { getDb, schema } from '@/db';
-import { detectImageType, resolveCollision, sanitizeFilename } from '@/lib/files';
-import { originalPath } from '@/lib/paths';
+import { detectImageType, detectUploadKind, resolveCollision, sanitizeFilename } from '@/lib/files';
+import { originalPath, workingJpegPath } from '@/lib/paths';
 import { extractExif } from '@/lib/exif';
 import { enqueueDerivatives } from '@/lib/queue';
+import {
+  decodeRawToJpeg,
+  isRawFilename,
+  MAX_RAW_UPLOAD_BYTES,
+  rawFormatFromFilename,
+} from '@/lib/raw';
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
@@ -17,11 +23,17 @@ export type UploadPhotoResult =
   | { ok: true; duplicate: true; existingFilename: string; created: false }
   | { ok: false; status: number; error: string };
 
+export type IngestOptions = {
+  /** When true and gallery.autoPublishOnUpload, publish the gallery if still draft. */
+  fromPublishApi?: boolean;
+};
+
 /** Shared ingest pipeline for admin + external publish API. */
 export async function ingestGalleryPhoto(
   galleryId: string,
   file: File,
   sectionId?: string | null,
+  opts: IngestOptions = {},
 ): Promise<UploadPhotoResult> {
   const db = getDb();
   const gallery = db
@@ -31,17 +43,53 @@ export async function ingestGalleryPhoto(
     .get();
   if (!gallery) return { ok: false, status: 404, error: 'Gallery not found' };
 
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return { ok: false, status: 413, error: 'File too large (max 50 MB)' };
+  const sanitized = sanitizeFilename(file.name);
+  if (!sanitized) return { ok: false, status: 400, error: 'Invalid filename' };
+
+  const isRaw = isRawFilename(sanitized);
+  const maxBytes = isRaw ? MAX_RAW_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+  if (file.size > maxBytes) {
+    return {
+      ok: false,
+      status: 413,
+      error: isRaw
+        ? 'File too large (max 100 MB for RAW)'
+        : 'File too large (max 50 MB)',
+    };
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
-  if (!detectImageType(buf)) {
-    return { ok: false, status: 415, error: 'Only JPEG and PNG files are accepted' };
+  const kind = detectUploadKind(buf, sanitized);
+  if (!kind) {
+    return {
+      ok: false,
+      status: 415,
+      error: 'Only JPEG, PNG, and camera RAW (DNG/CR2/CR3/NEF/ARW/…) files are accepted',
+    };
   }
 
-  const sanitized = sanitizeFilename(file.name);
-  if (!sanitized) return { ok: false, status: 400, error: 'Invalid filename' };
+  let workingJpeg: Buffer | null = null;
+  let isRawPhoto = false;
+  let format: string | null = null;
+
+  if (kind === 'raw') {
+    isRawPhoto = true;
+    format = rawFormatFromFilename(sanitized);
+    workingJpeg = await decodeRawToJpeg(buf);
+    if (!workingJpeg) {
+      return {
+        ok: false,
+        status: 415,
+        error:
+          'Could not decode this RAW file. Upload a JPEG/PNG, or a RAW with an embedded preview (or install dcraw on the server).',
+      };
+    }
+  } else {
+    format = kind;
+    if (!detectImageType(buf)) {
+      return { ok: false, status: 415, error: 'Only JPEG and PNG files are accepted' };
+    }
+  }
 
   const contentHash = crypto.createHash('sha256').update(buf).digest('hex');
   const duplicate = db
@@ -78,12 +126,13 @@ export async function ingestGalleryPhoto(
     if (sec && sec.galleryId === galleryId) resolvedSectionId = sec.id;
   }
 
+  const metaSource = workingJpeg ?? buf;
   let width = 0;
   let height = 0;
   let exifJson: string | null = null;
   let capturedAt: number | null = null;
   try {
-    const meta = await sharp(buf).metadata();
+    const meta = await sharp(metaSource).metadata();
     const swap = (meta.orientation ?? 1) >= 5;
     width = (swap ? meta.height : meta.width) ?? 0;
     height = (swap ? meta.width : meta.height) ?? 0;
@@ -97,6 +146,12 @@ export async function ingestGalleryPhoto(
   const dest = originalPath(galleryId, filename);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, buf);
+
+  if (workingJpeg) {
+    const wp = workingJpegPath(galleryId, filename);
+    fs.mkdirSync(path.dirname(wp), { recursive: true });
+    fs.writeFileSync(wp, workingJpeg);
+  }
 
   const maxOrder =
     db
@@ -118,9 +173,18 @@ export async function ingestGalleryPhoto(
     exif: exifJson,
     capturedAt,
     contentHash,
+    isRaw: isRawPhoto,
+    format,
   };
   db.insert(schema.photos).values(photo).run();
   enqueueDerivatives(photo.id);
+
+  if (opts.fromPublishApi && gallery.autoPublishOnUpload && !gallery.published) {
+    db.update(schema.galleries)
+      .set({ published: true, updatedAt: Date.now() })
+      .where(eq(schema.galleries.id, galleryId))
+      .run();
+  }
 
   const row = db
     .select()

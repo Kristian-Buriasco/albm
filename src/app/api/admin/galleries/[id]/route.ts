@@ -103,6 +103,23 @@ export async function PATCH(req: Request, { params }: Params) {
       summary: `PIN access ${body.pinEnabled ? 'enabled' : 'disabled'} for "${gallery.title}"`,
     });
   }
+  if ('forensicWatermark' in body && typeof body.forensicWatermark === 'boolean') {
+    logAdmin(
+      body.forensicWatermark ? 'gallery.forensic.enable' : 'gallery.forensic.disable',
+      {
+        targetType: 'gallery',
+        targetId: id,
+        summary: `Forensic watermark ${body.forensicWatermark ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+      },
+    );
+  }
+  if ('autoPublishOnUpload' in body && typeof body.autoPublishOnUpload === 'boolean') {
+    logAdmin('gallery.auto_publish.toggle', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Auto-publish on upload ${body.autoPublishOnUpload ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
 
   if (needsReprocess) {
     const photoRows = db

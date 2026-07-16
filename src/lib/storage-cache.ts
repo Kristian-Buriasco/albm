@@ -1,10 +1,8 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { DATA_DIR } from './env';
 import { dirSizeBytes, formatBytes, volumeUsage, type DiskUsage } from './disk';
 import { galleryDir } from './paths';
 import { getDb, schema } from '@/db';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 
 export type GalleryStorageRow = {
   id: string;
@@ -12,6 +10,8 @@ export type GalleryStorageRow = {
   type: string;
   photoCount: number;
   sizeBytes: number;
+  rawCount: number;
+  rawBytes: number;
 };
 
 export type StorageSnapshot = {
@@ -40,18 +40,31 @@ export function getStorageSnapshot(force = false): StorageSnapshot {
     .orderBy(asc(schema.galleries.sortOrder))
     .all();
 
-  const rows: GalleryStorageRow[] = galleries.map((g) => ({
-    id: g.id,
-    title: g.title,
-    type: g.type,
-    photoCount:
+  const rows: GalleryStorageRow[] = galleries.map((g) => {
+    const photoCount =
       db
         .select({ c: sql<number>`count(*)` })
         .from(schema.photos)
         .where(eq(schema.photos.galleryId, g.id))
-        .get()?.c ?? 0,
-    sizeBytes: dirSizeBytes(galleryDir(g.id)),
-  }));
+        .get()?.c ?? 0;
+    const raw = db
+      .select({
+        c: sql<number>`count(*)`,
+        bytes: sql<number>`coalesce(sum(${schema.photos.sizeBytes}), 0)`,
+      })
+      .from(schema.photos)
+      .where(and(eq(schema.photos.galleryId, g.id), eq(schema.photos.isRaw, true)))
+      .get();
+    return {
+      id: g.id,
+      title: g.title,
+      type: g.type,
+      photoCount,
+      sizeBytes: dirSizeBytes(galleryDir(g.id)),
+      rawCount: raw?.c ?? 0,
+      rawBytes: raw?.bytes ?? 0,
+    };
+  });
 
   const snap: StorageSnapshot = {
     computedAt: Date.now(),

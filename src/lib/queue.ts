@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import PQueue from 'p-queue';
 import sharp from 'sharp';
 import { getDb, schema } from '@/db';
-import { thumbPath, resolveWatermarkPath, webPath, originalPath } from './paths';
+import { thumbPath, resolveWatermarkPath, webPath, originalPath, workingJpegPath } from './paths';
 import { generatePlaceholder } from './photo-media';
 
 sharp.cache(false);
@@ -50,6 +50,14 @@ function watermarkPlacement(
   }
 }
 
+function derivativeSource(photo: { galleryId: string; filename: string; isRaw: boolean }): string {
+  if (photo.isRaw) {
+    const working = workingJpegPath(photo.galleryId, photo.filename);
+    if (fs.existsSync(working)) return working;
+  }
+  return originalPath(photo.galleryId, photo.filename);
+}
+
 async function generateDerivatives(photoId: string): Promise<void> {
   const db = getDb();
   const photo = db.select().from(schema.photos).where(eq(schema.photos.id, photoId)).get();
@@ -61,7 +69,7 @@ async function generateDerivatives(photoId: string): Promise<void> {
     .get();
   if (!gallery) return;
 
-  const src = originalPath(photo.galleryId, photo.filename);
+  const src = derivativeSource(photo);
   const webOut = webPath(photo.galleryId, photo.filename);
   const thumbOut = thumbPath(photo.galleryId, photo.filename);
 

@@ -21,9 +21,26 @@ export function originalPath(galleryId: string, filename: string): string {
   );
 }
 
-function webpBasename(filename: string): string {
+function stemOf(filename: string): string {
   const ext = path.extname(filename);
-  return `${filename.slice(0, filename.length - ext.length)}.webp`;
+  return filename.slice(0, filename.length - ext.length);
+}
+
+function webpBasename(filename: string): string {
+  return `${stemOf(filename)}.webp`;
+}
+
+/** Working JPEG for RAW archives (derivatives + default client original download). */
+export function workingJpegPath(galleryId: string, filename: string): string {
+  return assertInsideDataDir(
+    path.join(galleryDir(galleryId), 'working', `${stemOf(filename)}.jpg`),
+  );
+}
+
+export function printPath(galleryId: string, filename: string): string {
+  return assertInsideDataDir(
+    path.join(galleryDir(galleryId), 'print', `${stemOf(filename)}.jpg`),
+  );
 }
 
 export function webPath(galleryId: string, filename: string): string {

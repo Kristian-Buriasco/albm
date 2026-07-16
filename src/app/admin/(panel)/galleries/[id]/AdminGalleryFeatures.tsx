@@ -452,6 +452,83 @@ export function AdminExtraSettings({
         checked={gallery.trackDownloads}
         onChange={(v) => patchGallery({ trackDownloads: v })}
       />
+      {isClient && (
+        <>
+          <ToggleSwitch
+            label="Auto-publish on upload (live)"
+            checked={gallery.autoPublishOnUpload}
+            onChange={(v) => patchGallery({ autoPublishOnUpload: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            Publish API uploads publish the gallery automatically. Client view polls for new
+            photos. Derivative queue is concurrency-1 — bursts may backlog.
+          </p>
+          <ToggleSwitch
+            label="Deliver RAW originals to clients"
+            checked={gallery.deliverRaw}
+            onChange={(v) => patchGallery({ deliverRaw: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            Off (default): clients get the processed JPEG. On: clients can download the archived
+            RAW file.
+          </p>
+          <ToggleSwitch
+            label="Forensic watermark on download"
+            checked={gallery.forensicWatermark}
+            onChange={(v) => patchGallery({ forensicWatermark: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            Invisible per-download mark for leak tracing. Off = byte-identical downloads (aside from
+            GPS strip). Decode tool: Admin → Forensic decode.
+          </p>
+          <div className="space-y-2 rounded border border-neutral-200 p-3 dark:border-neutral-800">
+            <p className="text-xs font-medium text-neutral-500">Download sizes offered</p>
+            <ToggleSwitch
+              label="Web"
+              checked={gallery.downloadOfferWeb}
+              onChange={(v) => patchGallery({ downloadOfferWeb: v })}
+            />
+            <ToggleSwitch
+              label="Print (3000px)"
+              checked={gallery.downloadOfferPrint}
+              onChange={(v) => patchGallery({ downloadOfferPrint: v })}
+            />
+            <ToggleSwitch
+              label="Original"
+              checked={gallery.downloadOfferOriginal}
+              onChange={(v) => patchGallery({ downloadOfferOriginal: v })}
+            />
+          </div>
+          <ToggleSwitch
+            label="Keep EXIF on download (non-GPS)"
+            checked={gallery.keepExifOnDownload}
+            onChange={(v) => patchGallery({ keepExifOnDownload: v })}
+          />
+          <ToggleSwitch
+            label="Allow GPS in downloads"
+            checked={gallery.allowGpsInDownload}
+            onChange={(v) => patchGallery({ allowGpsInDownload: v })}
+          />
+          <p className="-mt-1 text-[11px] text-neutral-400">
+            GPS is stripped by default. Enable both keep-EXIF and allow-GPS only when clients need
+            location metadata.
+          </p>
+        </>
+      )}
+      {!isClient && (
+        <>
+          <ToggleSwitch
+            label="Keep EXIF on download (non-GPS)"
+            checked={gallery.keepExifOnDownload}
+            onChange={(v) => patchGallery({ keepExifOnDownload: v })}
+          />
+          <ToggleSwitch
+            label="Allow GPS in downloads"
+            checked={gallery.allowGpsInDownload}
+            onChange={(v) => patchGallery({ allowGpsInDownload: v })}
+          />
+        </>
+      )}
       <div className="grid grid-cols-3 gap-3 text-sm">
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500">WM position</span>

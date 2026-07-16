@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { isRawFilename, looksLikeRaw } from '@/lib/raw';
 
 /**
  * Sanitize an uploaded filename: strip any path components and anything
@@ -26,6 +27,18 @@ export function detectImageType(buf: Buffer | Uint8Array): ImageType | null {
   if (buf.length >= 8 && pngMagic.every((b, i) => buf[i] === b)) {
     return 'png';
   }
+  return null;
+}
+
+/** Accept JPEG/PNG, or RAW when filename looks like camera RAW. */
+export function detectUploadKind(
+  buf: Buffer | Uint8Array,
+  filename: string,
+): 'jpeg' | 'png' | 'raw' | null {
+  const img = detectImageType(buf);
+  if (img) return img;
+  const b = Buffer.from(buf);
+  if (isRawFilename(filename) && (looksLikeRaw(b) || b.length > 1024)) return 'raw';
   return null;
 }
 

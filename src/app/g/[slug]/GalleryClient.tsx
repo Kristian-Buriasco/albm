@@ -27,6 +27,10 @@ interface Props {
   clientInfoMode: 'off' | 'optional' | 'required';
   downloadEnabled: boolean;
   favoritesDownloadEnabled: boolean;
+  autoPublishOnUpload?: boolean;
+  downloadOfferWeb?: boolean;
+  downloadOfferPrint?: boolean;
+  downloadOfferOriginal?: boolean;
   sections: SectionGroup[];
   hasVisitor: boolean;
   initialSelectedIds: string[];
@@ -51,7 +55,11 @@ export default function GalleryClient({
   clientInfoMode,
   downloadEnabled,
   favoritesDownloadEnabled,
-  sections,
+  autoPublishOnUpload = false,
+  downloadOfferWeb = false,
+  downloadOfferPrint = false,
+  downloadOfferOriginal = true,
+  sections: initialSections,
   hasVisitor,
   initialSelectedIds,
   initialLists = [],
@@ -67,6 +75,7 @@ export default function GalleryClient({
   defaultLang,
 }: Props) {
   const [lang, setLang] = useState<Lang>(() => getStoredLang() ?? defaultLang);
+  const [sections, setSections] = useState(initialSections);
   const photos = useMemo(() => sections.flatMap((s) => s.photos), [sections]);
   const [visitorReady, setVisitorReady] = useState(hasVisitor);
   const [showInfoModal, setShowInfoModal] = useState(
@@ -80,12 +89,64 @@ export default function GalleryClient({
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [downloadConfirm, setDownloadConfirm] = useState<'all' | 'favorites' | null>(null);
   const [downloadInfo, setDownloadInfo] = useState<{ count: number; sizeLabel: string } | null>(null);
+  const [zipSize, setZipSize] = useState<'web' | 'print' | 'original'>('original');
   const [lists, setLists] = useState<SelectionListInfo[]>(initialLists);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
   const [linkedEmail, setLinkedEmail] = useState<string | null>(accountEmail);
   const [newListName, setNewListName] = useState('');
+  const [livePulse, setLivePulse] = useState(false);
+
+  const downloadSizes = useMemo((): Array<'web' | 'print' | 'original'> => {
+    const sizes: Array<'web' | 'print' | 'original'> = [];
+    if (downloadOfferWeb) sizes.push('web');
+    if (downloadOfferPrint) sizes.push('print');
+    if (downloadOfferOriginal) sizes.push('original');
+    return sizes.length > 0 ? sizes : ['original'];
+  }, [downloadOfferWeb, downloadOfferPrint, downloadOfferOriginal]);
+
+  useEffect(() => {
+    if (downloadSizes.includes(zipSize)) return;
+    setZipSize(downloadSizes[0]!);
+  }, [downloadSizes, zipSize]);
+
+  useEffect(() => {
+    if (!autoPublishOnUpload) return;
+    let cancelled = false;
+    let since = Date.now();
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/g/${slug}/live-photos?since=${since}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (typeof data.serverTime === 'number') since = data.serverTime;
+        const incoming = (data.photos ?? []) as LightboxPhoto[];
+        if (incoming.length === 0) return;
+        setLivePulse(true);
+        setSections((prev) => {
+          const known = new Set(prev.flatMap((s) => s.photos.map((p) => p.id)));
+          const fresh = incoming.filter((p) => !known.has(p.id));
+          if (fresh.length === 0) return prev;
+          if (prev.length === 0) {
+            return [{ id: null, title: '', photos: fresh }];
+          }
+          const next = prev.map((s) => ({ ...s, photos: [...s.photos] }));
+          const target = next[0]!;
+          target.photos = [...target.photos, ...fresh];
+          return next;
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+    const id = window.setInterval(tick, 20_000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [autoPublishOnUpload, slug]);
 
   const reloadSelections = useCallback(async (listId: string | null) => {
     const q = listId ? `?listId=${encodeURIComponent(listId)}` : '';
@@ -241,6 +302,16 @@ export default function GalleryClient({
             <h1 className="truncate text-base font-semibold tracking-tight">
               {title}
             </h1>
+            {autoPublishOnUpload && (
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-accent dark:text-accent-dark">
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full bg-current ${
+                    livePulse ? 'animate-pulse' : ''
+                  }`}
+                />
+                {t(lang, 'liveUpdating')}
+              </p>
+            )}
             <p className="mt-0.5 text-[11px] text-muted dark:text-muted-dark">
               {eventDate
                 ? new Date(eventDate).toLocaleDateString('en-GB', {
@@ -402,6 +473,13 @@ export default function GalleryClient({
             selectedIds={selected}
             onToggleSelect={toggleSelect}
             downloadEnabled={downloadEnabled}
+            downloadSizes={[...downloadSizes]}
+            downloadSizeLabels={{
+              web: t(lang, 'downloadSizeWeb'),
+              print: t(lang, 'downloadSizePrint'),
+              original: t(lang, 'downloadSizeOriginal'),
+              label: t(lang, 'downloadSizeLabel'),
+            }}
             commentsEnabled={commentsEnabled}
             commentsApiBase={`/api/g/${slug}/comments`}
             onPhotoOpen={recordPhotoView}
@@ -422,6 +500,31 @@ export default function GalleryClient({
                 size: downloadInfo?.sizeLabel ?? '?',
               })}
             </p>
+            {downloadSizes.length > 1 && (
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="text-muted dark:text-muted-dark">
+                  {t(lang, 'downloadSizeLabel')}:
+                </span>
+                {downloadSizes.map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => setZipSize(sz)}
+                    className={`rounded-full border px-2 py-0.5 ${
+                      zipSize === sz
+                        ? 'border-ink dark:border-ink-dark'
+                        : 'border-line dark:border-line-dark'
+                    }`}
+                  >
+                    {sz === 'web'
+                      ? t(lang, 'downloadSizeWeb')
+                      : sz === 'print'
+                        ? t(lang, 'downloadSizePrint')
+                        : t(lang, 'downloadSizeOriginal')}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
@@ -433,9 +536,9 @@ export default function GalleryClient({
               <a
                 href={
                   downloadConfirm === 'all'
-                    ? `/dl/gallery/${slug}.zip`
-                    : `/dl/favorites/${slug}.zip${
-                        activeListId ? `?listId=${encodeURIComponent(activeListId)}` : ''
+                    ? `/dl/gallery/${slug}.zip?size=${zipSize}`
+                    : `/dl/favorites/${slug}.zip?size=${zipSize}${
+                        activeListId ? `&listId=${encodeURIComponent(activeListId)}` : ''
                       }`
                 }
                 className="flex-1 border border-neutral-900 py-2 text-center text-xs uppercase dark:border-neutral-100"

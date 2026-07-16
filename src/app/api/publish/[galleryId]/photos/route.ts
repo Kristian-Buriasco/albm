@@ -46,7 +46,9 @@ export async function POST(req: Request, { params }: Params) {
   const sectionIdRaw = form.get('sectionId');
   const sectionId = typeof sectionIdRaw === 'string' ? sectionIdRaw : null;
 
-  const result = await ingestGalleryPhoto(galleryId, file, sectionId);
+  const result = await ingestGalleryPhoto(galleryId, file, sectionId, {
+    fromPublishApi: true,
+  });
   if (!result.ok) return errorJson(result.error, result.status);
   if ('duplicate' in result && result.duplicate) {
     return json({ duplicate: true, existingFilename: result.existingFilename });

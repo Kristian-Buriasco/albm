@@ -148,6 +148,10 @@ export default async function ClientGalleryPage({
       clientInfoMode={gallery.clientInfoMode}
       downloadEnabled={gallery.downloadEnabled}
       favoritesDownloadEnabled={gallery.favoritesDownloadEnabled}
+      autoPublishOnUpload={gallery.autoPublishOnUpload}
+      downloadOfferWeb={gallery.downloadOfferWeb}
+      downloadOfferPrint={gallery.downloadOfferPrint}
+      downloadOfferOriginal={gallery.downloadOfferOriginal}
       sections={sectionGroups}
       hasVisitor={hasVisitor}
       initialSelectedIds={selectedIds}

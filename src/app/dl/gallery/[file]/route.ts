@@ -3,10 +3,19 @@ import { PassThrough, Readable } from 'node:stream';
 import archiver from 'archiver';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import {
+  defaultDownloadSize,
+  parseDownloadSize,
+  preparePhotoDownload,
+  sizeAllowed,
+  type DownloadSize,
+} from '@/lib/download-delivery';
 import { isGalleryExpired, logDownloadEvent } from '@/lib/downloads';
-import { zipEntriesForGallery } from '@/lib/sections';
+import { sanitizeSectionFolder } from '@/lib/sections';
 import { hasGalleryAccess, isAdmin } from '@/lib/session';
 import { galleryRequiresAccess } from '@/lib/pin';
+
+export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ file: string }> };
 
@@ -19,10 +28,12 @@ function titleSlug(title: string): string {
   );
 }
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
   const { file } = await params;
   if (!file.endsWith('.zip')) return new Response('Not found', { status: 404 });
   const slug = file.slice(0, -4);
+  const url = new URL(req.url);
+  const sizeParam = parseDownloadSize(url.searchParams.get('size'));
 
   const db = getDb();
   const gallery = db
@@ -48,6 +59,11 @@ export async function GET(_req: Request, { params }: Params) {
     }
   }
 
+  const size: DownloadSize = sizeParam ?? defaultDownloadSize(gallery);
+  if (!(await isAdmin()) && !sizeAllowed(gallery, size)) {
+    return new Response('Size not available', { status: 403 });
+  }
+
   const photos = db
     .select()
     .from(schema.photos)
@@ -63,8 +79,8 @@ export async function GET(_req: Request, { params }: Params) {
     .where(eq(schema.sections.galleryId, gallery.id))
     .orderBy(asc(schema.sections.sortOrder))
     .all();
-
-  const entries = zipEntriesForGallery(gallery.id, photos, sections);
+  const sectionMap = new Map(sections.map((s) => [s.id, s.title]));
+  const hasSections = sections.length > 0;
 
   const archive = archiver('zip', { store: true });
   const out = new PassThrough();
@@ -79,9 +95,27 @@ export async function GET(_req: Request, { params }: Params) {
   archive.on('warning', (err) => console.warn('[zip] warning:', err.message));
   out.on('error', () => {});
 
-  for (const entry of entries) {
-    if (fs.existsSync(entry.filePath)) {
-      archive.file(entry.filePath, { name: entry.path });
+  for (const photo of photos) {
+    try {
+      const prepared = await preparePhotoDownload({
+        gallery,
+        photo,
+        size,
+        visitorId: null,
+        accountId: null,
+      });
+      let zipName = prepared.downloadName;
+      if (hasSections && photo.sectionId) {
+        const folder = sanitizeSectionFolder(sectionMap.get(photo.sectionId) ?? 'section');
+        zipName = `${folder}/${prepared.downloadName}`;
+      }
+      if (prepared.streamFile && prepared.filePath && fs.existsSync(prepared.filePath)) {
+        archive.file(prepared.filePath, { name: zipName });
+      } else if (prepared.body) {
+        archive.append(prepared.body, { name: zipName });
+      }
+    } catch (err) {
+      console.warn('[zip] skip photo', photo.id, err);
     }
   }
   archive.finalize().catch(abort);
