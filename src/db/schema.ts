@@ -377,6 +377,33 @@ export const magicLinks = sqliteTable('magic_links', {
   usedAt: integer('used_at'),
 });
 
+export const rateLimitHits = sqliteTable(
+  'rate_limit_hits',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    key: text('key').notNull(),
+    at: integer('at').notNull(),
+  },
+  (t) => [index('rate_limit_hits_key_at_idx').on(t.key, t.at)],
+);
+
+export const adminSessions = sqliteTable(
+  'admin_sessions',
+  {
+    id: text('id').primaryKey(),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    lastSeenAt: integer('last_seen_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    userAgentHash: text('user_agent_hash'),
+    ipHash: text('ip_hash'),
+    revokedAt: integer('revoked_at'),
+  },
+  (t) => [index('admin_sessions_revoked_idx').on(t.revokedAt)],
+);
+
 export type GalleryFolder = typeof galleryFolders.$inferSelect;
 
 export type Gallery = typeof galleries.$inferSelect;

@@ -49,6 +49,13 @@ export type I18nDict = {
   switchDevice: string;
   magicLinkCopy: string;
   magicLinkInstructions: string;
+  cookieTitle: string;
+  cookieBody: string;
+  cookieAccept: string;
+  cookieDecline: string;
+  cookieSettings: string;
+  cookieAnalyticsOn: string;
+  cookieAnalyticsOff: string;
 };
 
 const en: I18nDict = {
@@ -98,6 +105,14 @@ const en: I18nDict = {
   switchDevice: 'Switch device',
   magicLinkCopy: 'Copy link',
   magicLinkInstructions: 'Open this link on another device within 15 minutes:',
+  cookieTitle: 'Cookie settings',
+  cookieBody:
+    'We use essential cookies for gallery access and sessions. Optional analytics cookies help improve the site — declined by default.',
+  cookieAccept: 'Accept analytics',
+  cookieDecline: 'Essential only',
+  cookieSettings: 'Cookie settings',
+  cookieAnalyticsOn: 'Analytics cookies are on.',
+  cookieAnalyticsOff: 'Only essential cookies are used.',
 };
 
 const nl: I18nDict = {
@@ -147,6 +162,14 @@ const nl: I18nDict = {
   switchDevice: 'Ander apparaat',
   magicLinkCopy: 'Link kopiëren',
   magicLinkInstructions: 'Open deze link binnen 15 minuten op een ander apparaat:',
+  cookieTitle: 'Cookie-instellingen',
+  cookieBody:
+    'We gebruiken essentiële cookies voor galerijtoegang en sessies. Optionele analysecookies helpen de site te verbeteren — standaard uitgeschakeld.',
+  cookieAccept: 'Analyse accepteren',
+  cookieDecline: 'Alleen essentieel',
+  cookieSettings: 'Cookie-instellingen',
+  cookieAnalyticsOn: 'Analysecookies staan aan.',
+  cookieAnalyticsOff: 'Alleen essentiële cookies worden gebruikt.',
 };
 
 const it: I18nDict = {
@@ -196,6 +219,14 @@ const it: I18nDict = {
   switchDevice: 'Cambia dispositivo',
   magicLinkCopy: 'Copia link',
   magicLinkInstructions: 'Apri questo link su un altro dispositivo entro 15 minuti:',
+  cookieTitle: 'Impostazioni cookie',
+  cookieBody:
+    'Usiamo cookie essenziali per l’accesso alle gallerie e le sessioni. I cookie analitici opzionali aiutano a migliorare il sito — disattivati di default.',
+  cookieAccept: 'Accetta analitici',
+  cookieDecline: 'Solo essenziali',
+  cookieSettings: 'Impostazioni cookie',
+  cookieAnalyticsOn: 'I cookie analitici sono attivi.',
+  cookieAnalyticsOff: 'Vengono usati solo cookie essenziali.',
 };
 
 export const dictionaries: Record<Lang, I18nDict> = { en, nl, it };

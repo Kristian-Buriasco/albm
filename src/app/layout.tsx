@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import './globals.css';
 import AnalyticsHead from '@/components/AnalyticsHead';
+import CookieConsent from '@/components/CookieConsent';
+import { hasAnalyticsConsent, CONSENT_COOKIE } from '@/lib/consent';
 import { getSetting } from '@/lib/settings';
 import { BASE_URL } from '@/lib/env';
 import { parseLang } from '@/lib/i18n';
@@ -21,9 +23,12 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const pathname = (await headers()).get('x-pathname') ?? '';
   const isPublicPage = !pathname.startsWith('/admin');
-  const analyticsHtml = isPublicPage
-    ? (getSetting('analytics_head_html') ?? '')
-    : '';
+  const cookieStore = await cookies();
+  const consent = cookieStore.get(CONSENT_COOKIE)?.value;
+  const analyticsHtml =
+    isPublicPage && hasAnalyticsConsent(consent)
+      ? (getSetting('analytics_head_html') ?? '')
+      : '';
   const htmlLang = parseLang(getSetting('defaultLanguage'));
 
   return (
@@ -41,6 +46,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-paper text-ink antialiased dark:bg-paper-dark dark:text-ink-dark">
         {children}
+        {isPublicPage ? <CookieConsent lang={htmlLang} /> : null}
       </body>
     </html>
   );

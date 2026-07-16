@@ -8,6 +8,7 @@ import SettingsForm from './SettingsForm';
 import SecuritySettings from './SecuritySettings';
 import GalleryDefaultsForm from './GalleryDefaultsForm';
 import UploadTokensPanel from './UploadTokensPanel';
+import AdminSessionsPanel from './AdminSessionsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,7 @@ export default async function AdminSettingsPage() {
   return (
     <div className="space-y-16">
       <SecuritySettings />
+      <AdminSessionsPanel />
       <GalleryDefaultsForm initialDefaults={getGalleryDefaults()} />
       <UploadTokensPanel />
       <SettingsForm

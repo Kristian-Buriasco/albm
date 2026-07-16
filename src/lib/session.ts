@@ -1,6 +1,11 @@
 import { getIronSession, type IronSession, type SessionOptions } from 'iron-session';
 import { cookies } from 'next/headers';
 import { sessionSecret } from './env';
+import {
+  createAdminSession,
+  revokeAdminSession,
+  touchAdminSession,
+} from './admin-sessions';
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
 
@@ -15,6 +20,8 @@ const baseCookieOptions = {
 
 export interface AdminSessionData {
   isAdmin?: boolean;
+  /** Server-side admin session id (admin_sessions table). */
+  sessionId?: string;
 }
 
 export interface GalleryAccessData {
@@ -44,10 +51,8 @@ export async function getAdminSession(): Promise<IronSession<AdminSessionData>> 
 
 export async function isAdmin(): Promise<boolean> {
   const session = await getAdminSession();
-  if (!session.isAdmin) return false;
-  // Rolling session: refresh the cookie's expiry on activity. Cookie writes
-  // are only allowed in route handlers / server actions; during server
-  // component rendering this throws, so skip the refresh there.
+  if (!session.isAdmin || !session.sessionId) return false;
+  if (!touchAdminSession(session.sessionId)) return false;
   try {
     await session.save();
   } catch {
@@ -56,10 +61,28 @@ export async function isAdmin(): Promise<boolean> {
   return true;
 }
 
-export async function issueAdminSession(): Promise<void> {
+export async function getAdminSessionId(): Promise<string | null> {
   const session = await getAdminSession();
+  if (!session.isAdmin || !session.sessionId) return null;
+  if (!touchAdminSession(session.sessionId)) return null;
+  return session.sessionId;
+}
+
+export async function issueAdminSession(meta: {
+  userAgent?: string | null;
+  ip?: string | null;
+} = {}): Promise<void> {
+  const session = await getAdminSession();
+  const sessionId = createAdminSession(meta);
   session.isAdmin = true;
+  session.sessionId = sessionId;
   await session.save();
+}
+
+export async function revokeCurrentAdminSession(): Promise<void> {
+  const session = await getAdminSession();
+  if (session.sessionId) revokeAdminSession(session.sessionId);
+  session.destroy();
 }
 
 export async function getGalleryAccessSession(): Promise<

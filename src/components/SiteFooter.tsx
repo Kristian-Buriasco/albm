@@ -1,4 +1,6 @@
 import { getSetting } from '@/lib/settings';
+import { parseLang } from '@/lib/i18n';
+import CookieSettingsLink from '@/components/CookieSettingsLink';
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
@@ -6,6 +8,7 @@ const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 export default function SiteFooter() {
   const content = getSetting('footerContent')?.trim();
   const year = new Date().getFullYear();
+  const lang = parseLang(getSetting('defaultLanguage'));
 
   return (
     <footer className="mt-24 border-t border-line dark:border-line-dark">
@@ -15,9 +18,12 @@ export default function SiteFooter() {
         ) : (
           <p>{SITE_NAME}</p>
         )}
-        <p className="tabular-nums">
-          © {year} {SITE_NAME}
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <CookieSettingsLink lang={lang} />
+          <p className="tabular-nums">
+            © {year} {SITE_NAME}
+          </p>
+        </div>
       </div>
     </footer>
   );

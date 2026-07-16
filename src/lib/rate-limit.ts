@@ -1,32 +1,8 @@
+import { hitCount, recordHit, clearHits } from '@/lib/rate-limit-store';
+
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILURES_PER_IP = 10;
 const MAX_FAILURES_GLOBAL = 100;
-
-type Entry = { failures: number[] };
-
-const globalForRl = globalThis as unknown as {
-  __pwRateLimit?: Map<string, Entry>;
-};
-const store = (globalForRl.__pwRateLimit ??= new Map());
-
-function prune(entry: Entry, now: number) {
-  entry.failures = entry.failures.filter((t) => now - t < WINDOW_MS);
-}
-
-function bucketSize(key: string, windowMs: number): number {
-  const entry = store.get(key);
-  if (!entry) return 0;
-  prune(entry, Date.now());
-  return entry.failures.length;
-}
-
-function record(key: string, windowMs: number) {
-  const now = Date.now();
-  const entry = store.get(key) ?? { failures: [] };
-  entry.failures = entry.failures.filter((t: number) => now - t < windowMs);
-  entry.failures.push(now);
-  store.set(key, entry);
-}
 
 export type RateLimitOpts = {
   maxPerIp?: number;
@@ -53,8 +29,8 @@ export function isRateLimited(
 ): boolean {
   const o = { ...DEFAULT_OPTS, ...opts };
   const limited =
-    bucketSize(`${scope}:ip:${ip}`, o.windowMs) >= o.maxPerIp ||
-    bucketSize(`${scope}:global`, o.windowMs) >= o.maxGlobal;
+    hitCount(`${scope}:ip:${ip}`, o.windowMs) >= o.maxPerIp ||
+    hitCount(`${scope}:global`, o.windowMs) >= o.maxGlobal;
   if (limited && o.logLabel) {
     console.log(`[rate-limit] throttled ${o.logLabel} ip=${ip}`);
   }
@@ -67,20 +43,15 @@ export function recordFailure(
   opts: RateLimitOpts = {},
 ): void {
   const o = { ...DEFAULT_OPTS, ...opts };
-  record(`${scope}:ip:${ip}`, o.windowMs);
-  record(`${scope}:global`, o.windowMs);
+  recordHit(`${scope}:ip:${ip}`, o.windowMs);
+  recordHit(`${scope}:global`, o.windowMs);
 }
 
 export function clearFailures(scope: string, ip: string): void {
-  store.delete(`${scope}:ip:${ip}`);
+  clearHits(`${scope}:ip:${ip}`);
 }
 
-const globalForWrites = globalThis as unknown as {
-  __writeRateLimit?: Map<string, number[]>;
-};
-const writeStore = (globalForWrites.__writeRateLimit ??= new Map());
-
-/** In-memory write counter per scope+IP (likes, visitor POST, etc.). */
+/** Write counter per scope+IP (likes, visitor POST, etc.). */
 export function writeAllowed(
   scope: string,
   ip: string,
@@ -88,14 +59,9 @@ export function writeAllowed(
   windowMs: number,
 ): boolean {
   const key = `${scope}:${ip}`;
-  const now = Date.now();
-  const times = (writeStore.get(key) ?? []).filter((t: number) => now - t < windowMs);
-  if (times.length >= max) {
-    writeStore.set(key, times);
-    return false;
-  }
-  times.push(now);
-  writeStore.set(key, times);
+  const count = hitCount(key, windowMs);
+  if (count >= max) return false;
+  recordHit(key, windowMs);
   return true;
 }
 

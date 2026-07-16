@@ -1,8 +1,7 @@
-import { getAdminSession } from '@/lib/session';
+import { revokeCurrentAdminSession } from '@/lib/session';
 import { json } from '@/lib/api';
 
 export async function POST() {
-  const session = await getAdminSession();
-  session.destroy();
+  await revokeCurrentAdminSession();
   return json({ ok: true });
 }

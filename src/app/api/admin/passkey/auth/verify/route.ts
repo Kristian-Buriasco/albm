@@ -92,6 +92,9 @@ export async function POST(req: Request) {
 
   clearFailures(RL_SCOPE, ip);
   updatePasskeyAfterAuth(stored.id, newCounter, Date.now());
-  await issueAdminSession();
+  await issueAdminSession({
+    userAgent: req.headers.get('user-agent'),
+    ip,
+  });
   return json({ ok: true });
 }
