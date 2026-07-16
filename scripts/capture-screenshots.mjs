@@ -63,6 +63,11 @@ async function main() {
 
   await page.goto(`${BASE}/g/${clientSlug}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
+  const skip = page.getByRole('button', { name: /^skip$/i }).or(page.getByText(/^skip$/i));
+  if (await skip.isVisible().catch(() => false)) {
+    await skip.click().catch(() => {});
+    await page.waitForTimeout(400);
+  }
   const thumb = page.locator('img[src*="/img/"]').first();
   if (await thumb.count()) await thumb.click({ timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(600);
