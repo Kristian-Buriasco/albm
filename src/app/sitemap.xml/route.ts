@@ -1,6 +1,9 @@
 import { BASE_URL } from '@/lib/env';
 import { getPublishedPortfolioGalleries } from '@/lib/public-data';
 
+// Reads the live DB — must not be prerendered at build time (no env/DB there).
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const galleries = getPublishedPortfolioGalleries();
   const urls = [

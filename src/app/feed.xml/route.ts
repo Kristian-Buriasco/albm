@@ -1,5 +1,8 @@
 import { portfolioFeedItems } from '@/lib/feed-data';
 
+// Reads the live DB — must not be prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const items = portfolioFeedItems();
   const lines = [
