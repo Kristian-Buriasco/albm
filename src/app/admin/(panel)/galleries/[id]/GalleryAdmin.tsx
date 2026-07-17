@@ -14,6 +14,7 @@ import {
 import ShareTools from '@/components/ShareTools';
 import MostViewedStrip from '@/components/MostViewedStrip';
 import CollaboratorsPanel from './CollaboratorsPanel';
+import Tabs, { type TabDef } from '@/components/Tabs';
 
 interface VisitorInfo {
   id: string;
@@ -471,8 +472,19 @@ export default function GalleryAdmin({
   const inputClass =
     'w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100';
 
+  const galleryTabs: TabDef[] = [
+    { id: 'photos', label: 'Photos' },
+    ...(isOwner
+      ? [
+          { id: 'settings', label: 'Settings' },
+          { id: 'comments', label: 'Comments' },
+          { id: 'collaborators', label: 'Collaborators' },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -535,8 +547,13 @@ export default function GalleryAdmin({
         </p>
       )}
 
+      <Tabs tabs={galleryTabs}>
+        {(active) => (
+          <div className="space-y-12">
+
       {/* settings (owner only) */}
       {isOwner && (
+      <div hidden={active !== 'settings'}>
       <section className="grid gap-8 md:grid-cols-2">
         <div className="space-y-5">
           <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
@@ -671,11 +688,15 @@ export default function GalleryAdmin({
           )}
         </div>
       </section>
+      </div>
       )}
 
       {isOwner && (
+      <div hidden={active !== 'settings'}>
         <AdminExtraSettings gallery={gallery} photos={photos} patchGallery={patchGallery} />
+      </div>
       )}
+      <div hidden={active !== 'photos'}>
       <AdminSectionsPanel
         galleryId={gallery.id}
         photos={photos}
@@ -685,9 +706,15 @@ export default function GalleryAdmin({
         onTogglePhoto={togglePhotoSelection}
         isOwner={isOwner}
       />
-      {isOwner && <AdminCommentsPanel galleryId={gallery.id} />}
+      </div>
+      {isOwner && (
+      <div hidden={active !== 'comments'}>
+        <AdminCommentsPanel galleryId={gallery.id} />
+      </div>
+      )}
 
       {/* upload */}
+      <div hidden={active !== 'photos'}>
       <section>
         <h2 className="mb-3 text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Upload
@@ -832,8 +859,10 @@ export default function GalleryAdmin({
           </p>
         )}
       </section>
+      </div>
 
       {/* photo grid */}
+      <div hidden={active !== 'photos'}>
       <section ref={gridRef} tabIndex={-1} className="outline-none">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
@@ -973,9 +1002,11 @@ export default function GalleryAdmin({
           </div>
         )}
       </section>
+      </div>
 
       {/* selections panel (owner only) */}
       {isOwner && isClientGallery && (
+        <div hidden={active !== 'photos'}>
         <section>
           <h2 className="mb-3 text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
             Selections
@@ -1052,13 +1083,19 @@ export default function GalleryAdmin({
             </div>
           )}
         </section>
+        </div>
       )}
 
       {/* most viewed (owner only) */}
-      {isOwner && topViewed.length > 0 && <MostViewedStrip items={topViewed} photos={photos} />}
+      {isOwner && topViewed.length > 0 && (
+        <div hidden={active !== 'photos'}>
+          <MostViewedStrip items={topViewed} photos={photos} />
+        </div>
+      )}
 
       {/* danger zone (owner only) */}
       {isOwner && (
+        <div hidden={active !== 'settings'}>
         <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
           <button
             type="button"
@@ -1068,9 +1105,17 @@ export default function GalleryAdmin({
             Delete gallery
           </button>
         </section>
+        </div>
       )}
 
-      {isOwner && <CollaboratorsPanel galleryId={gallery.id} />}
+      {isOwner && (
+        <div hidden={active !== 'collaborators'}>
+          <CollaboratorsPanel galleryId={gallery.id} />
+        </div>
+      )}
+          </div>
+        )}
+      </Tabs>
     </div>
   );
 }
