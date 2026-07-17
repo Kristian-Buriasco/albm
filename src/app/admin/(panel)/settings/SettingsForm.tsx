@@ -239,12 +239,6 @@ export default function SettingsForm({
         />
       </SettingsCard>
 
-      <div className="sticky bottom-4 z-10 flex justify-end">
-        <div className="rounded-full bg-white/80 p-1 backdrop-blur dark:bg-black/70">
-          <SaveBar onSave={saveText} saving={saving} saved={saved} label="Save changes" />
-        </div>
-      </div>
-
       <SettingsCard
         title="Watermark"
         description="PNG with transparency. Composited on web-size images of galleries with watermarking enabled. Saved immediately on upload."
@@ -286,6 +280,12 @@ export default function SettingsForm({
           )}
         </div>
       </SettingsCard>
+
+      <div className="sticky bottom-4 z-10 flex justify-end">
+        <div className="rounded-full bg-white/80 p-1 backdrop-blur dark:bg-black/70">
+          <SaveBar onSave={saveText} saving={saving} saved={saved} label="Save changes" />
+        </div>
+      </div>
     </div>
   );
 }
