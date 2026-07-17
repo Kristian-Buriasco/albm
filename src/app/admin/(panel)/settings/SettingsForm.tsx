@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import SettingsCard from '@/components/SettingsCard';
+import SaveBar from '@/components/SaveBar';
 
 export default function SettingsForm({
   initialAbout,
@@ -101,19 +103,154 @@ export default function SettingsForm({
 
   const textareaClass =
     'w-full border border-neutral-300 bg-transparent p-3 text-sm leading-6 outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100';
+  const inputClass =
+    'w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700';
+  const labelClass = 'mb-2 block text-xs text-neutral-500 dark:text-neutral-400';
 
   return (
-    <div className="max-w-2xl space-y-12">
-      <section>
-        <h1 className="mb-4 text-sm font-medium tracking-widest uppercase">
-          Watermark
-        </h1>
-        <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-          PNG with transparency. Composited bottom-right on web-size images of
-          galleries with watermarking enabled.
-        </p>
+    <div className="max-w-2xl space-y-8">
+      <SettingsCard
+        title="Homepage"
+        description="Hero copy shown at the top of the public homepage."
+      >
+        <label className="block">
+          <span className={labelClass}>Homepage eyebrow</span>
+          <input
+            value={homeEyebrow}
+            onChange={(e) => setHomeEyebrow(e.target.value)}
+            maxLength={200}
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Homepage headline</span>
+          <input
+            value={homeHeadline}
+            onChange={(e) => setHomeHeadline(e.target.value)}
+            maxLength={200}
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Homepage intro</span>
+          <textarea
+            value={homeIntro}
+            onChange={(e) => setHomeIntro(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            className={textareaClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Default client gallery language</span>
+          <select
+            value={defaultLanguage}
+            onChange={(e) => setDefaultLanguage(e.target.value)}
+            className="border-b border-neutral-300 bg-transparent py-2 text-sm outline-none dark:border-neutral-700"
+          >
+            <option value="en">English</option>
+            <option value="nl">Nederlands</option>
+            <option value="it">Italiano</option>
+          </select>
+        </label>
+      </SettingsCard>
+
+      <SettingsCard
+        title="About & Contact"
+        description="About/contact page copy and the handles shown on the public contact page."
+      >
+        <label className="block">
+          <span className={labelClass}>Contact email (optional)</span>
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            maxLength={200}
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Instagram handle</span>
+          <input
+            value={contactInstagram}
+            onChange={(e) => setContactInstagram(e.target.value)}
+            maxLength={200}
+            placeholder="_kri14_"
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>WhatsApp number or link</span>
+          <input
+            value={contactWhatsapp}
+            onChange={(e) => setContactWhatsapp(e.target.value)}
+            maxLength={200}
+            placeholder="kristianburiasco"
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>About page content</span>
+          <textarea
+            value={about}
+            onChange={(e) => setAbout(e.target.value)}
+            rows={8}
+            className={textareaClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Contact page content</span>
+          <textarea
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            rows={6}
+            className={textareaClass}
+          />
+        </label>
+      </SettingsCard>
+
+      <SettingsCard
+        title="Footer & Language"
+        description="Footer text shown at the bottom of public pages."
+      >
+        <label className="block">
+          <span className={labelClass}>Footer text</span>
+          <textarea
+            value={footer}
+            onChange={(e) => setFooter(e.target.value)}
+            rows={2}
+            maxLength={2000}
+            placeholder="e.g. Based in Torino · Available worldwide"
+            className={textareaClass}
+          />
+        </label>
+      </SettingsCard>
+
+      <SettingsCard
+        title="Analytics"
+        description="Optional HTML pasted into the public site's <head> (e.g. GA4 or Umami). Executed as-is on public pages only — never on /admin. Leave empty to disable."
+      >
+        <textarea
+          value={analyticsHeadHtml}
+          onChange={(e) => setAnalyticsHeadHtml(e.target.value)}
+          rows={6}
+          className={textareaClass}
+          placeholder='<script async src="https://…"></script>'
+        />
+      </SettingsCard>
+
+      <div className="sticky bottom-4 z-10 flex justify-end">
+        <div className="rounded-full bg-white/80 p-1 backdrop-blur dark:bg-black/70">
+          <SaveBar onSave={saveText} saving={saving} saved={saved} label="Save changes" />
+        </div>
+      </div>
+
+      <SettingsCard
+        title="Watermark"
+        description="PNG with transparency. Composited on web-size images of galleries with watermarking enabled. Saved immediately on upload."
+      >
         {hasWatermark && (
-          <div className="mb-4 inline-block bg-neutral-200 p-4 dark:bg-neutral-800">
+          <div className="inline-block bg-neutral-200 p-4 dark:bg-neutral-800">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/admin/settings/watermark?v=${wmVersion}`}
@@ -148,179 +285,7 @@ export default function SettingsForm({
             </button>
           )}
         </div>
-      </section>
-
-      <section className="space-y-6">
-        <h2 className="text-sm font-medium tracking-widest uppercase">Site content</h2>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          Homepage hero copy and contact handles shown on the public contact page.
-        </p>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Homepage eyebrow
-          </span>
-          <input
-            value={homeEyebrow}
-            onChange={(e) => setHomeEyebrow(e.target.value)}
-            maxLength={200}
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Homepage headline
-          </span>
-          <input
-            value={homeHeadline}
-            onChange={(e) => setHomeHeadline(e.target.value)}
-            maxLength={200}
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Default client gallery language
-          </span>
-          <select
-            value={defaultLanguage}
-            onChange={(e) => setDefaultLanguage(e.target.value)}
-            className="border-b border-neutral-300 bg-transparent py-2 text-sm outline-none dark:border-neutral-700"
-          >
-            <option value="en">English</option>
-            <option value="nl">Nederlands</option>
-            <option value="it">Italiano</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Homepage intro
-          </span>
-          <textarea
-            value={homeIntro}
-            onChange={(e) => setHomeIntro(e.target.value)}
-            rows={4}
-            maxLength={2000}
-            className={textareaClass}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Contact email (optional)
-          </span>
-          <input
-            type="email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-            maxLength={200}
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Instagram handle
-          </span>
-          <input
-            value={contactInstagram}
-            onChange={(e) => setContactInstagram(e.target.value)}
-            maxLength={200}
-            placeholder="_kri14_"
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            WhatsApp number or link
-          </span>
-          <input
-            value={contactWhatsapp}
-            onChange={(e) => setContactWhatsapp(e.target.value)}
-            maxLength={200}
-            placeholder="kristianburiasco"
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Footer text (shown at the bottom of public pages)
-          </span>
-          <textarea
-            value={footer}
-            onChange={(e) => setFooter(e.target.value)}
-            rows={2}
-            maxLength={2000}
-            placeholder="e.g. Based in Torino · Available worldwide"
-            className={textareaClass}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={saveText}
-          disabled={saving}
-          className="border border-neutral-900 px-6 py-2 text-xs tracking-widest uppercase transition-colors hover:bg-neutral-900 hover:text-white disabled:opacity-40 dark:border-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-black"
-        >
-          {saving ? 'Saving…' : saved ? 'Saved' : 'Save site content'}
-        </button>
-      </section>
-
-      <section className="space-y-6">
-        <h2 className="text-sm font-medium tracking-widest uppercase">Pages</h2>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            About page content
-          </span>
-          <textarea
-            value={about}
-            onChange={(e) => setAbout(e.target.value)}
-            rows={8}
-            className={textareaClass}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
-            Contact page content
-          </span>
-          <textarea
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            rows={6}
-            className={textareaClass}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={saveText}
-          disabled={saving}
-          className="border border-neutral-900 px-6 py-2 text-xs tracking-widest uppercase transition-colors hover:bg-neutral-900 hover:text-white disabled:opacity-40 dark:border-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-black"
-        >
-          {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
-        </button>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-medium tracking-widest uppercase">
-          Analytics snippet
-        </h2>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          Optional HTML pasted into the public site&apos;s &lt;head&gt; (e.g. a
-          future GA4 or Umami script). Executed as-is on public pages only —
-          never on /admin. Leave empty to disable.
-        </p>
-        <textarea
-          value={analyticsHeadHtml}
-          onChange={(e) => setAnalyticsHeadHtml(e.target.value)}
-          rows={6}
-          className={textareaClass}
-          placeholder='<script async src="https://…"></script>'
-        />
-        <button
-          type="button"
-          onClick={saveText}
-          disabled={saving}
-          className="border border-neutral-900 px-6 py-2 text-xs tracking-widest uppercase transition-colors hover:bg-neutral-900 hover:text-white disabled:opacity-40 dark:border-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-black"
-        >
-          {saving ? 'Saving…' : saved ? 'Saved' : 'Save analytics snippet'}
-        </button>
-      </section>
+      </SettingsCard>
     </div>
   );
 }
