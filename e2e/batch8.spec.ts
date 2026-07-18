@@ -50,10 +50,9 @@ test('md variant serves + lazy-regenerates', async ({ playwright }) => {
 test('unknown gallery renders the branded 404', async ({ page }) => {
   const env = loadTestEnv();
   const res = await page.goto(`${env.baseUrl}/g/does-not-exist-xyz`);
-  // Branded not-found UI is the deliverable. (Status is 200, not 404, because
-  // these public routes are force-dynamic and notFound() during streaming
-  // returns a 200 shell — a pre-existing Next behavior, not a regression.)
-  expect(res?.status()).toBeLessThan(500);
+  // Proper 404 status (no route-level loading.tsx Suspense boundary on the
+  // public gallery routes, so notFound() resolves before the response flushes).
+  expect(res?.status()).toBe(404);
   await expect(page.getByText("This page doesn't exist")).toBeVisible();
   await expect(page.getByRole('link', { name: 'Back to home' })).toBeVisible();
 });
