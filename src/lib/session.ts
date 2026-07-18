@@ -91,7 +91,10 @@ export async function issueAdminSession(
   const session = await getAdminSession();
   const collaboratorId =
     principal.role === 'collaborator' ? principal.collaboratorId : null;
-  const sessionId = createAdminSession({ ...meta, collaboratorId });
+  const { deviceLabel, lookupGeo } = await import('./geo');
+  const device = deviceLabel(meta.userAgent);
+  const location = (await lookupGeo(meta.ip)).label;
+  const sessionId = createAdminSession({ ...meta, device, location, collaboratorId });
   session.isAdmin = true;
   session.sessionId = sessionId;
   await session.save();

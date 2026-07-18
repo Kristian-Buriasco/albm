@@ -24,6 +24,7 @@
     "drizzle-orm": "^0.45.2",
     "exif-reader": "^2.0.3",
     "iron-session": "^8.0.4",
+    "maxmind": "^4.3.29",
     "nanoid": "^6.0.0",
     "next": "^15.5.20",
     "p-queue": "^9.3.1",

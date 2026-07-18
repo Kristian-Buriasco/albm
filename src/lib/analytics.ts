@@ -16,12 +16,20 @@ export interface PhotoInsight {
   likes: number;
 }
 
+export interface LabelCount {
+  label: string;
+  count: number;
+}
+
 export interface GalleryInsights {
   viewTrend: TrendPoint[];
   totalViews: number;
   uniqueVisitors: number;
   conversion: { viewers: number; selectors: number; rate: number };
   perPhoto: PhotoInsight[];
+  topCities: LabelCount[];
+  referrers: LabelCount[];
+  peakHours: number[]; // 24 entries, index = hour of day (local-ish, UTC)
 }
 
 /** Fill missing days in a sparse daily trend with zeroes, oldest→newest. */
@@ -127,6 +135,44 @@ export function galleryInsights(galleryId: string): GalleryInsights {
     }))
     .sort((a, b) => b.views - a.views || b.downloads - a.downloads || b.likes - a.likes);
 
+  const galleryViewWhere = and(
+    eq(schema.viewEvents.galleryId, galleryId),
+    eq(schema.viewEvents.kind, 'gallery_view'),
+  );
+
+  const cityRows = db
+    .select({ label: schema.viewEvents.city, count: sql<number>`count(*)` })
+    .from(schema.viewEvents)
+    .where(and(galleryViewWhere, sql`${schema.viewEvents.city} is not null`))
+    .groupBy(schema.viewEvents.city)
+    .orderBy(desc(sql`count(*)`))
+    .limit(8)
+    .all();
+
+  const refRows = db
+    .select({ label: schema.viewEvents.referrer, count: sql<number>`count(*)` })
+    .from(schema.viewEvents)
+    .where(and(galleryViewWhere, sql`${schema.viewEvents.referrer} is not null`))
+    .groupBy(schema.viewEvents.referrer)
+    .orderBy(desc(sql`count(*)`))
+    .limit(8)
+    .all();
+
+  const hourRows = db
+    .select({
+      hour: sql<string>`strftime('%H', ${schema.viewEvents.createdAt} / 1000, 'unixepoch')`,
+      count: sql<number>`count(*)`,
+    })
+    .from(schema.viewEvents)
+    .where(galleryViewWhere)
+    .groupBy(sql`1`)
+    .all();
+  const peakHours = Array.from({ length: 24 }, () => 0);
+  for (const r of hourRows) {
+    const h = parseInt(r.hour, 10);
+    if (h >= 0 && h < 24) peakHours[h] = r.count;
+  }
+
   return {
     viewTrend: fillDays(trendRows),
     totalViews: totals?.total ?? 0,
@@ -137,6 +183,9 @@ export function galleryInsights(galleryId: string): GalleryInsights {
       rate: viewers > 0 ? Math.round((selectors / viewers) * 100) : 0,
     },
     perPhoto,
+    topCities: cityRows.filter((r) => r.label).map((r) => ({ label: r.label!, count: r.count })),
+    referrers: refRows.filter((r) => r.label).map((r) => ({ label: r.label!, count: r.count })),
+    peakHours,
   };
 }
 

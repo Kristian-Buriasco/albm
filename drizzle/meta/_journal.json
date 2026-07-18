@@ -141,6 +141,13 @@
       "when": 1784113200000,
       "tag": "0019_delivery_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1784199600000,
+      "tag": "0020_sessions_geo",
+      "breakpoints": true
     }
   ]
 }

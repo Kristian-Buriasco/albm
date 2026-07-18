@@ -111,6 +111,74 @@ export default function InsightsPanel({
 
       <LineChart data={trendData} title="Views (30 days)" />
 
+      {/* Peak viewing hours */}
+      <section className="space-y-4">
+        <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+          Peak viewing hours
+        </h2>
+        <div className="flex h-24 items-end gap-1">
+          {insights.peakHours && insights.peakHours.length === 24 ? (
+            (() => {
+              const maxValue = Math.max(...insights.peakHours);
+              return insights.peakHours.map((count, hour) => (
+                <div key={hour} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className="w-full rounded-t bg-neutral-900 dark:bg-neutral-100"
+                    style={{
+                      height: maxValue === 0 ? '2px' : `${(count / maxValue) * 100}%`,
+                    }}
+                  />
+                  {[0, 6, 12, 18].includes(hour) && (
+                    <span className="text-[10px] text-neutral-500">{hour}</span>
+                  )}
+                </div>
+              ));
+            })()
+          ) : (
+            <p className="text-xs text-neutral-500">No data yet.</p>
+          )}
+        </div>
+      </section>
+
+      {/* Locations and referrers */}
+      <div className="grid gap-8 md:grid-cols-2">
+        <section className="space-y-3">
+          <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+            Top locations
+          </h2>
+          {insights.topCities && insights.topCities.length > 0 ? (
+            <div className="space-y-2">
+              {insights.topCities.map((city) => (
+                <div key={city.label} className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700 dark:text-neutral-300">{city.label}</span>
+                  <span className="text-neutral-500 tabular-nums">{city.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500">No data yet.</p>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+            Traffic sources
+          </h2>
+          {insights.referrers && insights.referrers.length > 0 ? (
+            <div className="space-y-2">
+              {insights.referrers.map((ref) => (
+                <div key={ref.label} className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-700 dark:text-neutral-300">{ref.label}</span>
+                  <span className="text-neutral-500 tabular-nums">{ref.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500">No data yet.</p>
+          )}
+        </section>
+      </div>
+
       {/* Delivery lifecycle */}
       <section className="space-y-4">
         <h2 className="text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">

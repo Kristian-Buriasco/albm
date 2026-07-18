@@ -262,6 +262,9 @@ export const viewEvents = sqliteTable(
     photoId: text('photo_id').references(() => photos.id, { onDelete: 'set null' }),
     visitorId: text('visitor_id'),
     kind: text('kind').notNull(),
+    country: text('country'),
+    city: text('city'),
+    referrer: text('referrer'),
     createdAt: integer('created_at')
       .notNull()
       .$defaultFn(() => Date.now()),
@@ -547,6 +550,10 @@ export const adminSessions = sqliteTable(
       .$defaultFn(() => Date.now()),
     userAgentHash: text('user_agent_hash'),
     ipHash: text('ip_hash'),
+    /** Coarse device label (e.g. "Chrome on macOS"), not a fingerprint. */
+    device: text('device'),
+    /** Coarse geo (e.g. "Turin, IT"); null when no geo DB is present. */
+    location: text('location'),
     /** null = owner session; else the collaborators.id acting. */
     collaboratorId: text('collaborator_id'),
     revokedAt: integer('revoked_at'),

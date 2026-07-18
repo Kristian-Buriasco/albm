@@ -9,6 +9,8 @@ type SessionRow = {
   lastSeenAt: number;
   userAgentHash: string | null;
   ipHash: string | null;
+  device: string | null;
+  location: string | null;
   isCurrent: boolean;
 };
 
@@ -95,6 +97,9 @@ export default function AdminSessionsPanel() {
                 </p>
                 <p className="mt-0.5 text-neutral-500">
                   Created {fmt(s.createdAt)} · Last seen {fmt(s.lastSeenAt)}
+                </p>
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  {s.device ?? 'Unknown device'} · {s.location ?? 'Unknown location'}
                 </p>
                 <p className="mt-0.5 font-mono text-[10px] text-neutral-400">
                   UA {s.userAgentHash ?? '—'} · IP {s.ipHash ?? '—'}

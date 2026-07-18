@@ -1,6 +1,15 @@
 import { lt, eq, sql, and, isNotNull } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { getDb, schema } from '@/db';
+import { lookupGeo, referrerSource } from './geo';
+import { BASE_URL } from './env';
+
+let baseHost = '';
+try {
+  baseHost = new URL(BASE_URL).host;
+} catch {
+  baseHost = '';
+}
 
 const DEBOUNCE_MS = 30 * 60 * 1000;
 const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
@@ -50,12 +59,19 @@ export async function recordGalleryView(
 
   if (Math.random() < 0.01) pruneOldViewEvents();
 
+  const h = await headers();
+  const geo = await lookupGeo(await clientIp());
+  const referrer = referrerSource(h.get('referer'), baseHost);
+
   getDb()
     .insert(schema.viewEvents)
     .values({
       galleryId,
       visitorId,
       kind: 'gallery_view',
+      country: geo.country,
+      city: geo.city,
+      referrer,
     })
     .run();
 }

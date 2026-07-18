@@ -1,4 +1,4 @@
-import { asc, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '@/db';
 
@@ -55,18 +55,60 @@ export function pruneAuditLog(): void {
   }
 }
 
-export function listAuditLog(opts: { action?: string | null; limit?: number } = {}) {
+export type AuditFilter = {
+  action?: string | null;
+  actorType?: 'owner' | 'collaborator' | null;
+  since?: number | null; // epoch ms lower bound
+  limit?: number;
+};
+
+function auditConditions(opts: AuditFilter) {
+  const conds = [];
+  if (opts.action) conds.push(eq(schema.auditLog.action, opts.action));
+  if (opts.actorType) conds.push(eq(schema.auditLog.actorType, opts.actorType));
+  if (opts.since) conds.push(gte(schema.auditLog.at, opts.since));
+  return conds;
+}
+
+export function listAuditLog(opts: AuditFilter = {}) {
   const limit = Math.min(Math.max(opts.limit ?? 200, 1), 500);
   const db = getDb();
+  const conds = auditConditions(opts);
   const q = db.select().from(schema.auditLog);
-  if (opts.action) {
-    return q
-      .where(eq(schema.auditLog.action, opts.action))
-      .orderBy(desc(schema.auditLog.at))
-      .limit(limit)
-      .all();
-  }
-  return q.orderBy(desc(schema.auditLog.at)).limit(limit).all();
+  return (conds.length ? q.where(and(...conds)) : q)
+    .orderBy(desc(schema.auditLog.at))
+    .limit(limit)
+    .all();
+}
+
+/** Full filtered result (capped) formatted as CSV for export. */
+export function exportAuditCsv(opts: AuditFilter = {}): string {
+  const db = getDb();
+  const conds = auditConditions(opts);
+  const q = db.select().from(schema.auditLog);
+  const rows = (conds.length ? q.where(and(...conds)) : q)
+    .orderBy(desc(schema.auditLog.at))
+    .limit(5000)
+    .all();
+  const esc = (v: unknown) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = 'timestamp,action,actor_type,actor_id,target_type,target_id,summary';
+  const lines = rows.map((r) =>
+    [
+      new Date(r.at).toISOString(),
+      r.action,
+      r.actorType,
+      r.actorId ?? '',
+      r.targetType ?? '',
+      r.targetId ?? '',
+      r.summary,
+    ]
+      .map(esc)
+      .join(','),
+  );
+  return [header, ...lines].join('\n');
 }
 
 export function auditActionTypes(): string[] {

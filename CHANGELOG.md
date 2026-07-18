@@ -4,6 +4,23 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] — 2026-07-18
+
+### Added
+- **Session security**: 48-hour idle timeout (on top of the 7-day absolute cap); active-sessions
+  list now shows device + coarse location; per-session revoke and "log out everywhere" (existing).
+- **Login visibility**: each admin sign-in is audit-logged with device + location; a login from a
+  new device/location is flagged (`admin.login.new`).
+- **Audit log**: filter by actor and time range, plus CSV export.
+- **Location analytics**: optional, self-hosted IP→coarse-location via a local MaxMind
+  GeoLite2-City DB (`$DATA_DIR/GeoLite2-City.mmdb`); no external calls, no raw IPs stored — only
+  coarse strings. Absent DB → "Unknown". Powers viewer **Top locations** and admin login location.
+- **Insights** gains **peak viewing hours**, **top locations**, and **traffic sources** (referrers).
+
+### Notes
+- City/location data only appears once you place a GeoLite2-City DB at `$DATA_DIR/GeoLite2-City.mmdb`
+  (free from MaxMind). Everything else works without it.
+
 ## [1.8.0] — 2026-07-18
 
 ### Added
@@ -75,6 +92,7 @@ All notable changes to Albm are documented here. Format follows
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.9.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.9.0
 [1.8.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.8.0
 [1.7.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.7.1
 [1.7.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.7.0
