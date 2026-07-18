@@ -7,6 +7,8 @@ import { BASE_URL } from '@/lib/env';
 import { getPrincipal } from '@/lib/session';
 import { collaboratorHasCapability } from '@/lib/grants';
 import { topViewedPhotos } from '@/lib/views';
+import { galleryInsights, type GalleryInsights } from '@/lib/analytics';
+import { getGalleryTimeline, type TimelineItem } from '@/lib/lifecycle';
 import GalleryAdmin from './GalleryAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +58,8 @@ export default async function AdminGalleryPage({
   let viewStats = { total: 0, last7: 0, lastAt: null as number | null };
   let topViewed: { photoId: string; count: number }[] = [];
   let sizeBytes = 0;
+  let insights: GalleryInsights | null = null;
+  let timeline: TimelineItem[] = [];
 
   if (isOwner) {
     const visitorRows = db
@@ -123,6 +127,8 @@ export default async function AdminGalleryPage({
 
     topViewed = topViewedPhotos(id);
     sizeBytes = dirSizeBytes(galleryDir(id));
+    insights = galleryInsights(id);
+    timeline = getGalleryTimeline(id);
   }
 
   // Don't ship secret hashes to a collaborator's browser even though the
@@ -147,6 +153,8 @@ export default async function AdminGalleryPage({
           : `${BASE_URL}/portfolio/${gallery.slug}`
       }
       topViewed={topViewed}
+      insights={insights}
+      timeline={timeline}
     />
   );
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import AdminEditLink from '@/components/AdminEditLink';
 import JsonLd from '@/components/JsonLd';
 import WorkSection, { type WorkItem } from '@/components/WorkSection';
 import { getSetting } from '@/lib/settings';
@@ -114,6 +115,7 @@ export default function HomePage() {
         lang={lang}
       />
       <SiteFooter />
+      <AdminEditLink href="/admin" label="Admin" />
     </div>
   );
 }

@@ -134,6 +134,13 @@
       "when": 1784026800000,
       "tag": "0018_collaborators",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1784113200000,
+      "tag": "0019_delivery_lifecycle",
+      "breakpoints": true
     }
   ]
 }

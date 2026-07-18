@@ -124,6 +124,11 @@ export const galleries = sqliteTable('galleries', {
   faceBatchTotal: integer('face_batch_total').notNull().default(0),
   faceBatchError: text('face_batch_error'),
   faceBatchUpdatedAt: integer('face_batch_updated_at'),
+  deliveryState: text('delivery_state', {
+    enum: ['proofing', 'retouching', 'delivered'],
+  })
+    .notNull()
+    .default('proofing'),
   ...timestamps,
 });
 
@@ -264,6 +269,27 @@ export const viewEvents = sqliteTable(
   (t) => [index('view_events_gallery_created_idx').on(t.galleryId, t.createdAt)],
 );
 
+/** Admin-only delivery-lifecycle history for a gallery (state changes + notes). */
+export const galleryEvents = sqliteTable(
+  'gallery_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    type: text('type', { enum: ['state_change', 'note'] }).notNull(),
+    fromState: text('from_state'),
+    toState: text('to_state'),
+    note: text('note'),
+    actorType: text('actor_type').notNull().default('owner'),
+    actorId: text('actor_id'),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [index('gallery_events_gallery_created_idx').on(t.galleryId, t.createdAt)],
+);
+
 export const downloadEvents = sqliteTable('download_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   galleryId: text('gallery_id')
@@ -384,7 +410,7 @@ export const adminCredentials = sqliteTable(
   'admin_credentials',
   {
     id: text('id').primaryKey(),
-    credentialId: text('credential_id').notNull().unique(),
+    credentialId: text('credential_id').notNull(),
     publicKey: blob('public_key').notNull(),
     counter: integer('counter').notNull().default(0),
     transports: text('transports'),

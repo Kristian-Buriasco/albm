@@ -15,6 +15,9 @@ import ShareTools from '@/components/ShareTools';
 import MostViewedStrip from '@/components/MostViewedStrip';
 import CollaboratorsPanel from './CollaboratorsPanel';
 import Tabs, { type TabDef } from '@/components/Tabs';
+import InsightsPanel from './InsightsPanel';
+import type { GalleryInsights } from '@/lib/analytics';
+import type { DeliveryState, TimelineItem } from '@/lib/lifecycle';
 
 interface VisitorInfo {
   id: string;
@@ -36,6 +39,9 @@ interface Props {
   sizeBytes: number;
   shareUrl: string;
   topViewed?: { photoId: string; count: number }[];
+  /** Owner-only engagement + delivery data for the Insights tab. */
+  insights?: GalleryInsights | null;
+  timeline?: TimelineItem[];
   /** False for a collaborator: hides owner-only controls. Server routes are the real gate. */
   isOwner?: boolean;
 }
@@ -67,6 +73,8 @@ export default function GalleryAdmin({
   sizeBytes,
   shareUrl,
   topViewed = [],
+  insights = null,
+  timeline = [],
   isOwner = true,
 }: Props) {
   const router = useRouter();
@@ -477,6 +485,7 @@ export default function GalleryAdmin({
     ...(isOwner
       ? [
           { id: 'settings', label: 'Settings' },
+          { id: 'insights', label: 'Insights' },
           { id: 'comments', label: 'Comments' },
           { id: 'collaborators', label: 'Collaborators' },
         ]
@@ -1108,6 +1117,16 @@ export default function GalleryAdmin({
         </div>
       )}
 
+      {isOwner && insights && (
+        <div hidden={active !== 'insights'}>
+          <InsightsPanel
+            galleryId={gallery.id}
+            insights={insights}
+            timeline={timeline}
+            deliveryState={gallery.deliveryState as DeliveryState}
+          />
+        </div>
+      )}
       {isOwner && (
         <div hidden={active !== 'collaborators'}>
           <CollaboratorsPanel galleryId={gallery.id} />

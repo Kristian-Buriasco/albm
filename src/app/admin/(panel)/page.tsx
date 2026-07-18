@@ -9,6 +9,7 @@ import ExpiredGalleryActions from '@/components/ExpiredGalleryActions';
 import { pendingCommentCount } from '@/lib/comments';
 import { formatBytes } from '@/lib/disk';
 import { getStorageSnapshot } from '@/lib/storage-cache';
+import { globalAnalytics } from '@/lib/analytics';
 import { isGalleryExpired } from '@/lib/downloads';
 import { getPrincipal } from '@/lib/session';
 import { collaboratorGalleryIds } from '@/lib/grants';
@@ -141,6 +142,13 @@ export default async function AdminDashboard() {
 
   const expiredRows = listRows.filter((r) => r.expired && r.type === 'client');
   const usedPct = Math.round((storage.disk.usedBytes / storage.disk.totalBytes) * 100);
+  const totals = globalAnalytics().totals;
+  const statTiles = [
+    { label: 'Total views', value: totals.views },
+    { label: 'Unique visitors', value: totals.uniqueVisitors },
+    { label: 'Downloads', value: totals.downloads },
+    { label: 'Selections', value: totals.selections },
+  ];
 
   return (
     <div>
@@ -149,6 +157,20 @@ export default async function AdminDashboard() {
           {pendingComments} comment{pendingComments > 1 ? 's' : ''} awaiting moderation
         </p>
       )}
+
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {statTiles.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+          >
+            <p className="text-2xl font-medium tabular-nums">{s.value.toLocaleString()}</p>
+            <p className="mt-1 text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+              {s.label}
+            </p>
+          </div>
+        ))}
+      </div>
 
       <div className="mb-8 grid gap-8 md:grid-cols-2">
         <LineChart data={viewsOverTime} title="Views (30 days)" />
