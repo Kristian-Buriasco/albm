@@ -36,8 +36,8 @@ Optional form field:
 | `200` | Duplicate content hash; body includes `duplicate: true` and `existingFilename` |
 | `401` | Missing, invalid, or revoked token |
 | `404` | Gallery not found |
-| `413` | File over 50 MB |
-| `415` | Not JPEG/PNG or unreadable image |
+| `413` | File over 50 MB (100 MB for RAW) |
+| `415` | Not JPEG/PNG/RAW, or unreadable image |
 | `429` | Rate limit (300 uploads / 15 min per token+IP) |
 
 ## curl example
@@ -59,5 +59,5 @@ Use **Publish Services** or a third-party publish script targeting the same endp
 ## Notes
 
 - The gallery must already exist; tokens cannot create galleries.
-- JPEG and PNG only; filenames are sanitized and deduplicated by content hash.
+- JPEG, PNG, and camera RAW (DNG/CR2/CR3/NEF/ARW/…) are accepted; RAW is decoded server-side (install `dcraw` on the host for full RAW support beyond embedded previews) and delivered to clients as JPEG. Filenames are sanitized and deduplicated by content hash.
 - Token values are never logged server-side.

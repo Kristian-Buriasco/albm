@@ -2,8 +2,13 @@
 
 ## Security model
 
-Albm is a **single-admin, self-hosted** app. There is one admin
-identity (password and/or passkeys); there are no visitor accounts. Client
+Albm is a **single-owner, self-hosted** app. There is one owner identity
+(password and/or passkeys) with full control; there are no visitor accounts.
+The owner may optionally invite **Collaborators** — a secondary principal
+type with their own passkey, scoped per-gallery to upload and organize only,
+enforced server-side on every gallery-scoped route (not just hidden in the
+UI). Collaborators cannot touch site settings, other galleries, or any
+owner-only action, and revoking a grant removes access immediately. Client
 galleries are reached at unguessable URLs and may be individually
 password-protected. TLS is expected to be terminated by a reverse proxy in
 front of the app.
@@ -27,3 +32,5 @@ coordinated disclosure once a fix is available.
 - Serve only over HTTPS (WebAuthn/passkeys require a secure origin).
 - Back up `DATA_DIR` — it holds your database and photos. Migration backups
   land in `DATA_DIR/backups/`.
+- Review each gallery's **Collaborators** tab periodically; revoke a grant
+  or disable a collaborator the moment they no longer need access.
