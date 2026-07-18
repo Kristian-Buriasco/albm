@@ -92,10 +92,24 @@ export default async function ClientGalleryPage({
 
   if (!isPreview && needsAccessGate(gallery) && !admin && !(await hasGalleryAccess(gallery.id))) {
     const defaultLang = parseLang(getSetting('defaultLanguage'));
+    // Only the cover's blur placeholder (a ~24px data URI) is exposed to a
+    // locked visitor — never a real photo — for an ambient gate background.
+    const coverId = gallery.previewPhotoId ?? gallery.coverPhotoId;
+    const coverPlaceholder = coverId
+      ? (db
+          .select({ placeholder: schema.photos.placeholder })
+          .from(schema.photos)
+          .where(eq(schema.photos.id, coverId))
+          .get()?.placeholder ?? null)
+      : null;
     if (galleryUsesPin(gallery)) {
-      return <PinGate slug={slug} title={gallery.title} lang={defaultLang} />;
+      return (
+        <PinGate slug={slug} title={gallery.title} lang={defaultLang} coverPlaceholder={coverPlaceholder} />
+      );
     }
-    return <PasswordGate slug={slug} title={gallery.title} lang={defaultLang} />;
+    return (
+      <PasswordGate slug={slug} title={gallery.title} lang={defaultLang} coverPlaceholder={coverPlaceholder} />
+    );
   }
 
   const visitorSession = await getVisitorSession(gallery.id);

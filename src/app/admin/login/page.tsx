@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { startAuthentication } from '@simplewebauthn/browser';
+import ThemeToggle from '@/components/ThemeToggle';
+
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 type LoginConfig = {
   passwordLoginEnabled: boolean;
@@ -105,21 +108,40 @@ export default function AdminLoginPage() {
   const showPasskey = config?.hasPasskeys === true;
   const showPassword = config?.passwordLoginEnabled ?? true;
 
-  if (!loaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-xs text-neutral-500">Loading…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-xs">
-        <h1 className="mb-10 text-center text-sm font-light tracking-[0.3em] uppercase">
-          Admin
-        </h1>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-neutral-50 to-neutral-200 dark:from-neutral-950 dark:to-black"
+        aria-hidden
+      />
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
 
+      <div className="relative z-10 w-full max-w-sm rounded-xl border border-neutral-200 bg-white/80 p-8 shadow-xl ring-1 ring-black/5 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/70 dark:ring-white/10">
+        <div className="mb-8 text-center">
+          <span
+            className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 dark:border-neutral-700"
+            aria-hidden
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4">
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+          </span>
+          <p className="text-[10px] tracking-[0.3em] text-neutral-400 uppercase dark:text-neutral-500">
+            {SITE_NAME}
+          </p>
+          <h1 className="mt-2 text-sm font-light tracking-[0.25em] uppercase">Admin</h1>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            {loaded ? 'Sign in to manage galleries' : 'Loading…'}
+          </p>
+        </div>
+
+        {!loaded ? (
+          <div className="h-9 w-full animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
+        ) : (
+        <>
         {view === 'passkey' && (
           <div className="space-y-6">
             {showPasskey ? (
@@ -230,6 +252,8 @@ export default function AdminLoginPage() {
           <p className="mt-4 text-center text-xs text-red-600 dark:text-red-400">
             {error}
           </p>
+        )}
+        </>
         )}
       </div>
     </div>

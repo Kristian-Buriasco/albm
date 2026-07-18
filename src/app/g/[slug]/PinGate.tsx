@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ThemeToggle from '@/components/ThemeToggle';
+import LockedShell from './LockedShell';
 import type { Lang } from '@/lib/i18n';
 import { t } from '@/lib/i18n';
 
@@ -10,10 +10,12 @@ export default function PinGate({
   slug,
   title,
   lang,
+  coverPlaceholder,
 }: {
   slug: string;
   title: string;
   lang: Lang;
+  coverPlaceholder?: string | null;
 }) {
   const router = useRouter();
   const [pin, setPin] = useState('');
@@ -40,17 +42,11 @@ export default function PinGate({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <h1 className="mb-4 text-center text-sm font-light tracking-[0.3em] uppercase">
-        {title}
-      </h1>
-      <p className="mb-8 max-w-xs text-center text-xs text-muted dark:text-muted-dark">
+    <LockedShell title={title} coverPlaceholder={coverPlaceholder}>
+      <p className="mb-6 text-xs text-neutral-500 dark:text-neutral-400">
         {t(lang, 'pinHint')}
       </p>
-      <form onSubmit={submit} className="w-full max-w-xs">
+      <form onSubmit={submit}>
         <input
           type="text"
           inputMode="numeric"
@@ -75,6 +71,6 @@ export default function PinGate({
           {busy ? t(lang, 'checking') : t(lang, 'enter')}
         </button>
       </form>
-    </div>
+    </LockedShell>
   );
 }
