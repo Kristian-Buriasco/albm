@@ -107,6 +107,7 @@ export default function GalleryClient({
     () => new Set(initialSelectedIds),
   );
   const [onlyMine, setOnlyMine] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [downloadConfirm, setDownloadConfirm] = useState<'all' | 'favorites' | null>(null);
@@ -382,51 +383,12 @@ export default function GalleryClient({
               </p>
             )}
           </div>
-          <div className="-mx-4 flex items-center gap-3 overflow-x-auto px-4 pb-1 text-xs [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-            <div className="flex flex-nowrap items-center gap-1 sm:flex-wrap">
-              <span className="text-muted dark:text-muted-dark">{t(lang, 'selectionLists')}:</span>
-              <button
-                type="button"
-                onClick={() => setActiveListId(null)}
-                className={`rounded-full border px-2 py-0.5 ${
-                  activeListId === null ? 'border-ink dark:border-ink-dark' : 'border-line'
-                }`}
-              >
-                {DEFAULT_LIST_NAME}
-              </button>
-              {lists.map((list) => (
-                <button
-                  key={list.id}
-                  type="button"
-                  onClick={() => setActiveListId(list.id)}
-                  className={`rounded-full border px-2 py-0.5 ${
-                    activeListId === list.id ? 'border-ink dark:border-ink-dark' : 'border-line'
-                  }`}
-                >
-                  {list.name}
-                </button>
-              ))}
-              <input
-                value={newListName}
-                onChange={(e) => setNewListName(e.target.value)}
-                placeholder={t(lang, 'newList')}
-                className="w-20 border-b border-line bg-transparent py-0.5 dark:border-line-dark"
-              />
-              <button type="button" onClick={createList} className="underline">
-                +
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowMagicLink(true)}
-              className="underline"
-            >
-              {linkedEmail ? t(lang, 'switchDevice') : t(lang, 'saveSelections')}
-            </button>
+          <div className="flex items-center gap-2 text-xs sm:gap-3">
+            {/* Primary action — always visible on every screen size. */}
             <button
               type="button"
               onClick={() => setOnlyMine((v) => !v)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
                 onlyMine
                   ? 'border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black'
                   : 'border-neutral-300 text-neutral-600 hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300'
@@ -435,26 +397,96 @@ export default function GalleryClient({
               <HeartIcon filled={onlyMine} className="h-3.5 w-3.5" />
               {t(lang, 'mySelections')}
             </button>
-            {downloadEnabled && (
+
+            <div className="relative">
+              {/* Mobile menu trigger; the controls render inline on sm+. */}
               <button
                 type="button"
-                onClick={() => promptDownload('all')}
-                className="rounded-full border border-neutral-300 px-3 py-1.5 text-neutral-600 transition-colors hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-expanded={menuOpen}
+                aria-label="Options"
+                className="flex shrink-0 items-center rounded-full border border-line px-3 py-1.5 sm:hidden dark:border-line-dark"
               >
-                {t(lang, 'downloadAll')}
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                  <circle cx="5" cy="12" r="1.7" />
+                  <circle cx="12" cy="12" r="1.7" />
+                  <circle cx="19" cy="12" r="1.7" />
+                </svg>
               </button>
-            )}
-            {downloadEnabled && favoritesDownloadEnabled && selected.size > 0 && (
-              <button
-                type="button"
-                onClick={() => promptDownload('favorites')}
-                className="rounded-full border border-neutral-300 px-3 py-1.5 text-neutral-600 transition-colors hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300"
+              {menuOpen && (
+                <div
+                  className="fixed inset-0 z-10 sm:hidden"
+                  onClick={() => setMenuOpen(false)}
+                  aria-hidden
+                />
+              )}
+              <div
+                className={`${menuOpen ? 'flex' : 'hidden'} absolute top-full right-0 z-20 mt-2 w-64 flex-col items-stretch gap-4 rounded-xl border border-line bg-paper p-4 shadow-2xl dark:border-line-dark dark:bg-paper-dark sm:static sm:z-auto sm:mt-0 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}
               >
-                {t(lang, 'downloadSelections')}
-              </button>
-            )}
-            <LanguageSwitcher lang={lang} onChange={setLang} />
-            <ThemeToggle />
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-muted dark:text-muted-dark">{t(lang, 'selectionLists')}:</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveListId(null)}
+                    className={`rounded-full border px-2 py-0.5 ${
+                      activeListId === null ? 'border-ink dark:border-ink-dark' : 'border-line'
+                    }`}
+                  >
+                    {DEFAULT_LIST_NAME}
+                  </button>
+                  {lists.map((list) => (
+                    <button
+                      key={list.id}
+                      type="button"
+                      onClick={() => setActiveListId(list.id)}
+                      className={`rounded-full border px-2 py-0.5 ${
+                        activeListId === list.id ? 'border-ink dark:border-ink-dark' : 'border-line'
+                      }`}
+                    >
+                      {list.name}
+                    </button>
+                  ))}
+                  <input
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    placeholder={t(lang, 'newList')}
+                    className="w-20 border-b border-line bg-transparent py-0.5 dark:border-line-dark"
+                  />
+                  <button type="button" onClick={createList} className="underline">
+                    +
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMagicLink(true)}
+                  className="text-left underline sm:text-center"
+                >
+                  {linkedEmail ? t(lang, 'switchDevice') : t(lang, 'saveSelections')}
+                </button>
+                {downloadEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => promptDownload('all')}
+                    className="rounded-full border border-neutral-300 px-3 py-1.5 text-neutral-600 transition-colors hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300"
+                  >
+                    {t(lang, 'downloadAll')}
+                  </button>
+                )}
+                {downloadEnabled && favoritesDownloadEnabled && selected.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => promptDownload('favorites')}
+                    className="rounded-full border border-neutral-300 px-3 py-1.5 text-neutral-600 transition-colors hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300"
+                  >
+                    {t(lang, 'downloadSelections')}
+                  </button>
+                )}
+                <div className="flex items-center justify-between gap-3 sm:contents">
+                  <LanguageSwitcher lang={lang} onChange={setLang} />
+                  <ThemeToggle />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
