@@ -1,5 +1,6 @@
 import { expect, test, request as playwrightRequest } from '@playwright/test';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { adminLogin, createGallery, patchGallery, uploadPhoto, waitForPhotoReady } from './helpers/api';
 import { loadTestEnv, makeTestJpeg } from './helpers/env';
@@ -11,7 +12,7 @@ test('md variant serves + lazy-regenerates', async ({ playwright }) => {
   await adminLogin(admin, env.baseUrl, env.password);
 
   const g = await createGallery(admin, env.baseUrl, { title: 'Img Variants', type: 'portfolio' });
-  const f = `/private/tmp/claude-501/-Users-kristianburiasco/ebc0970a-6ff1-4c40-a7a4-10048022e3a3/scratchpad/imgtest.jpg`;
+  const f = path.join(os.tmpdir(), 'imgtest.jpg');
   await makeTestJpeg(f, { r: 100, g: 120, b: 140 });
   const ph = await uploadPhoto(admin, env.baseUrl, g.id, f);
   await waitForPhotoReady(admin, env.baseUrl, g.id, ph.id);
