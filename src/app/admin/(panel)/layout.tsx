@@ -45,6 +45,18 @@ export default async function AdminLayout({
                   Forensic
                 </Link>
                 <Link
+                  href="/admin/testimonials"
+                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  Testimonials
+                </Link>
+                <Link
+                  href="/admin/maintenance"
+                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  Maintenance
+                </Link>
+                <Link
                   href="/admin/settings"
                   className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
                 >

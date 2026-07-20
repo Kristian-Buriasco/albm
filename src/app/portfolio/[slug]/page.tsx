@@ -10,6 +10,7 @@ import JsonLd from '@/components/JsonLd';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
 import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
+import { effectiveGallerySeo } from '@/lib/gallery-seo';
 import { sitePersonName } from '@/lib/feed-data';
 import { isAdmin } from '@/lib/session';
 import { recordGalleryView } from '@/lib/views';
@@ -27,19 +28,28 @@ export async function generateMetadata({
     .from(schema.galleries)
     .where(and(eq(schema.galleries.slug, slug), eq(schema.galleries.type, 'portfolio')))
     .get();
-  if (!gallery || !gallery.published || !gallery.socialPreview) return {};
+  if (!gallery || !gallery.published) return {};
+  const seo = effectiveGallerySeo(gallery);
+  const base: Metadata = {
+    title: seo.title,
+    description: seo.description,
+    robots: seo.robots,
+  };
+  if (!gallery.socialPreview) return base;
   const preview = previewPhotoId(gallery);
-  if (!preview) return { title: gallery.title };
+  if (!preview) return base;
   const imageUrl = `${BASE_URL}/img/${preview}/web`;
   return {
-    title: gallery.title,
+    ...base,
     openGraph: {
-      title: gallery.title,
+      title: seo.title,
+      description: seo.description,
       images: [{ url: imageUrl }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: gallery.title,
+      title: seo.title,
+      description: seo.description,
       images: [imageUrl],
     },
   };

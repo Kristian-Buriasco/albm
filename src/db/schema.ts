@@ -129,8 +129,48 @@ export const galleries = sqliteTable('galleries', {
   })
     .notNull()
     .default('proofing'),
+  /** Soft storage quota in bytes; null = unlimited. Alerts only, never blocks upload. */
+  storageQuotaBytes: integer('storage_quota_bytes'),
+  /** Live event wall / kiosk mode toggle. */
+  kioskEnabled: integer('kiosk_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  /** Opaque token for the public kiosk link; null until first enabled. */
+  kioskToken: text('kiosk_token'),
+  /** Per-gallery SEO overrides (portfolio-facing). */
+  metaTitle: text('meta_title'),
+  metaDescription: text('meta_description'),
+  /** When true, emit robots noindex for this gallery's public page. */
+  noindex: integer('noindex', { mode: 'boolean' }).notNull().default(false),
   ...timestamps,
 });
+
+/** Post-delivery client testimonials; moderated (pending → approved) before public. */
+export const testimonials = sqliteTable(
+  'testimonials',
+  {
+    id: text('id').primaryKey(),
+    galleryId: text('gallery_id')
+      .notNull()
+      .references(() => galleries.id, { onDelete: 'cascade' }),
+    /** Client visitor who left it, when known. */
+    visitorId: text('visitor_id'),
+    rating: integer('rating').notNull(),
+    quote: text('quote').notNull(),
+    authorName: text('author_name').notNull(),
+    status: text('status', { enum: ['pending', 'approved', 'hidden'] })
+      .notNull()
+      .default('pending'),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+    approvedAt: integer('approved_at'),
+  },
+  (t) => [
+    index('testimonials_gallery_idx').on(t.galleryId),
+    index('testimonials_status_idx').on(t.status),
+  ],
+);
 
 export const galleryFolders = sqliteTable('gallery_folders', {
   id: text('id').primaryKey(),
@@ -632,3 +672,4 @@ export type SelectionList = typeof selectionLists.$inferSelect;
 export type ClientAccount = typeof clientAccounts.$inferSelect;
 export type UploadToken = typeof uploadTokens.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
+export type Testimonial = typeof testimonials.$inferSelect;

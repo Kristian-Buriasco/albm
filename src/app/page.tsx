@@ -4,6 +4,8 @@ import SiteFooter from '@/components/SiteFooter';
 import AdminEditLink from '@/components/AdminEditLink';
 import JsonLd from '@/components/JsonLd';
 import WorkSection, { type WorkItem } from '@/components/WorkSection';
+import Testimonials from '@/components/Testimonials';
+import { getApprovedTestimonials } from '@/lib/testimonials';
 import { getSetting } from '@/lib/settings';
 import { coverPhotoId, getPublishedPortfolioGalleries } from '@/lib/public-data';
 import { getGalleryTags } from '@/lib/tags';
@@ -114,6 +116,7 @@ export default function HomePage() {
         allTags={allTags}
         lang={lang}
       />
+      <Testimonials testimonials={getApprovedTestimonials()} />
       <SiteFooter />
       <AdminEditLink href="/admin" label="Admin" />
     </div>

@@ -117,6 +117,28 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
     updates.folderId =
       typeof body.folderId === 'string' && body.folderId ? body.folderId : null;
   }
+  if ('metaTitle' in body) {
+    updates.metaTitle =
+      typeof body.metaTitle === 'string' && body.metaTitle.trim()
+        ? body.metaTitle.trim().slice(0, 200)
+        : null;
+  }
+  if ('metaDescription' in body) {
+    updates.metaDescription =
+      typeof body.metaDescription === 'string' && body.metaDescription.trim()
+        ? body.metaDescription.trim().slice(0, 500)
+        : null;
+  }
+  if (typeof body.noindex === 'boolean') {
+    updates.noindex = body.noindex;
+  }
+  if ('storageQuotaBytes' in body) {
+    const v = body.storageQuotaBytes;
+    updates.storageQuotaBytes =
+      typeof v === 'number' && Number.isFinite(v) && v > 0
+        ? Math.round(v)
+        : null;
+  }
   return updates;
 }
 

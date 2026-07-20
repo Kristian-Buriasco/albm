@@ -4,7 +4,27 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
-## [1.9.0] — 2026-07-18
+## [1.10.0] — 2026-07-20
+
+Combined release covering three roadmap themes: storage, live events, and marketing.
+
+### Added
+- **Storage & integrity**: a **Maintenance** admin page — derivative-integrity scan (finds
+  `ready` photos missing thumb/md/web — plus working/print for RAW — and one-click regenerates
+  them) and volume/storage usage. Per-gallery **storage usage bar** with an optional **soft
+  quota** (`storage_quota_bytes`): warns at ≥80% / over, never blocks uploads.
+- **Live event wall / kiosk**: per-gallery **kiosk mode** — a fullscreen, auto-rotating,
+  chrome-free wall of the newest uploads that polls live during an event. Shareable public link
+  (+ QR); respects the gallery's existing password/PIN/expiry gating. New `kiosk_enabled` /
+  `kiosk_token` columns.
+- **Client testimonials** (moderated): after a gallery is **delivered**, clients get a
+  rating + quote prompt; submissions stay **pending** until you approve them in a new
+  **Testimonials** admin page, then appear in a public "What clients say" section. New
+  `testimonials` table.
+- **Per-gallery SEO**: custom `meta_title` / `meta_description` and a `noindex` toggle wired
+  into the gallery's public metadata + robots (portfolio-facing).
+
+
 
 ### Added
 - **Session security**: 48-hour idle timeout (on top of the 7-day absolute cap); active-sessions
@@ -95,6 +115,7 @@ All notable changes to Albm are documented here. Format follows
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.0
 [1.9.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.9.0
 [1.8.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.8.0
 [1.7.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.7.1

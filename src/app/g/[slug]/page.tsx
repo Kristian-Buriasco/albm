@@ -18,6 +18,8 @@ import AdminEditLink from '@/components/AdminEditLink';
 import PasswordGate from './PasswordGate';
 import PinGate from './PinGate';
 import GalleryClient from './GalleryClient';
+import TestimonialPrompt from './TestimonialPrompt';
+import { hasSubmittedTestimonial } from '@/lib/testimonials';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,6 +116,7 @@ export default async function ClientGalleryPage({
 
   const visitorSession = await getVisitorSession(gallery.id);
   let hasVisitor = false;
+  let currentVisitorId: string | null = null;
   let selectedIds: string[] = [];
   let accountEmail: string | null = null;
   let selectionLists: { id: string; name: string }[] = [];
@@ -125,6 +128,7 @@ export default async function ClientGalleryPage({
       .get();
     if (visitor && visitor.galleryId === gallery.id) {
       hasVisitor = true;
+      currentVisitorId = visitor.id;
       if (visitor.accountId) {
         accountEmail = getAccountEmail(visitor.accountId);
       }
@@ -151,6 +155,12 @@ export default async function ClientGalleryPage({
   const sectionGroups = buildSectionPayloads(gallery, photos, sectionsDb);
   const tagOptions = getDistinctPhotoTagsForClientGallery(gallery.id);
   const photoTagIds = getPhotoTagMapForClient(gallery.id);
+
+  const showTestimonialPrompt =
+    gallery.deliveryState === 'delivered' &&
+    hasVisitor &&
+    currentVisitorId != null &&
+    !hasSubmittedTestimonial(gallery.id, currentVisitorId);
 
   return (
     <>
@@ -187,6 +197,7 @@ export default async function ClientGalleryPage({
       tagOptions={tagOptions}
       defaultLang={parseLang(getSetting('defaultLanguage'))}
     />
+    {showTestimonialPrompt && <TestimonialPrompt slug={slug} />}
     </>
   );
 }

@@ -16,6 +16,10 @@ import MostViewedStrip from '@/components/MostViewedStrip';
 import CollaboratorsPanel from './CollaboratorsPanel';
 import Tabs, { type TabDef } from '@/components/Tabs';
 import InsightsPanel from './InsightsPanel';
+import KioskToggle from './KioskToggle';
+import SeoFields from './SeoFields';
+import StorageBar from './StorageBar';
+import SettingsCard from '@/components/SettingsCard';
 import type { GalleryInsights } from '@/lib/analytics';
 import type { DeliveryState, TimelineItem } from '@/lib/lifecycle';
 
@@ -703,6 +707,62 @@ export default function GalleryAdmin({
       {isOwner && (
       <div hidden={active !== 'settings'}>
         <AdminExtraSettings gallery={gallery} photos={photos} patchGallery={patchGallery} />
+      </div>
+      )}
+
+      {isOwner && (
+      <div hidden={active !== 'settings'} className="mt-12 space-y-8">
+        <SettingsCard
+          title="Storage"
+          description="Advisory only — a quota warns you here, it never blocks uploads."
+        >
+          <StorageBar galleryId={gallery.id} />
+          <label className="mt-4 block text-sm">
+            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
+              Storage quota (GB, blank = unlimited)
+            </span>
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              defaultValue={
+                gallery.storageQuotaBytes
+                  ? gallery.storageQuotaBytes / 1024 ** 3
+                  : ''
+              }
+              onBlur={(e) => {
+                const gb = parseFloat(e.target.value);
+                patchGallery({
+                  storageQuotaBytes:
+                    Number.isFinite(gb) && gb > 0
+                      ? Math.round(gb * 1024 ** 3)
+                      : null,
+                });
+              }}
+              className={inputClass}
+            />
+          </label>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Live event wall"
+          description="A fullscreen, auto-rotating public wall of this gallery's newest uploads. Respects the gallery's password/PIN."
+        >
+          <KioskToggle
+            galleryId={gallery.id}
+            slug={gallery.slug}
+            initialEnabled={gallery.kioskEnabled}
+          />
+        </SettingsCard>
+
+        {!isClientGallery && (
+          <SeoFields
+            galleryId={gallery.id}
+            initialMetaTitle={gallery.metaTitle}
+            initialMetaDescription={gallery.metaDescription}
+            initialNoindex={gallery.noindex}
+          />
+        )}
       </div>
       )}
       <div hidden={active !== 'photos'}>
