@@ -30,6 +30,14 @@ export async function GET() {
     contactWhatsapp: getSetting('contactWhatsapp') ?? '',
     footerContent: getSetting('footerContent') ?? '',
     defaultLanguage: getSetting('defaultLanguage') ?? 'en',
+    contactResponseTime: getSetting('contactResponseTime') ?? '',
+    smtpHost: getSetting('smtpHost') ?? '',
+    smtpPort: getSetting('smtpPort') ?? '',
+    smtpUser: getSetting('smtpUser') ?? '',
+    smtpFrom: getSetting('smtpFrom') ?? '',
+    smtpTo: getSetting('smtpTo') ?? '',
+    // Never return the stored password; just whether one is set.
+    smtpPassSet: Boolean(getSetting('smtpPass')),
     galleryDefaults: getGalleryDefaults(),
     hasWatermark: fs.existsSync(watermarkPath()),
   });
@@ -98,6 +106,23 @@ export async function POST(req: Request) {
   if (typeof body.defaultLanguage === 'string') {
     const lang = body.defaultLanguage === 'nl' || body.defaultLanguage === 'it' ? body.defaultLanguage : 'en';
     setSetting('defaultLanguage', lang);
+  }
+  if (typeof body.contactResponseTime === 'string') {
+    setCapped('contactResponseTime', body.contactResponseTime.trim(), SHORT_MAX);
+  }
+  // SMTP config (falls back to SMTP_* env when unset).
+  if (typeof body.smtpHost === 'string') setCapped('smtpHost', body.smtpHost.trim(), SHORT_MAX);
+  if (typeof body.smtpPort === 'string') {
+    setSetting('smtpPort', body.smtpPort.replace(/\D/g, '').slice(0, 5));
+  }
+  if (typeof body.smtpUser === 'string') setCapped('smtpUser', body.smtpUser.trim(), SHORT_MAX);
+  if (typeof body.smtpFrom === 'string') setCapped('smtpFrom', body.smtpFrom.trim(), SHORT_MAX);
+  if (typeof body.smtpTo === 'string') setCapped('smtpTo', body.smtpTo.trim(), SHORT_MAX);
+  // Password: update only when a new one is supplied; explicit clear via flag.
+  if (body.smtpPassClear === true) {
+    setSetting('smtpPass', '');
+  } else if (typeof body.smtpPass === 'string' && body.smtpPass !== '') {
+    setSetting('smtpPass', body.smtpPass.slice(0, SHORT_MAX));
   }
   if (body.galleryDefaults !== undefined) {
     const store = parseGalleryDefaults(JSON.stringify(body.galleryDefaults));

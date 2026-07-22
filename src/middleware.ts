@@ -21,6 +21,10 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets; run for pages and RSC requests.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Skip static assets AND all API routes. Middleware only does page-level
+  // work (admin-cookie bounce + x-pathname for public-page analytics); none of
+  // it applies to /api. Critically, letting middleware buffer API bodies caps
+  // uploads at Next's 10 MB middleware body limit, truncating larger photos —
+  // so route handlers (which enforce their own 50 MB limit) must bypass it.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

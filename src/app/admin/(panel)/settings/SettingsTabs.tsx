@@ -6,10 +6,12 @@ import AdminSessionsPanel from './AdminSessionsPanel';
 import GalleryDefaultsForm from './GalleryDefaultsForm';
 import UploadTokensPanel from './UploadTokensPanel';
 import SettingsForm from './SettingsForm';
+import EmailSettings from './EmailSettings';
 import type { GalleryDefaultsStore } from '@/lib/gallery-defaults';
 
 const tabs = [
   { id: 'general', label: 'General' },
+  { id: 'email', label: 'Email' },
   { id: 'security', label: 'Security' },
   { id: 'defaults', label: 'Gallery defaults' },
   { id: 'sharing', label: 'Sharing' },
@@ -18,9 +20,11 @@ const tabs = [
 export default function SettingsTabs({
   defaults,
   settingsFormProps,
+  emailProps,
 }: {
   defaults: GalleryDefaultsStore;
   settingsFormProps: React.ComponentProps<typeof SettingsForm>;
+  emailProps: React.ComponentProps<typeof EmailSettings>;
 }) {
   return (
     <Tabs tabs={tabs}>
@@ -28,6 +32,9 @@ export default function SettingsTabs({
         <>
           <div hidden={active !== 'general'}>
             <SettingsForm {...settingsFormProps} />
+          </div>
+          <div hidden={active !== 'email'}>
+            <EmailSettings {...emailProps} />
           </div>
           <div hidden={active !== 'security'} className="max-w-2xl space-y-12">
             <SecuritySettings />

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { pendingCommentCount } from '@/lib/comments';
+import { unreadInquiryCount } from '@/lib/inquiries';
 import { getPrincipal } from '@/lib/session';
 import ThemeToggle from '@/components/ThemeToggle';
 import UpdateBadge from '@/components/UpdateBadge';
@@ -16,6 +17,7 @@ export default async function AdminLayout({
   const isOwner = principal.role === 'owner';
 
   const pending = isOwner ? pendingCommentCount() : 0;
+  const newInquiries = isOwner ? unreadInquiryCount() : 0;
 
   return (
     <div className="min-h-screen">
@@ -43,6 +45,17 @@ export default async function AdminLayout({
                   className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
                 >
                   Forensic
+                </Link>
+                <Link
+                  href="/admin/inquiries"
+                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  Inquiries
+                  {newInquiries > 0 && (
+                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">
+                      {newInquiries}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/admin/testimonials"

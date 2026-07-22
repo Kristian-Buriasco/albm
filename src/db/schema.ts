@@ -444,6 +444,28 @@ export const comments = sqliteTable('comments', {
     .$defaultFn(() => Date.now()),
 });
 
+/** Public contact-form leads. Stored in-app; email notify is best-effort. */
+export const inquiries = sqliteTable(
+  'inquiries',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    eventType: text('event_type'),
+    eventDate: integer('event_date'),
+    message: text('message').notNull(),
+    status: text('status', { enum: ['new', 'read', 'archived'] })
+      .notNull()
+      .default('new'),
+    /** Coarse origin for abuse triage; hashed, never a raw IP. */
+    ipHash: text('ip_hash'),
+    createdAt: integer('created_at')
+      .notNull()
+      .$defaultFn(() => Date.now()),
+  },
+  (t) => [index('inquiries_status_created_idx').on(t.status, t.createdAt)],
+);
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -673,3 +695,4 @@ export type ClientAccount = typeof clientAccounts.$inferSelect;
 export type UploadToken = typeof uploadTokens.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
+export type Inquiry = typeof inquiries.$inferSelect;

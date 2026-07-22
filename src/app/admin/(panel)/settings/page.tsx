@@ -28,6 +28,14 @@ export default async function AdminSettingsPage() {
         initialDefaultLanguage: getSetting('defaultLanguage') ?? 'en',
         hasWatermark: fs.existsSync(watermarkPath()),
       }}
+      emailProps={{
+        initialHost: getSetting('smtpHost') ?? '',
+        initialPort: getSetting('smtpPort') ?? '',
+        initialUser: getSetting('smtpUser') ?? '',
+        initialFrom: getSetting('smtpFrom') ?? '',
+        initialTo: getSetting('smtpTo') ?? '',
+        passSet: Boolean(getSetting('smtpPass')),
+      }}
     />
   );
 }

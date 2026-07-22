@@ -4,6 +4,36 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.2] — 2026-07-23
+
+### Fixed
+- **Uploads over ~10 MB failed and retried endlessly.** Next.js middleware ran on the
+  upload route and buffered the request body under Next 15.5's default 10 MB middleware
+  limit, truncating larger photos so the multipart parse failed (`Expected multipart form
+  data`) and the client retried the same file. The middleware matcher now excludes `/api`
+  (it only did page-level work anyway), so upload bodies reach the route handler intact and
+  its own 50 MB limit applies.
+
+### Added
+- **Lightroom publish**: a bundled Lightroom Classic **Publish Service plugin**
+  (`integrations/lightroom/`) — map a Lightroom collection to an Albm gallery and
+  Publish, with full add / modify / delete sync. New token-authed API endpoints back it:
+  `GET /api/publish/galleries` (list), `PUT /api/publish/{galleryId}/photos/{photoId}`
+  (replace an edited photo in place), and `DELETE …/{photoId}` (remove). Replace/delete
+  are audit-logged (`publish.replace` / `publish.delete`).
+  - **Security note:** upload tokens can now replace and delete photos (not just add) in
+    any gallery — treat them like passwords; revoke leaked ones in Settings → Sharing.
+- **Contact page → inquiry funnel**: the contact page now has a real booking form
+  (name, email, event type, date, message) instead of a static link list. Submissions
+  are stored as **leads** in a new admin **Inquiries** inbox (filter new/read/archived,
+  reply via mailto, unread badge in the nav). Spam-guarded with a honeypot + rate limit
+  (5 / 15 min per IP) — no external CAPTCHA. New `inquiries` table.
+- **Optional email notifications** (`src/lib/mailer.ts`, nodemailer): when SMTP is
+  configured, each new inquiry emails you; without SMTP the lead is still stored and
+  everything else works (graceful no-op, same pattern as the optional geo DB).
+- **SMTP settings** in the admin Settings page (host/port/user/password/from/to) — no
+  plist edits needed. Falls back to `SMTP_*` env vars if those are set instead.
+
 ## [1.10.0] — 2026-07-20
 
 Combined release covering three roadmap themes: storage, live events, and marketing.
@@ -115,6 +145,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.2]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.2
 [1.10.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.0
 [1.9.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.9.0
 [1.8.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.8.0

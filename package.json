@@ -1,6 +1,6 @@
 {
   "name": "albm",
-  "version": "1.10.0",
+  "version": "1.10.2",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3200",
@@ -27,6 +27,7 @@
     "maxmind": "^4.3.29",
     "nanoid": "^6.0.0",
     "next": "^15.5.20",
+    "nodemailer": "^6.10.1",
     "p-queue": "^9.3.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
@@ -41,6 +42,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
+    "@types/nodemailer": "^6.4.24",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

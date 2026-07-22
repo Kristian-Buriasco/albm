@@ -48,9 +48,54 @@ curl -X POST "https://your-site.example/api/publish/GALLERY_ID/photos" \
   -F "file=@/path/to/photo.jpg"
 ```
 
+## List galleries
+
+```
+GET /api/publish/galleries
+Authorization: Bearer <token>
+```
+
+Returns the galleries a token may publish to (tokens are global, not gallery-scoped):
+
+```json
+{ "galleries": [ { "id": "...", "title": "...", "slug": "...", "type": "portfolio" } ] }
+```
+
+## Replace a photo (edited re-publish)
+
+```
+PUT /api/publish/{galleryId}/photos/{photoId}
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+
+file=<image file>
+```
+
+Replaces the photo's content in place. **Returns a new `photoId`** (`200`) — update your
+stored reference to it. `404` if the photo no longer exists (upload it fresh instead).
+Audit-logged as `publish.replace`.
+
+## Delete a photo
+
+```
+DELETE /api/publish/{galleryId}/photos/{photoId}
+Authorization: Bearer <token>
+```
+
+`200 { "ok": true }`. `404` if already gone. Audit-logged as `publish.delete`.
+
+> **Security note:** an upload token can now upload, replace, **and delete** photos in
+> any gallery. Treat tokens like passwords; revoke a leaked one in Settings → Sharing.
+
 ## Lightroom
 
-Use **File → Export** with a post-processing action or a plugin that POSTs to the URL above. Map the export filename to the `file` field. No official plugin is bundled — any tool that can HTTP POST multipart works.
+A **Publish Service plugin** is bundled under [`integrations/lightroom/`](../integrations/lightroom/) —
+install it via Lightroom's Plugin Manager, paste your base URL + upload token, pick a
+gallery, and Publish. It maps a Lightroom collection to an Albm gallery with full
+add / modify / delete sync using the endpoints above.
+
+Alternatively, use **File → Export** with any post-process action or script that POSTs
+to `/api/publish/{galleryId}/photos` — any tool that can HTTP POST multipart works.
 
 ## Capture One
 

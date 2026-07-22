@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     'better-sqlite3',
     'sharp',
     'maxmind',
+    'nodemailer',
     'tesseract.js',
     '@vladmandic/face-api',
     '@tensorflow/tfjs',
