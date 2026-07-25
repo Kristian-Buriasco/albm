@@ -587,6 +587,21 @@ export default function GalleryAdmin({
               className={inputClass}
             />
           </label>
+          <SegmentedControl
+            label="Gallery type"
+            value={gallery.type}
+            options={[
+              { value: 'client', label: 'Client' },
+              { value: 'portfolio', label: 'Portfolio' },
+            ]}
+            onChange={(v) => {
+              const msg =
+                v === 'portfolio'
+                  ? 'Switch to Portfolio? This drops password/PIN gating and client-only tools (downloads, selections) — the gallery becomes public at /portfolio/...'
+                  : 'Switch to Client? This removes it from the public portfolio at /portfolio/... — it moves to the private /g/... gallery, gated by password/PIN if set.';
+              if (confirm(msg)) patchGallery({ type: v });
+            }}
+          />
           <label className="block text-sm">
             <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
               Event date
@@ -671,34 +686,42 @@ export default function GalleryAdmin({
             </>
           )}
           {!isClientGallery && (
-            <>
-              <ToggleSwitch
-                label="Show public like counts"
-                hint="Visitors see aggregate counts next to hearts"
-                checked={gallery.showLikeCounts}
-                onChange={(v) => patchGallery({ showLikeCounts: v })}
-              />
-              <ToggleSwitch
-                label="Show in Featured Work"
-                hint="Featured on the homepage Featured Work grid"
-                checked={gallery.featured}
-                onChange={(v) => patchGallery({ featured: v })}
-              />
-              <label className="block text-sm">
-                <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
-                  Homepage sort order
-                </span>
-                <input
-                  type="number"
-                  defaultValue={gallery.sortOrder}
-                  onBlur={(e) =>
-                    patchGallery({ sortOrder: parseInt(e.target.value, 10) || 0 })
-                  }
-                  className={inputClass}
-                />
-              </label>
-            </>
+            <ToggleSwitch
+              label="Show public like counts"
+              hint="Visitors see aggregate counts next to hearts"
+              checked={gallery.showLikeCounts}
+              onChange={(v) => patchGallery({ showLikeCounts: v })}
+            />
           )}
+          <ToggleSwitch
+            label="Show in Featured Work"
+            hint={
+              isClientGallery
+                ? gallery.featuredConsent === 'granted'
+                  ? 'Client agreed — appears on the homepage'
+                  : gallery.featuredConsent === 'requested'
+                    ? 'Waiting on the client to agree (they see a prompt on their gallery page)'
+                    : gallery.featuredConsent === 'declined'
+                      ? 'Client declined — re-enable to ask again'
+                      : "Only shows once the client agrees — they'll see a prompt on their gallery page"
+                : 'Featured on the homepage Featured Work grid'
+            }
+            checked={gallery.featured}
+            onChange={(v) => patchGallery({ featured: v })}
+          />
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
+              Homepage sort order
+            </span>
+            <input
+              type="number"
+              defaultValue={gallery.sortOrder}
+              onBlur={(e) =>
+                patchGallery({ sortOrder: parseInt(e.target.value, 10) || 0 })
+              }
+              className={inputClass}
+            />
+          </label>
         </div>
       </section>
       </div>
@@ -751,7 +774,7 @@ export default function GalleryAdmin({
           <KioskToggle
             galleryId={gallery.id}
             slug={gallery.slug}
-            initialEnabled={gallery.kioskEnabled}
+            enabled={gallery.kioskEnabled}
           />
         </SettingsCard>
 

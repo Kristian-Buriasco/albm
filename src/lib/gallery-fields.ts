@@ -39,6 +39,9 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
   if ('eventDate' in body) {
     updates.eventDate = typeof body.eventDate === 'number' ? body.eventDate : null;
   }
+  if (body.type === 'client' || body.type === 'portfolio') {
+    updates.type = body.type;
+  }
   if (
     body.clientInfoMode === 'off' ||
     body.clientInfoMode === 'optional' ||

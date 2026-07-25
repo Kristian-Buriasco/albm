@@ -142,6 +142,17 @@ export const galleries = sqliteTable('galleries', {
   metaDescription: text('meta_description'),
   /** When true, emit robots noindex for this gallery's public page. */
   noindex: integer('noindex', { mode: 'boolean' }).notNull().default(false),
+  /**
+   * Client galleries can appear in the homepage Featured Work grid only with
+   * the client's consent. 'requested' = owner turned featured on and is
+   * waiting; portfolio galleries never use this (their `featured` flag alone
+   * is enough).
+   */
+  featuredConsent: text('featured_consent', {
+    enum: ['none', 'requested', 'granted', 'declined'],
+  })
+    .notNull()
+    .default('none'),
   ...timestamps,
 });
 

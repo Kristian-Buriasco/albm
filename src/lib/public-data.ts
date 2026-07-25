@@ -22,6 +22,28 @@ export function getSelectedWorkGalleries() {
   return getPublishedPortfolioGalleries().filter((g) => g.featured);
 }
 
+/**
+ * Client galleries the owner has marked featured AND the client has
+ * consented to (`featuredConsent === 'granted'`) — shown alongside featured
+ * portfolios on the homepage. Never includes anything the client hasn't
+ * explicitly agreed to, even if `featured` is on.
+ */
+export function getFeaturedClientGalleries() {
+  return getDb()
+    .select()
+    .from(schema.galleries)
+    .where(
+      and(
+        eq(schema.galleries.type, 'client'),
+        eq(schema.galleries.published, true),
+        eq(schema.galleries.featured, true),
+        eq(schema.galleries.featuredConsent, 'granted'),
+      ),
+    )
+    .orderBy(asc(schema.galleries.sortOrder), asc(schema.galleries.createdAt))
+    .all();
+}
+
 export function getReadyPhotos(galleryId: string) {
   return getDb()
     .select()

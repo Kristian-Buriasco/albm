@@ -7,7 +7,11 @@ import WorkSection, { type WorkItem } from '@/components/WorkSection';
 import Testimonials from '@/components/Testimonials';
 import { getApprovedTestimonials } from '@/lib/testimonials';
 import { getSetting } from '@/lib/settings';
-import { coverPhotoId, getPublishedPortfolioGalleries } from '@/lib/public-data';
+import {
+  coverPhotoId,
+  getFeaturedClientGalleries,
+  getPublishedPortfolioGalleries,
+} from '@/lib/public-data';
 import { getGalleryTags } from '@/lib/tags';
 import { sitePersonName } from '@/lib/feed-data';
 import { BASE_URL } from '@/lib/env';
@@ -27,7 +31,9 @@ function toWorkItems(gs: Gallery[]): WorkItem[] {
 export default function HomePage() {
   const allPortfolios = getPublishedPortfolioGalleries();
   const featured = allPortfolios.filter((g) => g.featured);
-  const workItems = toWorkItems(featured);
+  // Client galleries only ever land in "Featured Work" — with the client's
+  // consent — never in the full "More Work" catalog below it.
+  const workItems = toWorkItems([...featured, ...getFeaturedClientGalleries()]);
   const otherItems = toWorkItems(allPortfolios.filter((g) => !g.featured));
   const heroItem =
     toWorkItems(allPortfolios).find((g) => g.cover) ?? workItems.find((g) => g.cover) ?? null;

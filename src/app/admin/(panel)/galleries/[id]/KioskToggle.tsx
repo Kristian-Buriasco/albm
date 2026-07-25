@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ShareTools from '@/components/ShareTools';
 
 /**
@@ -9,17 +10,22 @@ import ShareTools from '@/components/ShareTools';
  * future deep-link/rotate flow) via PATCH /api/admin/galleries/[id]/kiosk.
  * The public link is still gated by the gallery's own password/PIN — the
  * token is not a bypass, just a stable identifier for the admin's own use.
+ *
+ * `enabled` is controlled by the parent's `gallery.kioskEnabled` (not copied
+ * into local state) — any other settings change on this page triggers a
+ * `router.refresh()` upstream, and this stays in sync with that instead of
+ * freezing at whatever value it had on first mount.
  */
 export default function KioskToggle({
   galleryId,
   slug,
-  initialEnabled,
+  enabled,
 }: {
   galleryId: string;
   slug: string;
-  initialEnabled: boolean;
+  enabled: boolean;
 }) {
-  const [enabled, setEnabled] = useState(initialEnabled);
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +44,7 @@ export default function KioskToggle({
         body: JSON.stringify({ enabled: next }),
       });
       if (!res.ok) throw new Error();
-      setEnabled(next);
+      router.refresh();
     } catch {
       setError('Could not update kiosk mode.');
     } finally {

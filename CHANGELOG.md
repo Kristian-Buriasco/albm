@@ -4,6 +4,25 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.3] — 2026-07-25
+
+### Added
+- **Client galleries can appear in Featured Work — with consent.** Turning on "Show in
+  Featured Work" for a client gallery no longer publishes it immediately: the client sees
+  an opt-in prompt on their own gallery page (agree/decline) before it shows on the
+  homepage. New `featured_consent` column (`none|requested|granted|declined`).
+- **Change a gallery's type** (Client ↔ Portfolio) from its Settings tab, with a
+  confirmation explaining what that flips (password/PIN gating vs. public listing).
+- Gallery creation dialog now explains what Client vs. Portfolio means, and notes the
+  type can be changed later.
+
+### Fixed
+- Featured-work grid linked client-type galleries to `/portfolio/...` (404) instead of
+  `/g/...`.
+- Kiosk toggle (Settings → Live event wall) could show a stale on/off state after saving
+  any *other* setting on the same page — it copied its initial value into local state
+  once instead of staying controlled by the gallery's live `kioskEnabled`.
+
 ## [1.10.2] — 2026-07-23
 
 ### Fixed
@@ -145,6 +164,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.3]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.3
 [1.10.2]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.2
 [1.10.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.0
 [1.9.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.9.0

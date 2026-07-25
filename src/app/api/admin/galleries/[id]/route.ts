@@ -67,6 +67,15 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const needsReprocess = shouldReprocessWatermark(updates);
 
+  // Turning "featured" on for a client gallery needs the client's consent —
+  // flag it as requested rather than showing it on the homepage immediately.
+  // (Portfolio galleries have no consent gate; homepage query only checks it
+  // for type==='client'.) Re-requesting after a decline resets the answer.
+  const effectiveType = updates.type ?? gallery.type;
+  if (updates.featured === true && effectiveType === 'client' && gallery.featuredConsent !== 'granted') {
+    updates.featuredConsent = 'requested';
+  }
+
   updates.updatedAt = Date.now();
   db.update(schema.galleries).set(updates).where(eq(schema.galleries.id, id)).run();
 
@@ -132,6 +141,13 @@ export async function PATCH(req: Request, { params }: Params) {
       targetType: 'gallery',
       targetId: id,
       summary: `Face search ${body.faceSearch ? 'enabled' : 'disabled'} for "${gallery.title}"`,
+    });
+  }
+  if ('type' in body && updates.type && updates.type !== gallery.type) {
+    logAdmin('gallery.type.change', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Changed "${gallery.title}" from ${gallery.type} to ${updates.type}`,
     });
   }
   if ('eventPage' in body && typeof body.eventPage === 'boolean') {

@@ -19,6 +19,7 @@ import PasswordGate from './PasswordGate';
 import PinGate from './PinGate';
 import GalleryClient from './GalleryClient';
 import TestimonialPrompt from './TestimonialPrompt';
+import FeaturedConsentPrompt from './FeaturedConsentPrompt';
 import { hasSubmittedTestimonial } from '@/lib/testimonials';
 
 export const dynamic = 'force-dynamic';
@@ -162,6 +163,8 @@ export default async function ClientGalleryPage({
     currentVisitorId != null &&
     !hasSubmittedTestimonial(gallery.id, currentVisitorId);
 
+  const showFeaturedConsentPrompt = hasVisitor && gallery.featuredConsent === 'requested';
+
   return (
     <>
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
@@ -197,6 +200,7 @@ export default async function ClientGalleryPage({
       tagOptions={tagOptions}
       defaultLang={parseLang(getSetting('defaultLanguage'))}
     />
+    {showFeaturedConsentPrompt && <FeaturedConsentPrompt slug={slug} />}
     {showTestimonialPrompt && <TestimonialPrompt slug={slug} />}
     </>
   );

@@ -18,7 +18,10 @@ function WorkGrid({ items, startIndex = 0 }: { items: WorkItem[]; startIndex?: n
     <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
       {items.map(({ gallery, cover }, i) => (
         <Reveal key={gallery.id} delay={((startIndex + i) % 3) * 80}>
-          <Link href={`/portfolio/${gallery.slug}`} className="group block">
+          <Link
+            href={gallery.type === 'client' ? `/g/${gallery.slug}` : `/portfolio/${gallery.slug}`}
+            className="group block"
+          >
             <div className="aspect-[4/3] overflow-hidden bg-line/60 dark:bg-line-dark/50">
               {cover && (
                 /* eslint-disable-next-line @next/next/no-img-element */
