@@ -163,7 +163,10 @@ export default async function ClientGalleryPage({
     currentVisitorId != null &&
     !hasSubmittedTestimonial(gallery.id, currentVisitorId);
 
-  const showFeaturedConsentPrompt = hasVisitor && gallery.featuredConsent === 'requested';
+  // No hasVisitor check: unlike testimonials this doesn't need a visitor
+  // record, and hasVisitor is only true post-mount (after GalleryClient's
+  // visitor POST), so gating on it hid the prompt on every first page load.
+  const showFeaturedConsentPrompt = gallery.featuredConsent === 'requested';
 
   return (
     <>

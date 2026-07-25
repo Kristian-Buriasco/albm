@@ -4,6 +4,15 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.4] — 2026-07-25
+
+### Fixed
+- Client's "Feature this gallery?" prompt (added in 1.10.3) never showed up. It was gated
+  on `hasVisitor`, which only turns true *after* the page mounts and posts to the visitor
+  API — so it was always `false` during the server render that decides whether to show
+  the prompt. The consent endpoint doesn't need a visitor record anyway; the prompt now
+  shows purely off `featuredConsent === 'requested'`.
+
 ## [1.10.3] — 2026-07-25
 
 ### Added
@@ -164,6 +173,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.4]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.4
 [1.10.3]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.3
 [1.10.2]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.2
 [1.10.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.0
