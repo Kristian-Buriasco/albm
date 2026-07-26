@@ -1,6 +1,6 @@
 {
   "name": "albm",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3200",
@@ -13,6 +13,7 @@
     "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
+    "@scalar/api-reference-react": "^0.9.59",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
     "@tensorflow/tfjs": "^4.22.0",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@redocly/cli": "^2.40.0",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/archiver": "^6.0.4",
     "@types/bcryptjs": "^2.4.6",

@@ -4,6 +4,17 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] — 2026-07-26
+
+### Added
+- **Interactive API reference** at `/docs/api` (linked from the admin nav) — every route
+  with a real standalone use case: all Admin API routes, the client-facing gallery API,
+  and the Publish API. Built on a hand-written OpenAPI 3.1 spec
+  (`docs/openapi.yaml`, also served at `/openapi.yaml` for Postman/Insomnia import) and
+  a self-hosted (no CDN) Scalar UI with a working "try it" console — publish routes take
+  a pasted bearer token, admin/client routes use whatever session cookie the browser
+  already has, same as calling the API directly.
+
 ## [1.11.1] — 2026-07-26
 
 ### Fixed
@@ -212,6 +223,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.12.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.0
 [1.11.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.1
 [1.11.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.0
 [1.10.6]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.6

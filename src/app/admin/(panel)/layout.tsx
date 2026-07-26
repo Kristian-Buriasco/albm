@@ -81,6 +81,12 @@ export default async function AdminLayout({
                 >
                   Settings
                 </Link>
+                <Link
+                  href="/docs/api"
+                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  API docs
+                </Link>
               </>
             )}
             <Link

@@ -1,0 +1,6201 @@
+openapi: 3.1.0
+info:
+  title: Albm API
+  version: 1.12.0
+  description: >
+    Self-hosted photography portfolio + client proofing app. This spec covers every route with a
+    legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
+    repo for what was deliberately excluded and why (WebAuthn ceremony endpoints, page-load
+    plumbing).
+
+
+    Three separate audiences, three separate auth schemes:
+
+    - **Admin API** (`cookieAuth`) — everything under `/api/admin/*`. Requires
+      being logged into the admin panel in this browser; most operations are
+      owner-only, a few allow a scoped collaborator.
+
+    - **Client Gallery API** (`visitorCookieAuth`) — everything under
+      `/api/g/{slug}/*`. A per-gallery visitor session, established by
+      `POST /api/g/{slug}/visitor` or `POST /api/g/{slug}/unlock`.
+
+    - **Publish API** (`bearerAuth`) — `/api/publish/*`. The only part of this
+      API meant for real third-party integration (Lightroom Classic plugin,
+      Capture One, custom scripts). Tokens are created in
+      Admin → Settings → Upload tokens and can upload, replace, **and delete**
+      photos — treat one like a password.
+  license:
+    name: AGPL-3.0-only
+    url: https://github.com/Kristian-Buriasco/albm/blob/master/LICENSE
+externalDocs:
+  description: Albm wiki
+  url: https://github.com/Kristian-Buriasco/albm/wiki
+servers:
+  - url: /
+    description: This Albm instance (relative — works from any origin it's deployed at)
+tags:
+  - name: Galleries
+    description: Create, configure, and manage galleries.
+  - name: Photos
+    description: Upload, tag, and bulk-manage photos within a gallery.
+  - name: Sections
+    description: Group a gallery's photos into named sections.
+  - name: Tags
+    description: Shared tag vocabulary used across photos, galleries, and clients.
+  - name: Folders
+    description: Organize galleries into folders in the admin panel.
+  - name: Clients
+    description: Cross-gallery client records (name, email, phone, notes, tags).
+  - name: Testimonials
+    description: Moderated client testimonials shown on the public homepage.
+  - name: Inquiries
+    description: Leads captured from the public contact form.
+  - name: Comments
+    description: Moderated comments on client-gallery photos.
+  - name: Settings
+    description: Site-wide admin settings, including optional SMTP.
+  - name: Upload Tokens
+    description: Bearer tokens used by the external Publish API.
+  - name: Storage & Maintenance
+    description: Disk usage and derivative-integrity tooling.
+  - name: Audit & Sessions
+    description: Admin audit log and active session management.
+  - name: Client Gallery
+    description: The public, visitor-facing API used by a client browsing their own gallery.
+  - name: Publish
+    description: External, bearer-token API for Lightroom/Capture One/scripted publishing.
+  - name: System
+    description: Unauthenticated health and version endpoints.
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: admin_session
+      description: >
+        Admin panel login session (password or passkey). Owner-only unless an operation's
+        description says a scoped collaborator may also call it.
+    visitorCookieAuth:
+      type: apiKey
+      in: cookie
+      name: visitor_{galleryId}
+      description: >
+        Per-gallery visitor session. Cookie name is scoped to the specific gallery (OpenAPI can't
+        parametrize a cookie name per path, so this is documented rather than modeled literally) —
+        established by `POST /api/g/{slug}/visitor` or, for password/PIN-gated galleries, `POST
+        /api/g/{slug}/unlock`.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        Upload token from Admin → Settings → Upload tokens, shown once at creation. Can upload,
+        replace, and delete photos in any gallery — treat it like a password.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    Gallery:
+      type: object
+      description: A gallery row, as stored (includes hashed secrets — never plaintext).
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum:
+            - client
+            - portfolio
+        title:
+          type: string
+        eventDate:
+          type:
+            - integer
+            - 'null'
+          description: Unix ms timestamp.
+        passwordHash:
+          type:
+            - string
+            - 'null'
+        clientInfoMode:
+          type: string
+          enum:
+            - 'off'
+            - optional
+            - required
+        watermarkEnabled:
+          type: boolean
+        watermarkPosition:
+          type: string
+          enum:
+            - br
+            - bl
+            - tr
+            - tl
+            - center
+        watermarkOpacity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        watermarkScale:
+          type: integer
+          minimum: 5
+          maximum: 100
+        downloadEnabled:
+          type: boolean
+        favoritesDownloadEnabled:
+          type: boolean
+        selectionExportEnabled:
+          type: boolean
+        published:
+          type: boolean
+        featured:
+          type: boolean
+        showLikeCounts:
+          type: boolean
+        showExif:
+          type: boolean
+        showLocation:
+          type: boolean
+        locationName:
+          type:
+            - string
+            - 'null'
+        locationLat:
+          type:
+            - string
+            - 'null'
+        locationLng:
+          type:
+            - string
+            - 'null'
+        commentsMode:
+          type: string
+          enum:
+            - 'off'
+            - post
+            - pre
+        expiresAt:
+          type:
+            - integer
+            - 'null'
+          description: Unix ms timestamp.
+        autoExpire:
+          type: boolean
+        selectionLimit:
+          type:
+            - integer
+            - 'null'
+        limitSelections:
+          type: boolean
+        trackDownloads:
+          type: boolean
+        socialPreview:
+          type: boolean
+        coverPhotoId:
+          type:
+            - string
+            - 'null'
+        previewPhotoId:
+          type:
+            - string
+            - 'null'
+        coverFocusX:
+          type: integer
+          minimum: 0
+          maximum: 100
+        coverFocusY:
+          type: integer
+          minimum: 0
+          maximum: 100
+        pinEnabled:
+          type: boolean
+        pinHash:
+          type:
+            - string
+            - 'null'
+        folderId:
+          type:
+            - string
+            - 'null'
+        sortOrder:
+          type: integer
+        autoPublishOnUpload:
+          type: boolean
+        deliverRaw:
+          type: boolean
+        forensicWatermark:
+          type: boolean
+        downloadOfferWeb:
+          type: boolean
+        downloadOfferPrint:
+          type: boolean
+        downloadOfferOriginal:
+          type: boolean
+        keepExifOnDownload:
+          type: boolean
+        allowGpsInDownload:
+          type: boolean
+        bibSearch:
+          type: boolean
+          description: OCR bib-number detection at upload.
+        faceSearch:
+          type: boolean
+          description: Face embedding batch + selfie search.
+        eventPage:
+          type: boolean
+          description: Public event landing page + venue QR.
+        faceBatchStatus:
+          type: string
+          enum:
+            - idle
+            - running
+            - done
+            - error
+        faceBatchDone:
+          type: integer
+        faceBatchTotal:
+          type: integer
+        faceBatchError:
+          type:
+            - string
+            - 'null'
+        faceBatchUpdatedAt:
+          type:
+            - integer
+            - 'null'
+        deliveryState:
+          type: string
+          enum:
+            - proofing
+            - retouching
+            - delivered
+        storageQuotaBytes:
+          type:
+            - integer
+            - 'null'
+          description: Soft quota in bytes; null = unlimited. Alerts only, never blocks upload.
+        kioskEnabled:
+          type: boolean
+        kioskToken:
+          type:
+            - string
+            - 'null'
+        metaTitle:
+          type:
+            - string
+            - 'null'
+        metaDescription:
+          type:
+            - string
+            - 'null'
+        noindex:
+          type: boolean
+        featuredConsent:
+          type: string
+          enum:
+            - none
+            - requested
+            - granted
+            - declined
+        clientId:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+    GalleryPatchRequest:
+      type: object
+      description: >-
+        All fields optional; only keys present in the request body are updated. `password` and `pin`
+        are write-only (never returned by any response) and are hashed server-side.
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            - client
+            - portfolio
+        eventDate:
+          type:
+            - integer
+            - 'null'
+        clientInfoMode:
+          type: string
+          enum:
+            - 'off'
+            - optional
+            - required
+        commentsMode:
+          type: string
+          enum:
+            - 'off'
+            - post
+            - pre
+        watermarkPosition:
+          type: string
+          enum:
+            - br
+            - bl
+            - tr
+            - tl
+            - center
+        watermarkEnabled:
+          type: boolean
+        watermarkOpacity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        watermarkScale:
+          type: integer
+          minimum: 5
+          maximum: 100
+        downloadEnabled:
+          type: boolean
+        favoritesDownloadEnabled:
+          type: boolean
+        selectionExportEnabled:
+          type: boolean
+        published:
+          type: boolean
+        featured:
+          type: boolean
+          description: >-
+            Turning this on for a `client`-type gallery without existing `featured: granted` consent
+            sets `featuredConsent` to `requested` rather than publishing to the homepage
+            immediately.
+        showLikeCounts:
+          type: boolean
+        showExif:
+          type: boolean
+        showLocation:
+          type: boolean
+        locationName:
+          type:
+            - string
+            - 'null'
+          maxLength: 200
+        locationLat:
+          type:
+            - string
+            - 'null'
+          maxLength: 32
+        locationLng:
+          type:
+            - string
+            - 'null'
+          maxLength: 32
+        expiresAt:
+          type:
+            - integer
+            - 'null'
+        autoExpire:
+          type: boolean
+        selectionLimit:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+        limitSelections:
+          type: boolean
+        trackDownloads:
+          type: boolean
+        socialPreview:
+          type: boolean
+        coverPhotoId:
+          type:
+            - string
+            - 'null'
+        previewPhotoId:
+          type:
+            - string
+            - 'null'
+        sortOrder:
+          type: integer
+        coverFocusX:
+          type: integer
+          minimum: 0
+          maximum: 100
+        coverFocusY:
+          type: integer
+          minimum: 0
+          maximum: 100
+        pinEnabled:
+          type: boolean
+        folderId:
+          type:
+            - string
+            - 'null'
+        autoPublishOnUpload:
+          type: boolean
+        deliverRaw:
+          type: boolean
+        forensicWatermark:
+          type: boolean
+        downloadOfferWeb:
+          type: boolean
+        downloadOfferPrint:
+          type: boolean
+        downloadOfferOriginal:
+          type: boolean
+        keepExifOnDownload:
+          type: boolean
+        allowGpsInDownload:
+          type: boolean
+        bibSearch:
+          type: boolean
+        faceSearch:
+          type: boolean
+        eventPage:
+          type: boolean
+        metaTitle:
+          type:
+            - string
+            - 'null'
+          maxLength: 200
+        metaDescription:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+        noindex:
+          type: boolean
+        clientId:
+          type:
+            - string
+            - 'null'
+        storageQuotaBytes:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+        password:
+          type:
+            - string
+            - 'null'
+          description: Write-only. Empty string or null clears the password.
+        pin:
+          type:
+            - string
+            - 'null'
+          pattern: ^\d{6}$
+          description: >-
+            Write-only. Must be exactly 6 digits when non-empty. Empty string or null clears the
+            PIN.
+    GalleryCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/GalleryPatchRequest'
+        - type: object
+          required:
+            - title
+          properties:
+            title:
+              type: string
+              description: Required at creation (unlike PATCH, where it's optional).
+    Photo:
+      type: object
+      properties:
+        id:
+          type: string
+        galleryId:
+          type: string
+        sectionId:
+          type:
+            - string
+            - 'null'
+        filename:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        sizeBytes:
+          type: integer
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum:
+            - processing
+            - ready
+            - error
+        exif:
+          type:
+            - string
+            - 'null'
+          description: JSON-encoded EXIF data.
+        capturedAt:
+          type:
+            - integer
+            - 'null'
+          description: Unix ms timestamp.
+        placeholder:
+          type:
+            - string
+            - 'null'
+          description: Blur-up placeholder data.
+        altText:
+          type:
+            - string
+            - 'null'
+        contentHash:
+          type:
+            - string
+            - 'null'
+        isRaw:
+          type: boolean
+        format:
+          type:
+            - string
+            - 'null'
+        uploadedBy:
+          type:
+            - string
+            - 'null'
+          description: Collaborator id if uploaded by a collaborator; null means the owner.
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+    Section:
+      type: object
+      properties:
+        id:
+          type: string
+        galleryId:
+          type: string
+        title:
+          type: string
+        sortOrder:
+          type: integer
+        createdAt:
+          type: integer
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Folder:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sortOrder:
+          type: integer
+        createdAt:
+          type: integer
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type:
+            - string
+            - 'null'
+        notes:
+          type:
+            - string
+            - 'null'
+        createdAt:
+          type: integer
+          description: Unix epoch milliseconds.
+        updatedAt:
+          type: integer
+          description: Unix epoch milliseconds.
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - notes
+        - createdAt
+        - updatedAt
+    ClientGallerySummary:
+      type: object
+      description: Reduced gallery projection returned alongside a client's detail view.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            - client
+            - portfolio
+        deliveryState:
+          type: string
+          enum:
+            - proofing
+            - retouching
+            - delivered
+      required:
+        - id
+        - title
+        - type
+        - deliveryState
+    Testimonial:
+      type: object
+      properties:
+        id:
+          type: string
+        galleryId:
+          type: string
+        visitorId:
+          type:
+            - string
+            - 'null'
+        rating:
+          type: integer
+        quote:
+          type: string
+        authorName:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - hidden
+        createdAt:
+          type: integer
+          description: Unix epoch milliseconds.
+        approvedAt:
+          type:
+            - integer
+            - 'null'
+          description: Unix epoch milliseconds, set when approved.
+      required:
+        - id
+        - galleryId
+        - visitorId
+        - rating
+        - quote
+        - authorName
+        - status
+        - createdAt
+        - approvedAt
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        galleryId:
+          type: string
+        photoId:
+          type: string
+        visitorId:
+          type:
+            - string
+            - 'null'
+        commenterToken:
+          type:
+            - string
+            - 'null'
+        authorName:
+          type: string
+        body:
+          type: string
+        isPhotographer:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - visible
+            - pending
+            - hidden
+        createdAt:
+          type: integer
+          description: Unix epoch milliseconds.
+      required:
+        - id
+        - galleryId
+        - photoId
+        - visitorId
+        - commenterToken
+        - authorName
+        - body
+        - isPhotographer
+        - status
+        - createdAt
+    SelectionList:
+      type: object
+      description: A visitor-owned named selection list (max 5 per visitor per gallery).
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 80
+      required:
+        - id
+        - name
+    GalleryPhoto:
+      type: object
+      description: A ready photo as rendered in the gallery lightbox/grid.
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        placeholder:
+          type:
+            - string
+            - 'null'
+          description: Low-res blur-up placeholder (e.g. base64 data URI or blurhash), if generated.
+        updatedAt:
+          type: integer
+          description: Unix ms timestamp.
+        alt:
+          type: string
+        exifLine:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Formatted EXIF summary, only present when the gallery has `showExif` enabled and the
+            photo has EXIF data.
+      required:
+        - id
+        - filename
+        - width
+        - height
+        - updatedAt
+        - alt
+    SiteSettings:
+      type: object
+      description: Full settings payload returned by `GET /api/admin/settings`.
+      properties:
+        aboutContent:
+          type: string
+        contactContent:
+          type: string
+        analyticsHeadHtml:
+          type: string
+        homeEyebrow:
+          type: string
+        homeHeadline:
+          type: string
+        homeIntro:
+          type: string
+        contactEmail:
+          type: string
+        contactInstagram:
+          type: string
+        contactWhatsapp:
+          type: string
+        footerContent:
+          type: string
+        defaultLanguage:
+          type: string
+          enum:
+            - en
+            - nl
+            - it
+        contactResponseTime:
+          type: string
+        smtpHost:
+          type: string
+        smtpPort:
+          type: string
+        smtpUser:
+          type: string
+        smtpFrom:
+          type: string
+        smtpTo:
+          type: string
+        smtpPassSet:
+          type: boolean
+          description: Whether an SMTP password is stored. The password itself is never returned.
+        galleryDefaults:
+          type: object
+          description: Default values applied to newly created galleries (site-specific shape).
+          additionalProperties: true
+        hasWatermark:
+          type: boolean
+    SiteSettingsUpdate:
+      type: object
+      description: >-
+        Partial update to site settings. Every field is optional; only recognized string/boolean
+        fields of the expected type are applied, everything else is silently ignored. Text fields
+        are trimmed and length-capped server-side (200 chars for short fields, 2000 for long-form
+        content).
+      properties:
+        aboutContent:
+          type: string
+        contactContent:
+          type: string
+        analyticsHeadHtml:
+          type: string
+        homeEyebrow:
+          type: string
+        homeHeadline:
+          type: string
+        homeIntro:
+          type: string
+        contactEmail:
+          type: string
+        contactInstagram:
+          type: string
+        contactWhatsapp:
+          type: string
+        footerContent:
+          type: string
+        defaultLanguage:
+          type: string
+          description: Any value other than `nl`/`it` falls back to `en`.
+          enum:
+            - en
+            - nl
+            - it
+        contactResponseTime:
+          type: string
+        smtpHost:
+          type: string
+        smtpPort:
+          type: string
+          description: Non-digit characters are stripped; capped at 5 digits.
+        smtpUser:
+          type: string
+        smtpFrom:
+          type: string
+        smtpTo:
+          type: string
+        smtpPass:
+          type: string
+          description: New SMTP password. Ignored if empty string; use `smtpPassClear` to clear.
+        smtpPassClear:
+          type: boolean
+          description: If `true`, clears the stored SMTP password (takes precedence over `smtpPass`).
+        galleryDefaults:
+          type: object
+          description: Replaces the stored gallery-defaults object.
+          additionalProperties: true
+    SecuritySettings:
+      type: object
+      properties:
+        passkeys:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              createdAt:
+                type: integer
+              lastUsedAt:
+                type:
+                  - integer
+                  - 'null'
+        passwordLoginEnabled:
+          type: boolean
+        unusedRecoveryCodes:
+          type: integer
+        canDisablePasswordLogin:
+          type: boolean
+        disablePasswordReason:
+          type:
+            - string
+            - 'null'
+    UploadToken:
+      type: object
+      description: >-
+        Upload token metadata (raw token value only ever appears in the create response). Backed by
+        the `upload_tokens` table.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: integer
+          description: Epoch milliseconds.
+        lastUsedAt:
+          type:
+            - integer
+            - 'null'
+          description: Epoch milliseconds, null if never used.
+        revokedAt:
+          type:
+            - integer
+            - 'null'
+          description: Epoch milliseconds, null if not revoked.
+    StorageSnapshot:
+      type: object
+      properties:
+        computedAt:
+          type: integer
+          description: Epoch milliseconds this snapshot was computed (cached for 1 hour).
+        disk:
+          $ref: '#/components/schemas/DiskUsage'
+        dataDirBytes:
+          type: integer
+        galleries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              type:
+                type: string
+              photoCount:
+                type: integer
+              sizeBytes:
+                type: integer
+              rawCount:
+                type: integer
+              rawBytes:
+                type: integer
+    DiskUsage:
+      type: object
+      properties:
+        totalBytes:
+          type: integer
+        freeBytes:
+          type: integer
+        usedBytes:
+          type: integer
+    IntegritySummary:
+      type: object
+      properties:
+        galleries:
+          type: array
+          items:
+            type: object
+            properties:
+              galleryId:
+                type: string
+              title:
+                type: string
+              total:
+                type: integer
+              missingCount:
+                type: integer
+              missing:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    photoId:
+                      type: string
+                    filename:
+                      type: string
+                    missingKinds:
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - thumb
+                          - md
+                          - web
+                          - workingJpeg
+                          - print
+        totalPhotos:
+          type: integer
+        totalMissing:
+          type: integer
+    AllGalleriesStorageUsage:
+      type: object
+      properties:
+        galleries:
+          type: array
+          items:
+            type: object
+            properties:
+              galleryId:
+                type: string
+              title:
+                type: string
+              usedBytes:
+                type: integer
+              quotaBytes:
+                type:
+                  - integer
+                  - 'null'
+              pct:
+                type:
+                  - number
+                  - 'null'
+              state:
+                type: string
+                enum:
+                  - ok
+                  - warn
+                  - over
+        volume:
+          $ref: '#/components/schemas/DiskUsage'
+    RegenerateResult:
+      type: object
+      properties:
+        photoId:
+          type: string
+        ok:
+          type: boolean
+        regenerated:
+          type: array
+          items:
+            type: string
+            enum:
+              - thumb
+              - md
+              - web
+              - workingJpeg
+              - print
+        failed:
+          type: array
+          items:
+            type: string
+            enum:
+              - thumb
+              - md
+              - web
+              - workingJpeg
+              - print
+    RegenerateGalleryResult:
+      type: object
+      properties:
+        galleryId:
+          type: string
+        attempted:
+          type: integer
+          description: Number of photos that had at least one missing derivative.
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegenerateResult'
+    AuditLogEntry:
+      type: object
+      description: One row from the audit log (shape follows the `audit_log` table).
+      properties:
+        id:
+          type: string
+        at:
+          type: integer
+          description: Epoch milliseconds.
+        action:
+          type: string
+          description: Action type, e.g. "settings.update", "upload_token.create".
+        actorType:
+          type: string
+          enum:
+            - owner
+            - collaborator
+        actorId:
+          type:
+            - string
+            - 'null'
+        targetType:
+          type:
+            - string
+            - 'null'
+        targetId:
+          type:
+            - string
+            - 'null'
+        summary:
+          type:
+            - string
+            - 'null'
+    AdminSession:
+      type: object
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: integer
+        lastSeenAt:
+          type: integer
+        userAgentHash:
+          type:
+            - string
+            - 'null'
+        ipHash:
+          type:
+            - string
+            - 'null'
+        device:
+          type:
+            - string
+            - 'null'
+        location:
+          type:
+            - string
+            - 'null'
+        collaboratorId:
+          type:
+            - string
+            - 'null'
+        isCurrent:
+          type: boolean
+    PublishGallery:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          description: e.g. "portfolio".
+    PublishPhoto:
+      type: object
+      description: The created/replaced photo row, returned on successful upload (`201`) or replace (`200`).
+      properties:
+        id:
+          type: string
+        galleryId:
+          type: string
+        sectionId:
+          type:
+            - string
+            - 'null'
+        filename:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        sizeBytes:
+          type: integer
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum:
+            - processing
+            - ready
+            - error
+        capturedAt:
+          type:
+            - integer
+            - 'null'
+    PublishDuplicate:
+      type: object
+      properties:
+        duplicate:
+          type: boolean
+          const: true
+        existingFilename:
+          type: string
+    VersionInfo:
+      type: object
+      properties:
+        current:
+          type: string
+          description: Running app version.
+        latest:
+          type:
+            - string
+            - 'null'
+          description: Latest GitHub release tag, or null if unknown/update-check disabled.
+        updateAvailable:
+          type: boolean
+  parameters:
+    GallerySlug:
+      name: slug
+      in: path
+      required: true
+      description: The client gallery's public slug.
+      schema:
+        type: string
+paths:
+  /api/admin/galleries:
+    post:
+      operationId: createGallery
+      summary: Create a gallery
+      description: >-
+        Creates a new client or portfolio gallery. Owner-only. Accepts the same settable fields as
+        `PATCH /api/admin/galleries/{id}` at creation time (plus `title`, which is required here).
+        If `password` is provided, it is hashed before storage.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GalleryCreateRequest'
+      responses:
+        '201':
+          description: Gallery created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gallery'
+        '400':
+          description: Missing/invalid body, or missing title.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: getGallery
+      summary: Get a gallery
+      description: Returns the full gallery row. Owner-only.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gallery'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: patchGallery
+      summary: Update a gallery's settings
+      description: >-
+        Partial update of gallery fields. Owner-only. Setting `password` to a non-empty string
+        hashes and stores it; an empty string or omission-with-key clears it. Setting `pin` requires
+        a 6-digit string (`400` otherwise), `null` or `""` clears it. Turning `featured` on for a
+        `client` gallery that hasn't granted consent sets `featuredConsent` to `requested` instead
+        of publishing it to the homepage immediately. Changing watermark-affecting fields
+        (`watermarkEnabled`, `watermarkPosition`, `watermarkOpacity`, `watermarkScale`) queues
+        reprocessing for every photo in the gallery. Every change of note is written to the audit
+        log.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GalleryPatchRequest'
+      responses:
+        '200':
+          description: Updated gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gallery'
+        '400':
+          description: Invalid JSON body, or PIN not 6 digits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteGallery
+      summary: Delete a gallery
+      description: >-
+        Deletes the gallery row and removes all of its files from disk (`recursive`/`force` rmdir).
+        Owner-only. Irreversible.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/cleanup:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    post:
+      operationId: cleanupGalleryExpired
+      summary: Run a cleanup action on an expired client gallery
+      description: >-
+        Owner-only. Only usable on `client`-type galleries that are actually expired (`400`
+        otherwise). `action: "unpublish"` unpublishes the gallery. `action: "delete-photos"` removes
+        every photo's files from disk (original, web, thumb) but keeps the DB rows. `action:
+        "delete"` deletes the gallery entirely, DB row and files.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - unpublish
+                    - delete-photos
+                    - delete
+      responses:
+        '200':
+          description: Cleanup action applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  action:
+                    type: string
+                    enum:
+                      - unpublish
+                      - delete-photos
+                      - delete
+                  removed:
+                    type: integer
+                    description: Present only for `delete-photos` — number of photos whose files were removed.
+        '400':
+          description: Invalid JSON body, gallery is not an expired client gallery, or unknown `action`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/reprocess:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    post:
+      operationId: reprocessGalleryPhotos
+      summary: Queue reprocessing for every photo in a gallery
+      description: >-
+        Owner-only. Re-queues derivative generation (thumbnails/web sizes/watermarking) for every
+        photo currently in the gallery, e.g. after changing watermark settings out of band.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Reprocessing queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  count:
+                    type: integer
+                    description: Number of photos queued for reprocessing.
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/delivery:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    patch:
+      operationId: patchGalleryDeliveryState
+      summary: Advance a gallery's delivery-lifecycle state
+      description: >-
+        Owner-only. Sets `deliveryState` to one of `proofing`, `retouching`, `delivered` and records
+        the transition as a `gallery_events` row. No-op (`changed: false`) if the requested state
+        matches the current one.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - state
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - proofing
+                    - retouching
+                    - delivered
+      responses:
+        '200':
+          description: State change applied (or was already at that state).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  changed:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or `state` is not a valid delivery state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: addGalleryDeliveryNote
+      summary: Append a free-text note to a gallery's delivery timeline
+      description: Owner-only. Adds a `note`-type `gallery_events` row.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Note added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or `note` is blank.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/kiosk:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    patch:
+      operationId: patchGalleryKiosk
+      summary: Enable or disable kiosk (live event wall) mode
+      description: >-
+        Owner-only. Enabling generates a stable `kioskToken` if one doesn't already exist (used for
+        the public kiosk deep link); disabling only flips the flag and leaves any existing token in
+        place so re-enabling doesn't rotate it.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Kiosk mode updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  kioskEnabled:
+                    type: boolean
+                  kioskToken:
+                    type:
+                      - string
+                      - 'null'
+        '400':
+          description: Invalid JSON body, or `enabled` is not a boolean.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/watermark:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: getGalleryWatermark
+      summary: Download a gallery's custom watermark image
+      description: >-
+        Owner-only. Returns the raw PNG file if one has been uploaded for this gallery, otherwise a
+        bodyless `404`.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The watermark PNG.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No watermark uploaded for this gallery.
+    post:
+      operationId: uploadGalleryWatermark
+      summary: Upload a gallery's custom watermark image
+      description: >-
+        Owner-only. Multipart upload; the `file` field must be a PNG (checked by magic-byte
+        sniffing, not just content-type). If `watermarkEnabled` is already on for this gallery,
+        uploading queues reprocessing for every photo.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PNG image file.
+      responses:
+        '200':
+          description: Watermark stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Missing `file` field, or gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Uploaded file is not a valid PNG.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteGalleryWatermark
+      summary: Remove a gallery's custom watermark image
+      description: >-
+        Owner-only. Deletes the watermark file if present. If `watermarkEnabled` is on for this
+        gallery, queues reprocessing for every photo.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Watermark removed (or was already absent).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/storage:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: getGalleryStorage
+      summary: Get a gallery's disk storage usage
+      description: Owner-only. Returns computed storage-usage figures for the gallery.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Storage usage.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Shape returned by the storage-usage calculator (bytes used, quota, etc).
+                additionalProperties: true
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/selections.csv:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: exportGallerySelectionsCsv
+      summary: Export a gallery's visitor selections as CSV
+      description: >-
+        Owner-only. Returns a `text/csv` attachment with columns `filename, visitor_name,
+        visitor_email, list_name, selected_at`, one row per (photo, visitor, list) selection.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export.
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/face-batch:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: getGalleryFaceBatch
+      summary: Get face-search embedding batch progress
+      description: >-
+        Owner-only. Returns the gallery's `faceSearch` flag, the batch's status/progress fields, and
+        the current stored face count.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Face-batch status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  faceSearch:
+                    type: boolean
+                  status:
+                    type: string
+                    enum:
+                      - idle
+                      - running
+                      - done
+                      - error
+                  done:
+                    type: integer
+                  total:
+                    type: integer
+                  error:
+                    type:
+                      - string
+                      - 'null'
+                  updatedAt:
+                    type:
+                      - integer
+                      - 'null'
+                    description: Unix ms timestamp.
+                  faceCount:
+                    type: integer
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: startGalleryFaceBatch
+      summary: Start the face-embedding batch for a gallery
+      description: >-
+        Owner-only. Kicks off an overnight-style embedding batch over the gallery's photos (not
+        real-time). Fails with `400` if a batch can't be started (e.g. already running, or face
+        search not enabled) per `startFaceBatch`'s own validation.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Batch started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Batch could not be started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: purgeGalleryFaces
+      summary: Purge all face embeddings for a gallery
+      description: >-
+        Owner-only. GDPR-style deletion of every stored face embedding for the gallery's photos.
+        Logged to the audit log.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Purge complete.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: integer
+                    description: Number of face embeddings deleted.
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/collaborators:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: listGalleryCollaborators
+      summary: List a gallery's collaborators
+      description: Owner-only. Lists everyone with a `collaborator`-kind grant on this gallery.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Collaborators.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collaborators:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        grantId:
+                          type: string
+                        collaboratorId:
+                          type: string
+                        email:
+                          type: string
+                        name:
+                          type:
+                            - string
+                            - 'null'
+                        capabilities:
+                          type: string
+                          description: JSON-encoded array of capability strings, e.g. `["upload","organize"]`.
+                        lastLoginAt:
+                          type:
+                            - integer
+                            - 'null'
+                        disabledAt:
+                          type:
+                            - integer
+                            - 'null'
+                        createdAt:
+                          type: integer
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: inviteGalleryCollaborator
+      summary: Invite a collaborator to a gallery
+      description: >-
+        Owner-only. Creates a pending collaborator grant and a single-use onboarding link (WebAuthn
+        registration happens client-side at that link; not part of this API). Logged to the audit
+        log.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 320
+                name:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: Invite created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collaboratorId:
+                    type: string
+                  onboardingUrl:
+                    type: string
+                    format: uri
+                  expiresAt:
+                    type: integer
+                    description: Unix ms timestamp the invite expires.
+        '400':
+          description: Invalid JSON body, or missing/invalid email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/photos:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: listGalleryPhotos
+      summary: List a gallery's photos
+      description: >-
+        Requires the `upload` or `organize` capability on the gallery (owner always passes; a
+        collaborator with neither capability gets a `404`, not a `401`, to avoid leaking gallery
+        existence). Pass `?tags=1` to also receive a `photoId -> tags` map alongside the photo list.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - '1'
+          description: When `1`, response includes a `photoTags` map.
+      responses:
+        '200':
+          description: Photos (array), or `{ photos, photoTags }` when `tags=1`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Photo'
+                  - type: object
+                    properties:
+                      photos:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Photo'
+                      photoTags:
+                        type: object
+                        description: Map of photoId to an array of `{ id, name }` tags.
+                        additionalProperties:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/Tag'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collaborator has no grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: uploadGalleryPhoto
+      summary: Upload a photo to a gallery
+      description: >-
+        Requires the `upload` capability on the gallery (owner always passes). Multipart upload;
+        `file` is required, `sectionId` is optional. If the uploaded file's content hash already
+        exists in the gallery, returns `200` with `{ duplicate: true, existingFilename }` instead of
+        creating a new photo. When uploaded by a collaborator, the photo's `uploadedBy` is set to
+        their collaborator id.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sectionId:
+                  type: string
+                  description: Optional section to place the photo in.
+      responses:
+        '200':
+          description: Duplicate detected — no new photo created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  duplicate:
+                    type: boolean
+                    enum:
+                      - true
+                  existingFilename:
+                    type: string
+        '201':
+          description: Photo created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          description: Not multipart form data, or missing `file`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, or collaborator has no `upload` grant on it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Unsupported/unreadable image format (only JPEG and PNG are accepted).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Upload failed for an unexpected reason.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/photos/bulk:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    post:
+      operationId: bulkUpdateGalleryPhotos
+      summary: Run a bulk action over a set of photos in a gallery
+      description: >-
+        `action: "delete"` and `action: "cover"` are owner-only (destructive / gallery-settings
+        changes). `action: "move"` only requires the `organize` capability on the gallery. All
+        `photoIds` must belong to this gallery.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - photoIds
+                - action
+              properties:
+                photoIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                action:
+                  type: string
+                  enum:
+                    - delete
+                    - move
+                    - cover
+                sectionId:
+                  type:
+                    - string
+                    - 'null'
+                  description: Required when `action` is `move`; `null` moves photos to ungrouped.
+      responses:
+        '200':
+          description: Action applied.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: 'Result of `action: "delete"`.'
+                    properties:
+                      ok:
+                        type: boolean
+                      deleted:
+                        type: integer
+                  - type: object
+                    description: 'Result of `action: "move"`.'
+                    properties:
+                      ok:
+                        type: boolean
+                      moved:
+                        type: integer
+                  - type: object
+                    description: 'Result of `action: "cover"`.'
+                    properties:
+                      ok:
+                        type: boolean
+                      coverPhotoId:
+                        type: string
+        '400':
+          description: >-
+            Invalid JSON body, empty/missing `photoIds`, invalid photo id, missing `sectionId` for a
+            `move`, more/less than one photo id for `cover`, or unknown `action`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner (for `delete`/`cover`), or not authenticated at all.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: >-
+            For `move`, target section not found or not in this gallery; or collaborator has no
+            `organize` grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/photos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Photo id.
+    patch:
+      operationId: patchPhoto
+      summary: Update a photo's alt text
+      description: Owner-only. Currently the only patchable field is `altText`.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                altText:
+                  type: string
+                  maxLength: 300
+                  description: Trimmed and truncated to 300 chars; empty string clears it to null.
+      responses:
+        '200':
+          description: Updated photo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '400':
+          description: Invalid JSON body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deletePhoto
+      summary: Delete a photo
+      description: >-
+        Requires the `organize` capability on the photo's gallery (owner always passes). Removes the
+        photo row, clears it as the gallery's cover photo if set, and deletes its files (original,
+        web, thumb) from disk.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found, or collaborator has no `organize` grant on its gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/photos/tags:
+    post:
+      operationId: assignPhotoTags
+      summary: Assign a tag to a set of photos
+      description: >-
+        Requires the `organize` capability on every gallery any of `photoIds` belongs to (owner
+        always passes). Provide either an existing `tagId` (must already exist) or a `tagName` to
+        find-or-create a tag by name. Max 500 photo ids per call.
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - photoIds
+              properties:
+                photoIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 500
+                tagId:
+                  type: string
+                  description: Id of an existing tag. Mutually exclusive with `tagName`.
+                tagName:
+                  type: string
+                  description: Find-or-create a tag by name. Mutually exclusive with `tagId`.
+      responses:
+        '200':
+          description: Tag assigned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  tagId:
+                    type: string
+        '400':
+          description: >-
+            Invalid JSON body, missing/invalid `photoIds`, more than 500 photo ids, unknown `tagId`,
+            or neither `tagId` nor `tagName` given.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collaborator lacks `organize` on one of the photos' galleries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: unassignPhotoTags
+      summary: Remove a tag from a set of photos
+      description: >-
+        Requires the `organize` capability on every gallery any of `photoIds` belongs to (owner
+        always passes).
+      tags:
+        - Photos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - photoIds
+                - tagId
+              properties:
+                photoIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                tagId:
+                  type: string
+      responses:
+        '200':
+          description: Tag unassigned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or missing/invalid `photoIds`/`tagId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collaborator lacks `organize` on one of the photos' galleries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/sections:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: listGallerySections
+      summary: List a gallery's sections
+      description: Requires the `organize` capability on the gallery (owner always passes).
+      tags:
+        - Sections
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Sections, ordered by `sortOrder`.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Section'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collaborator has no `organize` grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createGallerySection
+      summary: Create a section in a gallery
+      description: Requires the `organize` capability on the gallery (owner always passes).
+      tags:
+        - Sections
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  maxLength: 120
+                sortOrder:
+                  type: integer
+                  description: Defaults to one past the current max sort order in the gallery.
+      responses:
+        '201':
+          description: Section created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Section'
+        '400':
+          description: Invalid JSON body, or missing/blank title.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, or collaborator has no `organize` grant on it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: patchGallerySection
+      summary: Rename or reorder a single section
+      description: >-
+        Requires the `organize` capability on the gallery (owner always passes). Targets the section
+        via `sectionId` in the request body (not a path param) — this route serves the whole
+        gallery's section collection.
+      tags:
+        - Sections
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sectionId
+              properties:
+                sectionId:
+                  type: string
+                title:
+                  type: string
+                  maxLength: 120
+                sortOrder:
+                  type: integer
+      responses:
+        '200':
+          description: Updated section.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Section'
+        '400':
+          description: Invalid JSON body, missing `sectionId`, or nothing to update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: >-
+            Section not found, section belongs to a different gallery, or collaborator has no
+            `organize` grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteGallerySection
+      summary: Delete a section
+      description: >-
+        Requires the `organize` capability on the gallery (owner always passes). Targets the section
+        via `sectionId` in the request body. Photos in the deleted section become ungrouped
+        (`sectionId` set to `null`), not deleted.
+      tags:
+        - Sections
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sectionId
+              properties:
+                sectionId:
+                  type: string
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or missing `sectionId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: >-
+            Section not found, section belongs to a different gallery, or collaborator has no
+            `organize` grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: reorderGallerySections
+      summary: Reorder all sections in a gallery
+      description: >-
+        Requires the `organize` capability on the gallery (owner always passes). Body is an array of
+        section ids in the desired order; each section's `sortOrder` is set to its index in the
+        array. Non-string entries are silently skipped.
+      tags:
+        - Sections
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        '200':
+          description: Reordered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or body is not an array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collaborator has no `organize` grant on this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/tags:
+    get:
+      operationId: listTags
+      summary: List all tags
+      description: Owner-only. Returns every tag, alphabetical by name.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Tags.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createTag
+      summary: Create a tag
+      description: >-
+        Owner-only. Find-or-create by normalized name — if a tag with the normalized name already
+        exists, that existing tag is returned instead of creating a duplicate.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Tag (created or pre-existing).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  tag:
+                    $ref: '#/components/schemas/Tag'
+        '400':
+          description: Invalid JSON body, or invalid/blank tag name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/tags/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Tag id.
+    delete:
+      operationId: deleteTag
+      summary: Delete a tag
+      description: >-
+        Owner-only. Deletes the tag and (via DB cascade) its assignments to photos, galleries, and
+        clients.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Empty `id` path segment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/tags:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Gallery id.
+    get:
+      operationId: listGalleryTags
+      summary: List tags assigned to a gallery
+      description: Owner-only.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Tags assigned to the gallery.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: assignGalleryTag
+      summary: Assign a tag to a gallery
+      description: >-
+        Owner-only. Provide either an existing `tagId` (must already exist) or a `tagName` to
+        find-or-create a tag by name.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagId:
+                  type: string
+                  description: Id of an existing tag. Mutually exclusive with `tagName`.
+                tagName:
+                  type: string
+                  description: Find-or-create a tag by name. Mutually exclusive with `tagId`.
+      responses:
+        '200':
+          description: Tag assigned; returns the gallery's full tag list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+        '400':
+          description: Invalid JSON body, unknown `tagId`, or neither `tagId` nor `tagName` given.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: unassignGalleryTag
+      summary: Remove a tag from a gallery
+      description: Owner-only.
+      tags:
+        - Tags
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tagId
+              properties:
+                tagId:
+                  type: string
+      responses:
+        '200':
+          description: Tag unassigned; returns the gallery's remaining tag list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+        '400':
+          description: Invalid JSON body, or missing `tagId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/folders:
+    get:
+      operationId: listFolders
+      summary: List all gallery folders
+      description: >-
+        Owner-only. Folders are a flat organizational grouping for galleries (not nested). Ordered
+        by `sortOrder` then `createdAt`.
+      tags:
+        - Folders
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Folders.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  folders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Folder'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createFolder
+      summary: Create a gallery folder
+      description: Owner-only. New folders are appended after the current max sort order.
+      tags:
+        - Folders
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+      responses:
+        '201':
+          description: Folder created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+        '400':
+          description: Invalid JSON body, or missing/blank name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: reorderFolders
+      summary: Reorder all gallery folders
+      description: >-
+        Owner-only. Body is an array of folder ids in the desired order; each folder's `sortOrder`
+        is set to its index in the array. Non-string entries are silently skipped.
+      tags:
+        - Folders
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        '200':
+          description: Reordered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Invalid JSON body, or body is not an array.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/folders/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Folder id.
+    patch:
+      operationId: patchFolder
+      summary: Rename a gallery folder
+      description: Owner-only. Currently the only patchable field is `name`.
+      tags:
+        - Folders
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+      responses:
+        '200':
+          description: Updated folder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+        '400':
+          description: Invalid JSON body, or nothing to update (blank/missing name).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Folder not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteFolder
+      summary: Delete a gallery folder
+      description: >-
+        Owner-only. Any galleries assigned to this folder have their `folderId` cleared to `null`
+        (they are not deleted).
+      tags:
+        - Folders
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          description: Not authenticated as owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Folder not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/clients:
+    get:
+      tags:
+        - Clients
+      summary: List clients
+      description: Returns every client, sorted by name. Owner-only.
+      operationId: listClients
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: List of clients.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Clients
+      summary: Create a client
+      description: >-
+        Creates a client record. `name` and `email` are required (both trimmed; empty after trimming
+        is rejected); `phone` and `notes` are optional. Owner-only.
+      operationId: createClient
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                  description: Trimmed and truncated to 200 characters server-side.
+                email:
+                  type: string
+                  description: Trimmed and truncated to 320 characters server-side.
+                phone:
+                  type:
+                    - string
+                    - 'null'
+                  description: Trimmed and truncated to 40 characters server-side.
+                notes:
+                  type:
+                    - string
+                    - 'null'
+                  description: Trimmed and truncated to 5000 characters server-side.
+      responses:
+        '201':
+          description: Client created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          description: Missing/blank name or email, or invalid JSON body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/clients/{id}:
+    get:
+      tags:
+        - Clients
+      summary: Get a client
+      description: >-
+        Returns a single client along with a summary of the galleries assigned to them (id, title,
+        type, delivery state). Owner-only.
+      operationId: getClient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Client and its galleries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  client:
+                    $ref: '#/components/schemas/Client'
+                  galleries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClientGallerySummary'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Clients
+      summary: Update a client
+      description: >-
+        Partially updates a client. Only fields present in the body are changed; `name`/`email` are
+        rejected if they'd end up blank after trimming. Owner-only.
+      operationId: updateClient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type:
+                    - string
+                    - 'null'
+                notes:
+                  type:
+                    - string
+                    - 'null'
+      responses:
+        '200':
+          description: Updated client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          description: Invalid JSON body, or name/email would be blank.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Clients
+      summary: Delete a client
+      description: Deletes a client. Owner-only.
+      operationId: deleteClient
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/clients/{id}/tags:
+    post:
+      tags:
+        - Clients
+      summary: Assign a tag to a client
+      description: >-
+        Assigns an existing tag (by `tagId`) or creates a new tag from `tagName` and assigns it.
+        Exactly one of the two must be provided. Owner-only.
+      operationId: assignClientTag
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagId:
+                  type: string
+                  description: ID of an existing tag. Must exist if provided.
+                tagName:
+                  type: string
+                  description: Name of a new tag to create when tagId is not given.
+      responses:
+        '200':
+          description: Tag assigned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+                  tagId:
+                    type: string
+        '400':
+          description: Invalid JSON body, unknown tagId, or neither tagId nor tagName provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Clients
+      summary: Unassign a tag from a client
+      description: Removes a tag assignment from a client. Owner-only.
+      operationId: unassignClientTag
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tagId
+              properties:
+                tagId:
+                  type: string
+      responses:
+        '200':
+          description: Tag unassigned (also returned if the client didn't have that tag).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+        '400':
+          description: Invalid JSON body, or missing tagId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/testimonials:
+    get:
+      tags:
+        - Testimonials
+      summary: List testimonials
+      description: >-
+        Returns testimonials, optionally filtered by status. An invalid or omitted `status` query
+        param returns all statuses. Owner-only.
+      operationId: listTestimonials
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - approved
+              - hidden
+          description: Filter by status; any other value is ignored (returns all).
+      responses:
+        '200':
+          description: List of testimonials.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  testimonials:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Testimonial'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/testimonials/{id}:
+    patch:
+      tags:
+        - Testimonials
+      summary: Approve or hide a testimonial
+      description: >-
+        Sets a testimonial's status to `approved` or `hidden`. No other status values are accepted
+        via this endpoint. Owner-only.
+      operationId: updateTestimonialStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - approved
+                    - hidden
+      responses:
+        '200':
+          description: Updated testimonial.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+                  testimonial:
+                    $ref: '#/components/schemas/Testimonial'
+        '400':
+          description: Invalid JSON body, or status is not approved/hidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Testimonial not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/inquiries/{id}:
+    patch:
+      tags:
+        - Inquiries
+      summary: Set an inquiry's status
+      description: >-
+        Updates the triage status of a contact-form inquiry to `new`, `read`, or `archived`.
+        Owner-only. Inquiries have no standalone list API route (listed server-side in the admin
+        panel), so only this status-update endpoint is documented here.
+      operationId: updateInquiryStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - new
+                    - read
+                    - archived
+      responses:
+        '200':
+          description: Status updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+        '400':
+          description: Invalid JSON body, or status not one of new/read/archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/comments:
+    get:
+      tags:
+        - Comments
+      summary: List or count pending comments
+      description: >-
+        With `status=pending` (the default), returns every pending comment across all galleries plus
+        a count. With any other `status` value, returns only the pending count (comments array
+        omitted). Owner-only.
+      operationId: listAdminComments
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: pending
+          description: >-
+            "pending" (default) returns full pending comments + count; any other value returns just
+            the pending count.
+      responses:
+        '200':
+          description: Pending comments and/or count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    type: integer
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/comments/{id}:
+    patch:
+      tags:
+        - Comments
+      summary: Show or hide a comment
+      description: >-
+        Sets a comment's status to `visible` or `hidden`. No other status values are accepted via
+        this endpoint. Owner-only.
+      operationId: updateCommentStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - visible
+                    - hidden
+      responses:
+        '200':
+          description: Status updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+        '400':
+          description: Invalid JSON body, or status not visible/hidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Comment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Comments
+      summary: Hide a comment
+      description: >-
+        Soft-deletes a comment by setting its status to `hidden`. This is a moderation hide, not a
+        row deletion; succeeds even if the comment ID does not exist. Owner-only.
+      operationId: deleteComment
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment hidden.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/galleries/{id}/comments:
+    get:
+      tags:
+        - Comments
+      summary: List comments for a gallery
+      description: >-
+        Returns comments on a gallery. With `status=all` (the default), returns every non-hidden
+        comment; with an explicit status (`visible`, `pending`, or `hidden`), returns only comments
+        matching it exactly. Owner-only.
+      operationId: listGalleryComments
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Gallery ID.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            default: all
+          description: '"all" (default) returns non-hidden comments; otherwise filters to an exact status match.'
+      responses:
+        '200':
+          description: Comments for the gallery.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Comments
+      summary: Post a photographer comment on a photo
+      description: >-
+        Creates a comment authored by the photographer (`isPhotographer: true`, status `visible`) on
+        a photo within the gallery. `photoId` must reference a photo that belongs to this gallery.
+        Owner-only.
+      operationId: createGalleryComment
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Gallery ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - photoId
+                - body
+              properties:
+                photoId:
+                  type: string
+                body:
+                  type: string
+                  description: Trimmed; max 2000 characters.
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Invalid JSON body, missing photoId/body, or body longer than 2000 characters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found in this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/unlock:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: getGalleryAccessMode
+      summary: Get a gallery's access mode
+      description: >-
+        Returns whether the client gallery is unlocked with a PIN, a password, or has no gate at
+        all. Rate-limited to 60 requests/minute per IP via `writeAllowed`. Only published,
+        `client`-type galleries are visible; anything else (or a missing gallery) reports as not
+        found.
+      security:
+        - visitorCookieAuth: []
+      responses:
+        '200':
+          description: Access mode resolved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    enum:
+                      - pin
+                      - password
+                      - none
+                required:
+                  - mode
+        '404':
+          description: Gallery not found, unpublished, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Client Gallery
+      operationId: unlockGallery
+      summary: Unlock a gallery with its password or PIN
+      description: >-
+        This route is one of the ones that actually establishes gallery access: on success it adds
+        the gallery to the caller's gallery-access session (a signed cookie), which subsequent
+        `visitorCookieAuth`-gated routes check via `canViewGallery`. Whether a PIN or password is
+        expected depends on the gallery's configuration (`galleryUsesPin`). Failed attempts are
+        tracked per scope/IP via `isRateLimited`/`recordFailure` (PIN attempts use a stricter,
+        gallery-scoped limiter than password attempts); a correct attempt clears the failure
+        counter. If the gallery has no password/PIN hash configured for its mode, the route reports
+        success without checking anything.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: Required when the gallery uses password mode.
+                pin:
+                  type: string
+                  description: Required when the gallery uses PIN mode.
+      responses:
+        '200':
+          description: Unlocked (or gallery has no gate configured for its mode).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: Request body is not valid JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Incorrect password or PIN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, unpublished, expired, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many attempts; try again later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/visitor:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: createOrRecognizeVisitor
+      summary: Create or recognize the visitor for a gallery
+      description: >-
+        This route is one of the ones that actually establishes the per-gallery visitor session
+        cookie. If an existing visitor session already matches this gallery, it's returned as-is.
+        Otherwise a new visitor row is created (unless both name and email are blank and the
+        gallery's `clientInfoMode` isn't `required`, in which case the session token is saved
+        without a DB row yet — a "deferred anonymous" visitor, lazily persisted by other routes such
+        as selections/comments). When `clientInfoMode` is `required`, both a name and a valid email
+        are mandatory. Rate-limited to 30 requests/10 minutes per IP via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                email:
+                  type: string
+                  maxLength: 320
+      responses:
+        '200':
+          description: An existing visitor session for this gallery was recognized.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  visitorId:
+                    type: string
+                required:
+                  - ok
+                  - visitorId
+        '201':
+          description: A new visitor was created, or an anonymous session was deferred.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  visitorId:
+                    type: string
+                    description: >-
+                      Omitted when the visitor row creation was deferred (fully anonymous,
+                      non-required info mode).
+                required:
+                  - ok
+        '400':
+          description: Name/email too long, or name/valid email missing when required by `clientInfoMode`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found or not viewable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/selections:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: getSelections
+      summary: List the visitor's selected photos and selection lists
+      description: >-
+        Returns the photo IDs currently selected by this visitor in the active list (the default
+        unnamed list unless `listId` is given and resolves to a list the visitor owns), plus all of
+        the visitor's named lists and the gallery's selection limit, if any
+        (`gallery.limitSelections` + `gallery.selectionLimit`).
+      security:
+        - visitorCookieAuth: []
+      parameters:
+        - name: listId
+          in: query
+          required: false
+          description: >-
+            A named selection list ID owned by this visitor. Falls back to the default (unnamed)
+            list if omitted or not owned by this visitor.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current selections and lists.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photoIds:
+                    type: array
+                    items:
+                      type: string
+                  selectionLimit:
+                    type:
+                      - integer
+                      - 'null'
+                  selectionCount:
+                    type: integer
+                  lists:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SelectionList'
+                  activeListId:
+                    type:
+                      - string
+                      - 'null'
+                required:
+                  - photoIds
+                  - selectionLimit
+                  - selectionCount
+                  - lists
+                  - activeListId
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found or not viewable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Client Gallery
+      operationId: addSelection
+      summary: Add a photo to the visitor's selections
+      description: >-
+        Adds `photoId` to the visitor's active selection list (the default list, or a named list
+        they own if `listId` is given). Enforces `gallery.selectionLimit` when
+        `gallery.limitSelections` is set (counting the current list only). Idempotent — re-adding an
+        already-selected photo is a no-op (`onConflictDoNothing`). The photo must exist in this
+        gallery and be `ready`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+                listId:
+                  type: string
+                  description: A named selection list ID owned by this visitor; omit for the default list.
+              required:
+                - photoId
+      responses:
+        '200':
+          description: Selected.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: photoId missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable, or photo not found/not in this gallery/not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Selection limit reached for the active list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Client Gallery
+      operationId: removeSelection
+      summary: Remove a photo from the visitor's selections
+      description: >-
+        Removes `photoId` from the visitor's active selection list (default list, or the named list
+        given by `listId`). Always returns success even if the photo wasn't selected.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+                listId:
+                  type: string
+                  description: A named selection list ID owned by this visitor; omit for the default list.
+              required:
+                - photoId
+      responses:
+        '200':
+          description: Removed (or was never selected).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: photoId missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found or not viewable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Client Gallery
+      operationId: createSelectionList
+      summary: Create a named selection list
+      description: >-
+        Creates a new named selection list for the visitor (max 5 per visitor per gallery,
+        `MAX_LISTS_PER_VISITOR`). The reserved default-list name cannot be used. Rate-limited to 20
+        requests/15 minutes per IP via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+              required:
+                - name
+      responses:
+        '201':
+          description: List created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectionList'
+        '400':
+          description: Name missing/blank, or name is the reserved default-list name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found or not viewable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Visitor already has the maximum number of lists (5).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/selections/lists/{listId}:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+      - name: listId
+        in: path
+        required: true
+        description: The selection list's ID.
+        schema:
+          type: string
+    delete:
+      tags:
+        - Client Gallery
+      operationId: deleteSelectionList
+      summary: Delete one of the visitor's named selection lists
+      description: >-
+        Deletes a named selection list owned by the current visitor. Its selections are removed too,
+        via a DB foreign-key cascade. A visitor can never delete another visitor's list — ownership
+        is checked by `visitorId` + `galleryId`.
+      security:
+        - visitorCookieAuth: []
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable, or list not found/not owned by this visitor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/comments:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: getPhotoComments
+      summary: List comments on a photo
+      description: >-
+        Returns visible comments (plus the caller's own pending ones) for a photo, along with a
+        prefilled commenter name. 404s if the gallery doesn't have comments enabled
+        (`galleryCommentsEnabled`) in addition to the usual not-found/not-viewable cases.
+      security:
+        - visitorCookieAuth: []
+      parameters:
+        - name: photoId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comments for the photo.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  prefilledName:
+                    type: string
+                required:
+                  - comments
+                  - prefilledName
+        '400':
+          description: photoId query param missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/comments disabled, or photo not found/not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Client Gallery
+      operationId: createComment
+      summary: Post a comment on a photo
+      description: >-
+        Creates a comment as the visitor identity resolved from the gallery-visitor session cookie.
+        If the gallery moderates comments (`commentsMode: 'pre'`) the comment is created with
+        `status: pending` and only visible to its author until approved; otherwise it's immediately
+        `visible`. A deferred anonymous visitor (session token but no DB row yet) is lazily
+        persisted here, same as in the selections route, provided a name is supplied. Rate-limited
+        to 20 requests/10 minutes per IP via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+                body:
+                  type: string
+                  maxLength: 2000
+                name:
+                  type: string
+                  maxLength: 80
+                  description: >-
+                    Required the first time a deferred/anonymous visitor comments; ignored once the
+                    visitor already has a stored name.
+              required:
+                - photoId
+                - body
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+                required:
+                  - ok
+                  - comment
+        '400':
+          description: photoId/body missing, body/name too long, or name required and missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/comments disabled, or photo not found/not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Client Gallery
+      operationId: deleteOwnComment
+      summary: Hide (soft-delete) the caller's own comment
+      description: >-
+        Sets a comment's status to `hidden`. Only the comment's own author (matched by visitor
+        identity) may delete it, and photographer-authored comments can never be deleted this way.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commentId:
+                  type: string
+              required:
+                - commentId
+      responses:
+        '200':
+          description: Comment hidden.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: commentId missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: >-
+            Caller has no resolvable comment identity, does not own the comment, or the comment is a
+            photographer comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/comments disabled, or comment not found in this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/magic-link:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: requestMagicLink
+      summary: Email the visitor a magic sign-in link for this gallery
+      description: >-
+        Issues a single-use magic-link token for the given email and returns the link URL directly
+        in the response (the app is expected to email it; this endpoint itself does not send mail).
+        Rate-limited via `writeAllowed` to 5 requests/15 minutes per IP, and separately 5
+        requests/15 minutes per normalized email address. Also links the email to the current
+        visitor session, if any, and writes an admin audit log entry (`magic_link.issue`).
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      responses:
+        '200':
+          description: Magic link issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  expiresAt:
+                    type: integer
+                    description: Unix ms timestamp when the link expires.
+                required:
+                  - url
+                  - expiresAt
+        '400':
+          description: Invalid JSON body, or missing/invalid email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, not viewable, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests (per-IP or per-email limit).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/magic-link/verify:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: verifyMagicLink
+      summary: Verify a magic-link token and link the visitor session to a client account
+      description: >-
+        Validates the `token` query param against the gallery, then links (or creates) the visitor
+        session to the resolved client account, setting the gallery-visitor session cookie. This is
+        one of the routes that establishes the visitor session cookie in the first place. Non-admins
+        must already have passed the gallery's access gate (`needsAccessGate` + `hasGalleryAccess`)
+        if the gallery requires one.
+      security:
+        - visitorCookieAuth: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verified and linked.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: token query param missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Token invalid or expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Gallery requires its password/PIN gate and the caller hasn't passed it yet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, not viewable, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/testimonial:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: submitTestimonial
+      summary: Submit a testimonial for a delivered gallery
+      description: >-
+        Creates a `pending` testimonial (subject to admin approval). Only allowed once the gallery's
+        `deliveryState` is `delivered`, and only once per visitor per gallery
+        (`hasSubmittedTestimonial`). Rate-limited to 5 requests/hour per IP via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                  description: Rounded server-side; must be between 1 and 5.
+                quote:
+                  type: string
+                  maxLength: 2000
+                authorName:
+                  type: string
+                  maxLength: 200
+                  description: Falls back to the visitor's stored name if omitted.
+              required:
+                - rating
+                - quote
+      responses:
+        '201':
+          description: Testimonial submitted (pending approval).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: Invalid JSON, rating out of range, quote/name missing or too long.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/not a client gallery, or not yet delivered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Visitor already submitted a testimonial for this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/featured-consent:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: setFeaturedConsent
+      summary: Grant or decline consent to be featured
+      description: >-
+        Sets the gallery's `featuredConsent` field to `granted` or `declined`, recording whether the
+        client consents to their gallery being used in the photographer's marketing/portfolio.
+        Rate-limited to 10 requests/hour per IP via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                granted:
+                  type: boolean
+              required:
+                - granted
+      responses:
+        '200':
+          description: Consent recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: Invalid JSON body, or `granted` is not a boolean.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found, not viewable, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/download-info:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: getDownloadInfo
+      summary: Get download size/count info for a gallery
+      description: >-
+        Returns the count and total byte size of all `ready` photos in the gallery, for showing a
+        "download all" size estimate before the client commits to it.
+      security:
+        - visitorCookieAuth: []
+      responses:
+        '200':
+          description: Download info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  sizeBytes:
+                    type: integer
+                  sizeLabel:
+                    type: string
+                    description: Human-readable size, e.g. "1.2 GB".
+                required:
+                  - count
+                  - sizeBytes
+                  - sizeLabel
+        '404':
+          description: Gallery not found, not viewable, or not a client gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/bib-search:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: searchByBibNumber
+      summary: Find photos by race-bib number
+      description: >-
+        Looks up `ready` photos tagged with the given bib number. Only available when the gallery
+        has `gallery.bibSearch` enabled. Rate-limited to 60 requests/minute per IP+gallery via
+        `writeAllowed`. Response deliberately avoids asserting identity — copy is phrased as "photos
+        matching #N", not a claim the bib belongs to any particular person.
+      security:
+        - visitorCookieAuth: []
+      parameters:
+        - name: number
+          in: query
+          required: true
+          description: 1-6 digit bib number. Leading zeros are stripped server-side.
+          schema:
+            type: string
+            pattern: ^\d{1,6}$
+      responses:
+        '200':
+          description: Matching photo IDs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  number:
+                    type: string
+                    description: The normalized (leading-zero-stripped) bib number searched.
+                  photoIds:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+                  label:
+                    type: string
+                required:
+                  - number
+                  - photoIds
+                  - count
+        '400':
+          description: number query param missing or not 1-6 digits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/not a client gallery, or bib search not enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/face-search:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: searchByFace
+      summary: Find photos matching a selfie via face recognition
+      description: >-
+        Accepts a multipart form with a `selfie` file field (max 5 MB), detects faces in-memory, and
+        matches against the gallery's stored face embeddings. The uploaded selfie is never written
+        to disk or persisted — only match results (photo IDs) are returned. Only available when the
+        gallery has `gallery.faceSearch` enabled. Hard rate-limited to 3 requests/15 minutes per
+        IP+gallery via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                selfie:
+                  type: string
+                  format: binary
+              required:
+                - selfie
+      responses:
+        '200':
+          description: Match results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photoIds:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+                  facesDetected:
+                    type: integer
+                  selfieStored:
+                    type: boolean
+                    description: Always false — the selfie is never persisted.
+                required:
+                  - photoIds
+                  - count
+        '400':
+          description: >-
+            Invalid/missing form data, missing selfie file, selfie too large/empty, or face
+            detection failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/not a client gallery, or face search not enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many selfie searches; try again later.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/live-photos:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    get:
+      tags:
+        - Client Gallery
+      operationId: getLivePhotos
+      summary: Poll for newly published photos in a live gallery
+      description: >-
+        Returns `ready` photos created after the `since` timestamp, for live/event galleries to poll
+        incrementally. Only available when the gallery has `gallery.autoPublishOnUpload` enabled;
+        otherwise treated as not found.
+      security:
+        - visitorCookieAuth: []
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: Unix ms timestamp; only photos created after this are returned. Defaults to 0.
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: New photos since the given timestamp.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GalleryPhoto'
+                  serverTime:
+                    type: integer
+                    description: Unix ms server time, for the caller to use as the next poll's `since`.
+                  live:
+                    type: boolean
+                required:
+                  - photos
+                  - serverTime
+                  - live
+        '400':
+          description: since query param is not a valid non-negative number.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: >-
+            Gallery not found, not viewable, not a client gallery, or not a live/auto-publish
+            gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/photo-view:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: recordPhotoView
+      summary: Record a photo view
+      description: >-
+        Records an anonymous view event for a photo, used for the admin photo-view analytics.
+        Rate-limited to 60 requests/minute per IP+gallery via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+              required:
+                - photoId
+      responses:
+        '200':
+          description: View recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        '400':
+          description: Invalid JSON body, or photoId missing/not a string.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found/not viewable/not a client gallery, or photo not found in this gallery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/g/{slug}/find/save:
+    parameters:
+      - $ref: '#/components/parameters/GallerySlug'
+    post:
+      tags:
+        - Client Gallery
+      operationId: saveFoundPhotos
+      summary: Save bib/face/event "find" results into the visitor's selections
+      description: >-
+        Bulk-adds up to 200 matched photo IDs to the visitor's selections (default list, or a named
+        list via `listId`), typically called right after a bib-search/face-search/event-page result
+        set. Only available when the gallery has `gallery.bibSearch`, `gallery.faceSearch`, or
+        `gallery.eventPage` enabled. Lazily creates a deferred anonymous visitor if none exists yet.
+        Duplicate/invalid IDs are silently skipped (`onConflictDoNothing`). Rate-limited to 20
+        requests/15 minutes per IP+gallery via `writeAllowed`.
+      security:
+        - visitorCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoIds:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 200
+                listId:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    A named selection list ID owned by this visitor, or null/omitted for the default
+                    list.
+              required:
+                - photoIds
+      responses:
+        '200':
+          description: Save result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: integer
+                    description: Number of photos newly inserted (duplicates already selected don't count).
+                  count:
+                    type: integer
+                    description: >-
+                      Number of the given photoIds that resolved to valid, ready photos in this
+                      gallery.
+                required:
+                  - saved
+                  - count
+        '400':
+          description: Invalid JSON body, or photoIds missing/empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No visitor session cookie present and none could be created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: >-
+            Gallery not found/not viewable/not a client gallery, or none of
+            bib-search/face-search/event-page enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/settings:
+    get:
+      tags:
+        - Settings
+      summary: Get site settings
+      description: >-
+        Returns all site content/config settings (about/contact copy, home hero text, SMTP config
+        with the password redacted, gallery defaults, and whether a watermark is currently set).
+      operationId: getSettings
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Settings
+      summary: Update site settings or upload a watermark
+      description: >-
+        Two request shapes on the same route. Send `multipart/form-data` with a `watermark` field to
+        upload a new watermark PNG (max 10 MB, must decode as PNG). Send `application/json` to
+        update any subset of text/SMTP settings and gallery defaults — every field is optional and
+        only recognized keys of the correct type are applied; unrecognized or wrong-typed fields are
+        silently ignored. String fields are trimmed and length-capped (200 chars for short fields,
+        2000 for long-form content) server-side. `smtpPassClear: true` clears the stored SMTP
+        password; otherwise a non-empty `smtpPass` string overwrites it and an absent one leaves it
+        untouched.
+      operationId: updateSettings
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                watermark:
+                  type: string
+                  format: binary
+                  description: PNG image, max 10 MB.
+              required:
+                - watermark
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteSettingsUpdate'
+      responses:
+        '200':
+          description: Settings updated, or watermark uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+        '400':
+          description: Missing watermark file in the multipart form, or the JSON body could not be parsed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Watermark file larger than 10 MB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Uploaded watermark is not a valid PNG.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Settings
+      summary: Remove the site watermark
+      description: Deletes the stored watermark PNG, if any (no-op if none is set).
+      operationId: deleteWatermark
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Watermark removed (or already absent).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/settings/watermark:
+    get:
+      tags:
+        - Settings
+      summary: Fetch the current watermark image
+      description: >-
+        Streams the raw watermark PNG for preview in the admin settings page. Supports HTTP range
+        requests via the shared file-streaming helper.
+      operationId: getWatermarkImage
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Watermark image bytes.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No watermark is currently set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/settings/smtp-test:
+    post:
+      tags:
+        - Settings
+      summary: Send a test email via the configured SMTP settings
+      description: >-
+        Sends a fixed "Albm SMTP test" message to the configured notify recipient (or contact email
+        fallback) using the currently saved SMTP settings. Requires SMTP to already be configured.
+      operationId: sendSmtpTest
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Test email sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+                  to:
+                    type: string
+                    description: Recipient address the test was sent to.
+        '400':
+          description: >-
+            SMTP is not configured yet, or no recipient could be determined (no "Notify to" or
+            contact email set).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Send failed — check host/port/credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/security:
+    get:
+      tags:
+        - Settings
+      summary: Get security/login settings
+      description: >-
+        Returns registered passkeys (metadata only, no credential material), whether password login
+        is enabled, how many unused recovery codes remain, and whether password login can currently
+        be disabled (it cannot be disabled if doing so would leave no other way to log in).
+      operationId: getSecuritySettings
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current security settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySettings'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Settings
+      summary: Enable or disable password login
+      description: >-
+        Toggles password-based admin login. Disabling is rejected with `400` when it would remove
+        the only remaining way to log in (e.g. no passkeys registered) — the reason is included in
+        the error message.
+      operationId: setPasswordLoginEnabled
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                passwordLoginEnabled:
+                  type: boolean
+              required:
+                - passwordLoginEnabled
+      responses:
+        '200':
+          description: Password login setting updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+                  passwordLoginEnabled:
+                    type: boolean
+        '400':
+          description: >-
+            Invalid request body (missing/non-boolean `passwordLoginEnabled`), or disabling would
+            leave no other login method available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/upload-tokens:
+    get:
+      tags:
+        - Upload Tokens
+      summary: List upload tokens
+      description: >-
+        Returns all upload tokens (including revoked ones) with metadata only — raw token values are
+        never returned after creation, only a one-way hash is stored server-side.
+      operationId: listUploadTokens
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Upload tokens.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UploadToken'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Upload Tokens
+      summary: Create an upload token
+      description: >-
+        Creates a new token for use with the external publish API. The raw token value is returned
+        exactly once in this response — it cannot be retrieved again afterward, only revoked and
+        replaced.
+      operationId: createUploadToken
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Human-readable label (trimmed; required, non-empty).
+              required:
+                - name
+      responses:
+        '201':
+          description: Token created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  createdAt:
+                    type: integer
+                    description: Epoch milliseconds.
+                  token:
+                    type: string
+                    description: Raw bearer token value — shown only this once.
+        '400':
+          description: Invalid request body, or `name` missing/empty after trimming.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Upload Tokens
+      summary: Revoke an upload token
+      description: >-
+        Revokes (soft-deletes) an upload token by id. A revoked token can no longer authenticate
+        publish-API requests.
+      operationId: revokeUploadToken
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+              required:
+                - id
+      responses:
+        '200':
+          description: Token revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+        '400':
+          description: Invalid request body, or `id` missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No token with that id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/storage:
+    get:
+      tags:
+        - Storage & Maintenance
+      summary: Get storage usage snapshot
+      description: >-
+        Returns disk usage, total data-directory size, and per-gallery photo/size/RAW breakdown.
+        Cached for 1 hour; pass `?refresh=1` to force recomputation.
+      operationId: getStorageSnapshot
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: refresh
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - '1'
+          description: Pass `1` to bypass the 1-hour cache and recompute now.
+      responses:
+        '200':
+          description: Storage snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageSnapshot'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/maintenance/scan:
+    get:
+      tags:
+        - Storage & Maintenance
+      summary: Scan derivative integrity and storage usage
+      description: >-
+        Scans every `ready` photo in every gallery for missing derivative files (thumb/md/web, plus
+        workingJpeg/print for RAW originals) and reports per-gallery storage usage alongside soft
+        quota state. Not cached — recomputed on every call.
+      operationId: scanMaintenanceIntegrity
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Integrity report and storage usage.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  integrity:
+                    $ref: '#/components/schemas/IntegritySummary'
+                  storage:
+                    $ref: '#/components/schemas/AllGalleriesStorageUsage'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/maintenance/regenerate:
+    post:
+      tags:
+        - Storage & Maintenance
+      summary: Regenerate missing derivatives
+      description: >-
+        Regenerates missing derivative files for a single photo (`photoId`) or every photo with a
+        gap in a gallery (`galleryId`). Exactly one of the two fields should be supplied; `photoId`
+        takes precedence if both are present. `thumb`/`md`/`web` regeneration is enqueued on the
+        background derivative queue (fire-and-forget); `workingJpeg` and `print` are regenerated
+        synchronously and their success/failure is reflected in the response.
+      operationId: regenerateDerivatives
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+                galleryId:
+                  type: string
+              description: Provide exactly one of `photoId` or `galleryId`.
+      responses:
+        '200':
+          description: Regeneration result for the photo or gallery.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/RegenerateResult'
+                  - $ref: '#/components/schemas/RegenerateGalleryResult'
+        '400':
+          description: Body did not parse as JSON, or neither `photoId` nor `galleryId` was supplied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/audit:
+    get:
+      tags:
+        - Audit & Sessions
+      summary: List (or export) the admin audit log
+      description: >-
+        Returns audit-log entries, most recent first (max 500, default 200), optionally filtered by
+        action type, actor type, and a rolling window in days. Pass `?format=csv` to instead
+        download the filtered rows as a CSV attachment.
+      operationId: listAuditLog
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to a single audit action type (e.g. `settings.update`).
+        - name: actor
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - owner
+              - collaborator
+          description: Filter by actor type. Any other value is ignored.
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Only include entries from the last N days.
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - csv
+          description: Pass `csv` to receive a CSV file instead of JSON.
+      responses:
+        '200':
+          description: Audit log rows (JSON) or a CSV file (`format=csv`).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rows:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  actions:
+                    type: array
+                    items:
+                      type: string
+                    description: All distinct action types seen in the log, for filter UIs.
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/admin/sessions:
+    get:
+      tags:
+        - Audit & Sessions
+      summary: List active admin sessions
+      description: >-
+        Returns every currently active admin session (owner and collaborator), each flagged with
+        `isCurrent` for the session making this request.
+      operationId: listAdminSessions
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Active sessions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminSession'
+                  currentId:
+                    type:
+                      - string
+                      - 'null'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Audit & Sessions
+      summary: Revoke an admin session (or all others)
+      description: >-
+        Two request shapes: `{ "revokeAllOthers": true }` revokes every admin session except the
+        caller's own and returns the count revoked; `{ "id": "<sessionId>" }` revokes a single named
+        session. Revoking the caller's own current session is rejected — use the logout flow
+        instead.
+      operationId: revokeAdminSession
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                revokeAllOthers:
+                  type: boolean
+                id:
+                  type: string
+              description: 'Provide either `revokeAllOthers: true` or an `id`.'
+      responses:
+        '200':
+          description: Session(s) revoked.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      ok:
+                        type: boolean
+                        const: true
+                      revoked:
+                        type: integer
+                        description: Count of other sessions revoked (revokeAllOthers path).
+                  - type: object
+                    properties:
+                      ok:
+                        type: boolean
+                        const: true
+        '400':
+          description: >-
+            Invalid JSON body, `id` missing when not using `revokeAllOthers`, or attempting to
+            revoke the caller's own current session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not logged in as admin, or no resolvable current session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No session with that id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/publish/galleries:
+    get:
+      tags:
+        - Publish
+      summary: List galleries a publish token may publish to
+      description: >-
+        Returns every gallery in the instance. Upload tokens are global, not gallery-scoped, so this
+        is the same set of galleries the upload endpoint already accepts for this token. Used by the
+        Lightroom Publish Service plugin's gallery picker. Rate-limited to 120 requests / 15 min per
+        token+IP.
+      operationId: listGalleriesForToken
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Galleries available to this token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  galleries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublishGallery'
+        '401':
+          description: Missing, invalid, or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (120 requests / 15 min per token+IP).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/publish/{galleryId}/photos:
+    post:
+      tags:
+        - Publish
+      summary: Upload a photo to a gallery
+      description: >-
+        Pushes a new photo into an existing gallery. Accepts JPEG or PNG; filenames are sanitized
+        and deduplicated by content hash — a repeat upload of the same content returns `200` with
+        `duplicate: true` instead of creating a new photo. Optionally assigns the photo to an
+        existing gallery section via the `sectionId` form field. Rate-limited to 300 uploads / 15
+        min per token+IP.
+      operationId: uploadPublishPhoto
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: galleryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG image, max 50 MB.
+                sectionId:
+                  type: string
+                  description: Optional existing section id to assign the photo to.
+              required:
+                - file
+      responses:
+        '200':
+          description: Duplicate content hash — no new photo was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishDuplicate'
+        '201':
+          description: 'Photo accepted; processing started (`status: processing` → `ready`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishPhoto'
+        '400':
+          description: Request was not multipart form data, or the `file` field is missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing, invalid, or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Gallery not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File over 50 MB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Not JPEG/PNG, or unreadable image.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (300 uploads / 15 min per token+IP).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/publish/{galleryId}/photos/{photoId}:
+    put:
+      tags:
+        - Publish
+      summary: Replace a photo's content (edited re-publish)
+      description: >-
+        Replaces an existing photo's content in place — the old file and derivatives are deleted and
+        the new content is ingested fresh, which means the response's `id` is a **new photo id**;
+        callers must update their stored reference to it. Audit-logged as `publish.replace`.
+        Rate-limited to 300 requests / 15 min per token+IP.
+      operationId: replacePublishPhoto
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: galleryId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG image, max 50 MB.
+              required:
+                - file
+      responses:
+        '200':
+          description: >-
+            Photo replaced (new photo id in the response), or a duplicate content hash was detected
+            (`duplicate: true`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PublishPhoto'
+                  - $ref: '#/components/schemas/PublishDuplicate'
+        '400':
+          description: Request was not multipart form data, or the `file` field is missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing, invalid, or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo does not exist in this gallery — upload it fresh instead.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (300 requests / 15 min per token+IP).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Publish
+      summary: Delete a photo
+      description: >-
+        Deletes a photo and its files. Audit-logged as `publish.delete`. Rate-limited to 300
+        requests / 15 min per token+IP.
+      operationId: deletePublishPhoto
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: galleryId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Photo deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+        '401':
+          description: Missing, invalid, or revoked token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo already gone (or never belonged to this gallery).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded (300 requests / 15 min per token+IP).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/health:
+    get:
+      tags:
+        - System
+      summary: Health probe
+      description: >-
+        Unauthenticated liveness/readiness check for uptime monitors. Runs a trivial `SELECT 1`
+        against the database; leaks nothing beyond ok/fail.
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Database reachable.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+        '500':
+          description: Database query failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    const: false
+  /api/admin/version:
+    get:
+      tags:
+        - System
+      summary: Get app version and update availability
+      description: >-
+        Returns the running app version and, unless `DISABLE_UPDATE_CHECK=1`, the latest GitHub
+        release tag (cached 24h) with an `updateAvailable` flag. Despite living alongside the
+        unauthenticated System routes, this endpoint is **admin-gated** — it requires a valid admin
+        session like any other `/api/admin/*` route.
+      operationId: getVersionInfo
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Version info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+        '401':
+          description: Not logged in as admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
