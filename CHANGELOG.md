@@ -4,6 +4,17 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] — 2026-07-26
+
+### Added
+- **Clients**: a real cross-gallery Client record (name, email, phone, notes, tags) —
+  the CRM entity that was completely missing before. New owner-only **Clients** admin
+  page (search, tag filter, create/edit/delete), a "Client" picker on a gallery's
+  Settings tab (optional, set after creation — one client can span many galleries over
+  time), and a "Convert to client" button on each Inquiries row. Deleting a Client never
+  deletes or orphans its galleries — they just become unlinked. New `clients` +
+  `client_tags` tables, `galleries.client_id` column.
+
 ## [1.10.6] — 2026-07-26
 
 ### Added
@@ -192,6 +203,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.11.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.0
 [1.10.6]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.6
 [1.10.5]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.5
 [1.10.4]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.4

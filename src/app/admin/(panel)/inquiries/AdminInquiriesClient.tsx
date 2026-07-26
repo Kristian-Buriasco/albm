@@ -47,6 +47,23 @@ export default function AdminInquiriesClient({
     }
   }
 
+  async function convertToClient(r: Inquiry) {
+    setBusy(r.id);
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: r.name, email: r.email }),
+      });
+      if (res.ok) {
+        const client = await res.json();
+        router.push(`/admin/clients/${client.id}`);
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const active = filter ?? 'all';
 
   return (
@@ -129,6 +146,14 @@ export default function AdminInquiriesClient({
                 >
                   Reply
                 </a>
+                <button
+                  type="button"
+                  disabled={busy === r.id}
+                  onClick={() => convertToClient(r)}
+                  className="text-neutral-500 hover:text-neutral-900 disabled:opacity-50 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  Convert to client
+                </button>
                 {r.status !== 'read' && (
                   <button
                     type="button"

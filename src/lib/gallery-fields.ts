@@ -135,6 +135,9 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
   if (typeof body.noindex === 'boolean') {
     updates.noindex = body.noindex;
   }
+  if ('clientId' in body) {
+    updates.clientId = typeof body.clientId === 'string' && body.clientId ? body.clientId : null;
+  }
   if ('storageQuotaBytes' in body) {
     const v = body.storageQuotaBytes;
     updates.storageQuotaBytes =

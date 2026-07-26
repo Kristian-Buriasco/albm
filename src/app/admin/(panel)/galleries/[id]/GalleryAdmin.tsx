@@ -17,6 +17,7 @@ import CollaboratorsPanel from './CollaboratorsPanel';
 import Tabs, { type TabDef } from '@/components/Tabs';
 import InsightsPanel from './InsightsPanel';
 import KioskToggle from './KioskToggle';
+import ClientPicker from './ClientPicker';
 import SeoFields from './SeoFields';
 import StorageBar from './StorageBar';
 import SettingsCard from '@/components/SettingsCard';
@@ -625,6 +626,15 @@ export default function GalleryAdmin({
           </label>
           {isClientGallery && (
             <>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
+                  Client
+                </span>
+                <ClientPicker
+                  clientId={gallery.clientId}
+                  onChange={(clientId) => patchGallery({ clientId })}
+                />
+              </label>
               <PasswordField
                 hasPassword={!!gallery.passwordHash}
                 onSave={(pw) => patchGallery({ password: pw })}

@@ -153,6 +153,8 @@ export const galleries = sqliteTable('galleries', {
   })
     .notNull()
     .default('none'),
+  /** Optional link to a cross-gallery Client record (Settings, set after creation). */
+  clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
   ...timestamps,
 });
 
@@ -544,6 +546,33 @@ export const galleryTags = sqliteTable(
   (t) => [primaryKey({ columns: [t.galleryId, t.tagId] })],
 );
 
+export const clients = sqliteTable('clients', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  notes: text('notes'),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  updatedAt: integer('updated_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+});
+
+export const clientTags = sqliteTable(
+  'client_tags',
+  {
+    clientId: text('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    tagId: text('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.clientId, t.tagId] })],
+);
+
 export const auditLog = sqliteTable(
   'audit_log',
   {
@@ -707,3 +736,4 @@ export type UploadToken = typeof uploadTokens.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Inquiry = typeof inquiries.$inferSelect;
+export type Client = typeof clients.$inferSelect;
