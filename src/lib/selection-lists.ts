@@ -57,6 +57,32 @@ export function createSelectionList(
     .get()!;
 }
 
+/**
+ * Delete a named list (and, via FK cascade, its selections) — scoped to the
+ * requesting visitor + gallery so a visitor can never delete another
+ * visitor's list. Returns false if the list doesn't exist / isn't theirs.
+ */
+export function deleteSelectionList(
+  visitorId: string,
+  galleryId: string,
+  listId: string,
+): boolean {
+  const list = getDb()
+    .select({ id: schema.selectionLists.id })
+    .from(schema.selectionLists)
+    .where(
+      and(
+        eq(schema.selectionLists.id, listId),
+        eq(schema.selectionLists.visitorId, visitorId),
+        eq(schema.selectionLists.galleryId, galleryId),
+      ),
+    )
+    .get();
+  if (!list) return false;
+  getDb().delete(schema.selectionLists).where(eq(schema.selectionLists.id, listId)).run();
+  return true;
+}
+
 export function resolveListId(
   visitorId: string,
   galleryId: string,

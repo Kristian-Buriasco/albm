@@ -250,6 +250,19 @@ export default function GalleryClient({
     [selected, slug, ensureVisitor, atLimit, activeListId],
   );
 
+  async function deleteList(listId: string) {
+    if (!confirm(t(lang, 'deleteListConfirm'))) return;
+    const res = await fetch(`/api/g/${slug}/selections/lists/${encodeURIComponent(listId)}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      setLists((prev) => prev.filter((l) => l.id !== listId));
+      // Switching away from a deleted active list re-triggers the existing
+      // activeListId effect, which reloads selections for the new list.
+      if (activeListId === listId) setActiveListId(null);
+    }
+  }
+
   async function createList() {
     if (!newListName.trim()) return;
     if (!(await ensureVisitor())) return;
@@ -435,16 +448,25 @@ export default function GalleryClient({
                     {DEFAULT_LIST_NAME}
                   </button>
                   {lists.map((list) => (
-                    <button
+                    <span
                       key={list.id}
-                      type="button"
-                      onClick={() => setActiveListId(list.id)}
-                      className={`rounded-full border px-2 py-0.5 ${
+                      className={`inline-flex items-center rounded-full border ${
                         activeListId === list.id ? 'border-ink dark:border-ink-dark' : 'border-line'
                       }`}
                     >
-                      {list.name}
-                    </button>
+                      <button type="button" onClick={() => setActiveListId(list.id)} className="py-0.5 pr-1 pl-2">
+                        {list.name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteList(list.id)}
+                        aria-label={t(lang, 'deleteList')}
+                        title={t(lang, 'deleteList')}
+                        className="px-1.5 py-0.5 text-muted hover:text-red-600 dark:text-muted-dark dark:hover:text-red-400"
+                      >
+                        &times;
+                      </button>
+                    </span>
                   ))}
                   <input
                     value={newListName}

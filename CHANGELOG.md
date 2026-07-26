@@ -4,6 +4,14 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.5] — 2026-07-26
+
+### Added
+- Clients can delete their own named selection lists (Lists chip bar → ×). Photos stay in
+  the gallery; only the list and its selections are removed. Scoped to the visitor who
+  created it — one client can't delete another's list. New `DELETE
+  /api/g/[slug]/selections/lists/[listId]`.
+
 ## [1.10.4] — 2026-07-25
 
 ### Fixed
@@ -173,6 +181,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.5]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.5
 [1.10.4]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.4
 [1.10.3]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.3
 [1.10.2]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.2

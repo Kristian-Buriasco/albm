@@ -44,6 +44,8 @@ export type I18nDict = {
   workNoMatches: string;
   selectionLists: string;
   newList: string;
+  deleteList: string;
+  deleteListConfirm: string;
   saveSelections: string;
   selectionsSaved: string;
   switchDevice: string;
@@ -130,6 +132,8 @@ const en: I18nDict = {
   workNoMatches: 'No work matches your filters.',
   selectionLists: 'Lists',
   newList: 'New list',
+  deleteList: 'Delete list',
+  deleteListConfirm: 'Delete this list? Photos stay in the gallery — only the list and its selections are removed.',
   saveSelections: 'Save my selections',
   selectionsSaved: 'Selections saved',
   switchDevice: 'Switch device',
@@ -218,6 +222,8 @@ const nl: I18nDict = {
   workNoMatches: 'Geen werk komt overeen met je filters.',
   selectionLists: 'Lijsten',
   newList: 'Nieuwe lijst',
+  deleteList: 'Lijst verwijderen',
+  deleteListConfirm: "Deze lijst verwijderen? Foto's blijven in de galerij — alleen de lijst en de selecties worden verwijderd.",
   saveSelections: 'Mijn selectie opslaan',
   selectionsSaved: 'Selectie opgeslagen',
   switchDevice: 'Ander apparaat',
@@ -306,6 +312,8 @@ const it: I18nDict = {
   workNoMatches: 'Nessun lavoro corrisponde ai filtri.',
   selectionLists: 'Liste',
   newList: 'Nuova lista',
+  deleteList: 'Elimina lista',
+  deleteListConfirm: 'Eliminare questa lista? Le foto restano nella galleria — vengono rimosse solo la lista e le sue selezioni.',
   saveSelections: 'Salva le mie selezioni',
   selectionsSaved: 'Selezioni salvate',
   switchDevice: 'Cambia dispositivo',
