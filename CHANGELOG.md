@@ -4,6 +4,17 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.6] — 2026-07-26
+
+### Added
+- Audit logging for section create/rename/delete and bulk photo-move actions
+  (`section.create`, `section.rename`, `section.delete`, `photos.move`). These previously
+  left no trace at all — investigating a report of photos appearing in a different section
+  than expected turned up the gap; deploys themselves never touch `data/` (verified: only
+  `drizzle`, `node_modules`, `package.json`, `public`, `server.js`, `src`, `.next` are
+  swapped), and no code path was found that reassigns sections automatically, but there
+  was no way to check history if it does happen again. Now there is.
+
 ## [1.10.5] — 2026-07-26
 
 ### Added
@@ -181,6 +192,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.10.6]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.6
 [1.10.5]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.5
 [1.10.4]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.4
 [1.10.3]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.3

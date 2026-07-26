@@ -2,6 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireGalleryCapability } from '@/lib/api';
+import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -49,6 +50,11 @@ export async function POST(req: Request, { params }: Params) {
     sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : maxOrder + 1,
   };
   db.insert(schema.sections).values(section).run();
+  logAdmin('section.create', {
+    targetType: 'section',
+    targetId: section.id,
+    summary: `Created section "${title}" in "${gallery.title}"`,
+  });
   return json(section, 201);
 }
 
@@ -82,6 +88,13 @@ export async function PATCH(req: Request, { params }: Params) {
   if (Object.keys(updates).length === 0) return errorJson('Nothing to update', 400);
 
   db.update(schema.sections).set(updates).where(eq(schema.sections.id, sectionId)).run();
+  if (updates.title) {
+    logAdmin('section.rename', {
+      targetType: 'section',
+      targetId: sectionId,
+      summary: `Renamed section "${section.title}" to "${updates.title}"`,
+    });
+  }
   return json(db.select().from(schema.sections).where(eq(schema.sections.id, sectionId)).get());
 }
 
@@ -106,11 +119,21 @@ export async function DELETE(req: Request, { params }: Params) {
     .get();
   if (!section || section.galleryId !== id) return errorJson('Not found', 404);
 
+  const affected = db
+    .select({ c: sql<number>`count(*)` })
+    .from(schema.photos)
+    .where(eq(schema.photos.sectionId, sectionId))
+    .get()?.c ?? 0;
   db.update(schema.photos)
     .set({ sectionId: null, updatedAt: Date.now() })
     .where(eq(schema.photos.sectionId, sectionId))
     .run();
   db.delete(schema.sections).where(eq(schema.sections.id, sectionId)).run();
+  logAdmin('section.delete', {
+    targetType: 'section',
+    targetId: sectionId,
+    summary: `Deleted section "${section.title}" — ${affected} photo(s) became ungrouped`,
+  });
   return json({ ok: true });
 }
 

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireGalleryCapability, requireOwner } from '@/lib/api';
 import { deletePhotoById } from '@/lib/delete-photo';
+import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -64,6 +65,11 @@ export async function POST(req: Request, { params }: Params) {
         .where(eq(schema.photos.id, pid))
         .run();
     }
+    logAdmin('photos.move', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Moved ${photoIds.length} photo(s) to ${sectionId ? `section ${sectionId}` : 'ungrouped'}`,
+    });
     return json({ ok: true, moved: photoIds.length });
   }
 
