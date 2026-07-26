@@ -147,6 +147,7 @@ export default function GalleryAdmin({
   // ---- settings ----
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   async function patchGallery(body: Record<string, unknown>) {
     setSaving(true);
@@ -587,6 +588,46 @@ export default function GalleryAdmin({
               }}
               className={inputClass}
             />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">
+              URL slug
+            </span>
+            <input
+              type="text"
+              defaultValue={gallery.slug}
+              onBlur={async (e) => {
+                const next = e.target.value.trim();
+                if (!next || next === gallery.slug) return;
+                if (
+                  !confirm(
+                    'Change this gallery\'s URL? Old links will redirect here, but anything caching the exact URL without following redirects could still break.',
+                  )
+                ) {
+                  e.target.value = gallery.slug;
+                  return;
+                }
+                const res = await fetch(`/api/admin/galleries/${gallery.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ slug: next }),
+                });
+                if (res.ok) {
+                  router.refresh();
+                } else {
+                  const data = await res.json().catch(() => null);
+                  setSlugError(data?.error ?? 'Could not update the URL.');
+                  e.target.value = gallery.slug;
+                }
+              }}
+              className={inputClass}
+            />
+            <span className="mt-1 block text-xs text-neutral-400">
+              /{isClientGallery ? 'g' : 'portfolio'}/{gallery.slug}
+            </span>
+            {slugError && (
+              <span className="mt-1 block text-xs text-red-600 dark:text-red-400">{slugError}</span>
+            )}
           </label>
           <SegmentedControl
             label="Gallery type"

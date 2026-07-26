@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import { findCurrentSlugFor } from '@/lib/slug-history';
 import { getSetting } from '@/lib/settings';
 import { parseLang } from '@/lib/i18n';
 import { needsAccessGate, galleryUsesPin } from '@/lib/gallery-auth';
@@ -22,7 +23,12 @@ export default async function FindPage({ params }: { params: Promise<{ slug: str
     .get();
 
   const admin = await isAdmin();
-  if (!gallery || (!gallery.published && !admin)) notFound();
+  if (!gallery) {
+    const currentSlug = findCurrentSlugFor(slug);
+    if (currentSlug) redirect(`/g/${currentSlug}/find`);
+    notFound();
+  }
+  if (!gallery.published && !admin) notFound();
   if (!admin && isGalleryExpired(gallery)) notFound();
   if (!gallery.bibSearch && !gallery.faceSearch) notFound();
 

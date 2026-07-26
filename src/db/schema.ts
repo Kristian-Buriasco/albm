@@ -573,6 +573,17 @@ export const clientTags = sqliteTable(
   (t) => [primaryKey({ columns: [t.clientId, t.tagId] })],
 );
 
+export const gallerySlugHistory = sqliteTable('gallery_slug_history', {
+  id: text('id').primaryKey(),
+  galleryId: text('gallery_id')
+    .notNull()
+    .references(() => galleries.id, { onDelete: 'cascade' }),
+  oldSlug: text('old_slug').notNull().unique(),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+});
+
 export const auditLog = sqliteTable(
   'audit_log',
   {

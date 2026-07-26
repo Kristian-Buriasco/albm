@@ -4,6 +4,15 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] — 2026-07-27
+
+### Added
+- **Custom gallery URLs.** Set a memorable slug (`/g/jane-wedding-2026` instead of
+  `/g/RT2wThgTFXsshF`) — optionally at creation, or anytime after from a gallery's
+  Settings tab. Renaming an already-shared URL redirects the old one to the new one
+  (307 for client galleries, 308 for portfolio) rather than breaking it. New
+  `gallery_slug_history` table backs the redirect.
+
 ## [1.12.1] — 2026-07-27
 
 ### Fixed
@@ -235,6 +244,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.13.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.13.0
 [1.12.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.1
 [1.12.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.0
 [1.11.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.1

@@ -7,6 +7,8 @@ import { parseGalleryUpdates } from '@/lib/gallery-fields';
 import { galleryDir } from '@/lib/paths';
 import { hashPin, isValidPinFormat } from '@/lib/pin';
 import { reprocessPhoto, shouldReprocessWatermark } from '@/lib/queue';
+import { normalizeSlug } from '@/lib/slug';
+import { recordSlugChange } from '@/lib/slug-history';
 import { logAdmin } from '@/lib/audit-log';
 
 type Params = { params: Promise<{ id: string }> };
@@ -46,6 +48,23 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const updates = parseGalleryUpdates(body);
 
+  let newSlug: string | null = null;
+  if ('slug' in body) {
+    if (typeof body.slug !== 'string') return errorJson('Invalid slug', 400);
+    const normalized = normalizeSlug(body.slug);
+    if (!normalized) return errorJson('Invalid slug', 400);
+    if (normalized !== gallery.slug) {
+      const collision = db
+        .select({ id: schema.galleries.id })
+        .from(schema.galleries)
+        .where(eq(schema.galleries.slug, normalized))
+        .get();
+      if (collision) return errorJson('That URL is already taken', 409);
+      newSlug = normalized;
+      updates.slug = normalized;
+    }
+  }
+
   if ('password' in body) {
     if (typeof body.password === 'string' && body.password.length > 0) {
       updates.passwordHash = await bcrypt.hash(body.password, 10);
@@ -78,6 +97,15 @@ export async function PATCH(req: Request, { params }: Params) {
 
   updates.updatedAt = Date.now();
   db.update(schema.galleries).set(updates).where(eq(schema.galleries.id, id)).run();
+
+  if (newSlug) {
+    recordSlugChange(id, gallery.slug);
+    logAdmin('gallery.slug.change', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Changed URL slug for "${gallery.title}" from "${gallery.slug}" to "${newSlug}"`,
+    });
+  }
 
   if ('published' in body && typeof body.published === 'boolean') {
     logAdmin(body.published ? 'gallery.publish' : 'gallery.unpublish', {

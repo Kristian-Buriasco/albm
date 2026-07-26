@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { findCurrentSlugFor } from '@/lib/slug-history';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { getVisitorSession, hasGalleryAccess, isAdmin } from '@/lib/session';
@@ -76,7 +77,12 @@ export default async function ClientGalleryPage({
 
   const admin = await isAdmin();
   const isPreview = preview === '1' && admin;
-  if (!gallery || (!gallery.published && !isPreview)) notFound();
+  if (!gallery) {
+    const currentSlug = findCurrentSlugFor(slug);
+    if (currentSlug) redirect(`/g/${currentSlug}${preview === '1' ? '?preview=1' : ''}`);
+    notFound();
+  }
+  if (!gallery.published && !isPreview) notFound();
   if (!admin && isGalleryExpired(gallery)) notFound();
 
   if (gallery.published && !isGalleryExpired(gallery)) {

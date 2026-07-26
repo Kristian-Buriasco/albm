@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { applyCreateFields } from '@/lib/gallery-fields';
 import { applyGalleryDefaults } from '@/lib/gallery-defaults';
+import { normalizeSlug } from '@/lib/slug';
 import { logAdmin } from '@/lib/audit-log';
 
 export async function POST(req: Request) {
@@ -29,10 +30,25 @@ export async function POST(req: Request) {
       .from(schema.galleries)
       .get()?.m ?? 0;
 
+  // Custom slug is a nice-to-have, not required: invalid/blank/colliding
+  // input silently falls back to a random slug rather than failing creation.
+  let slug = nanoid(14);
+  if (typeof body.slug === 'string' && body.slug.trim()) {
+    const normalized = normalizeSlug(body.slug);
+    if (normalized) {
+      const collision = db
+        .select({ id: schema.galleries.id })
+        .from(schema.galleries)
+        .where(eq(schema.galleries.slug, normalized))
+        .get();
+      if (!collision) slug = normalized;
+    }
+  }
+
   // Accept the same settable fields as PATCH at creation time.
   const gallery: typeof schema.galleries.$inferInsert = {
     id: nanoid(),
-    slug: nanoid(14),
+    slug,
     type: type as 'client' | 'portfolio',
     title,
     sortOrder:

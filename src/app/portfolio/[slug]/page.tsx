@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { and, asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
+import { findCurrentSlugFor } from '@/lib/slug-history';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import AdminEditLink from '@/components/AdminEditLink';
@@ -72,7 +73,12 @@ export default async function PortfolioGalleryPage({
     .from(schema.galleries)
     .where(and(eq(schema.galleries.slug, slug), eq(schema.galleries.type, 'portfolio')))
     .get();
-  if (!gallery || (!gallery.published && !isPreview)) notFound();
+  if (!gallery) {
+    const currentSlug = findCurrentSlugFor(slug);
+    if (currentSlug) permanentRedirect(`/portfolio/${currentSlug}`);
+    notFound();
+  }
+  if (!gallery.published && !isPreview) notFound();
 
   if (gallery.published) await recordGalleryView(gallery.id, null);
 

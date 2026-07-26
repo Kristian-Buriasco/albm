@@ -2,14 +2,22 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { normalizeSlug } from '@/lib/slug';
 
 export default function CreateGalleryButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
   const [type, setType] = useState<'client' | 'portfolio'>('client');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function onTitleChange(value: string) {
+    setTitle(value);
+    if (!slugTouched) setSlug(normalizeSlug(value));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +26,7 @@ export default function CreateGalleryButton() {
     const res = await fetch('/api/admin/galleries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, type }),
+      body: JSON.stringify({ title, type, slug: slug.trim() || undefined }),
     });
     setBusy(false);
     if (res.ok) {
@@ -52,11 +60,31 @@ export default function CreateGalleryButton() {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => onTitleChange(e.target.value)}
               placeholder="Title"
               autoFocus
               className="mt-6 w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
             />
+            <label className="mt-4 block text-xs">
+              <span className="mb-1 block text-neutral-500 dark:text-neutral-400">
+                Custom URL (optional)
+              </span>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setSlug(normalizeSlug(e.target.value));
+                }}
+                placeholder="auto-generated if left blank"
+                className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
+              />
+              {slug && (
+                <span className="mt-1 block text-neutral-400">
+                  /{type === 'portfolio' ? 'portfolio' : 'g'}/{slug}
+                </span>
+              )}
+            </label>
             <div className="mt-4 space-y-2 text-xs">
               {(
                 [
