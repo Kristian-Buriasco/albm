@@ -12,7 +12,8 @@ Send it on every request:
 Authorization: Bearer <your-token>
 ```
 
-Tokens only allow photo uploads. They do **not** grant admin access.
+Tokens can upload, replace, and delete photos (see below). They do **not** grant
+admin access or the ability to create/configure galleries.
 
 ## Upload a photo
 
