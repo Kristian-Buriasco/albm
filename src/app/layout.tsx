@@ -25,10 +25,18 @@ export default async function RootLayout({
   const isPublicPage = !pathname.startsWith('/admin');
   const cookieStore = await cookies();
   const consent = cookieStore.get(CONSENT_COOKIE)?.value;
-  const analyticsHtml =
-    isPublicPage && hasAnalyticsConsent(consent)
-      ? (getSetting('analytics_head_html') ?? '')
-      : '';
+  const rawAnalyticsHtml = isPublicPage ? (getSetting('analytics_head_html') ?? '').trim() : '';
+  // Google Consent Mode v2: the tag itself always loads (so Google's install
+  // verifier — and any real analytics — actually sees it), but it starts out
+  // denied. It's only flipped to granted here once the visitor has accepted
+  // the cookie banner; nothing is collected before that either way. Because
+  // choosing a cookie preference does a full page reload (see
+  // CookieConsent.tsx), this server-known value always matches the visitor's
+  // actual choice — no client-side "update" call needed.
+  const analyticsStorage = hasAnalyticsConsent(consent) ? 'granted' : 'denied';
+  const consentDefaultScript = rawAnalyticsHtml
+    ? `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'${analyticsStorage}'});`
+    : '';
   const htmlLang = parseLang(getSetting('defaultLanguage'));
 
   return (
@@ -42,7 +50,10 @@ export default async function RootLayout({
             <link rel="alternate" type="application/feed+json" href={`${BASE_URL}/feed.json`} title="Portfolio JSON Feed" />
           </>
         )}
-        {analyticsHtml ? <AnalyticsHead html={analyticsHtml} /> : null}
+        {consentDefaultScript && (
+          <script dangerouslySetInnerHTML={{ __html: consentDefaultScript }} />
+        )}
+        {rawAnalyticsHtml ? <AnalyticsHead html={rawAnalyticsHtml} /> : null}
       </head>
       <body className="min-h-screen bg-paper text-ink antialiased dark:bg-paper-dark dark:text-ink-dark">
         {children}

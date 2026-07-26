@@ -4,6 +4,18 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.12.1] — 2026-07-27
+
+### Fixed
+- **Google couldn't verify the analytics tag was installed.** The pasted GA snippet only
+  rendered in `<head>` after a visitor accepted the cookie-consent banner — Google's
+  install checker fetches the page cold, with no cookies, so it always saw zero script
+  tags. Implemented Google Consent Mode v2: the tag now always loads (so it's
+  detectable, and real visits register), but starts with `analytics_storage: denied`
+  by default and only flips to `granted` once the visitor actually accepts analytics
+  cookies — no change in what data is collected or when, just whether the tag's
+  *presence* is visible to an unauthenticated crawler.
+
 ## [1.12.0] — 2026-07-26
 
 ### Added
@@ -223,6 +235,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.12.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.1
 [1.12.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.0
 [1.11.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.1
 [1.11.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.0
