@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { trackEvent } from '@/lib/ga-events';
 
 /**
  * Post-delivery "leave a testimonial" prompt for a client gallery.
@@ -10,7 +11,7 @@ import { useState } from 'react';
  * where `alreadySubmitted` comes from `hasSubmittedTestimonial(gallery.id, visitor.id)`
  * (`@/lib/testimonials`), computed alongside the existing visitor lookup.
  */
-export default function TestimonialPrompt({ slug }: { slug: string }) {
+export default function TestimonialPrompt({ slug, galleryId }: { slug: string; galleryId: string }) {
   const [rating, setRating] = useState(5);
   const [quote, setQuote] = useState('');
   const [authorName, setAuthorName] = useState('');
@@ -48,6 +49,7 @@ export default function TestimonialPrompt({ slug }: { slug: string }) {
         return;
       }
       setStatus('done');
+      trackEvent('testimonial_submit', { gallery_ref: galleryId, gallery_type: 'client' });
     } catch {
       setError('Something went wrong');
       setStatus('error');

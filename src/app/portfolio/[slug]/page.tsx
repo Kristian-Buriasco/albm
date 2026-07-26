@@ -6,6 +6,7 @@ import { findCurrentSlugFor } from '@/lib/slug-history';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import AdminEditLink from '@/components/AdminEditLink';
+import GalleryViewPing from '@/components/GalleryViewPing';
 import PortfolioGrid from '@/components/PortfolioGrid';
 import JsonLd from '@/components/JsonLd';
 import { BASE_URL } from '@/lib/env';
@@ -108,6 +109,7 @@ export default async function PortfolioGalleryPage({
       />
       <SiteHeader />
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
+      <GalleryViewPing gallery={{ id: gallery.id, type: 'portfolio', title: gallery.title }} />
       <main className="mx-auto max-w-6xl px-6 pb-24">
         <h1 className="display pt-14 pb-3 text-center text-3xl font-semibold md:text-4xl">
           {gallery.title}
@@ -139,6 +141,7 @@ export default async function PortfolioGalleryPage({
           <PortfolioGrid
             sections={sectionGroups}
             slug={gallery.slug}
+            title={gallery.title}
             showLikeCounts={gallery.showLikeCounts}
             commentsEnabled={gallery.commentsMode !== 'off'}
           />

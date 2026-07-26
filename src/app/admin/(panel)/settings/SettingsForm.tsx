@@ -9,6 +9,7 @@ export default function SettingsForm({
   initialAbout,
   initialContact,
   initialAnalyticsHeadHtml,
+  initialGaCustomEventsEnabled,
   initialHomeEyebrow,
   initialHomeHeadline,
   initialHomeIntro,
@@ -22,6 +23,7 @@ export default function SettingsForm({
   initialAbout: string;
   initialContact: string;
   initialAnalyticsHeadHtml: string;
+  initialGaCustomEventsEnabled: boolean;
   initialHomeEyebrow: string;
   initialHomeHeadline: string;
   initialHomeIntro: string;
@@ -37,6 +39,9 @@ export default function SettingsForm({
   const [contact, setContact] = useState(initialContact);
   const [analyticsHeadHtml, setAnalyticsHeadHtml] = useState(
     initialAnalyticsHeadHtml,
+  );
+  const [gaCustomEventsEnabled, setGaCustomEventsEnabled] = useState(
+    initialGaCustomEventsEnabled,
   );
   const [homeEyebrow, setHomeEyebrow] = useState(initialHomeEyebrow);
   const [homeHeadline, setHomeHeadline] = useState(initialHomeHeadline);
@@ -61,6 +66,7 @@ export default function SettingsForm({
         aboutContent: about,
         contactContent: contact,
         analyticsHeadHtml,
+        gaCustomEventsEnabled,
         homeEyebrow,
         homeHeadline,
         homeIntro,
@@ -237,6 +243,22 @@ export default function SettingsForm({
           className={textareaClass}
           placeholder='<script async src="https://…"></script>'
         />
+        <label className="mt-4 flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={gaCustomEventsEnabled}
+            onChange={(e) => setGaCustomEventsEnabled(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Also send custom events (likes, downloads, searches, submissions) to
+            Google Analytics.
+            <span className="mt-1 block text-xs text-neutral-500 dark:text-neutral-400">
+              Portfolio gallery titles are sent as-is (already public). Client gallery
+              events use an anonymous ID instead — never a title or client name.
+            </span>
+          </span>
+        </label>
       </SettingsCard>
 
       <SettingsCard

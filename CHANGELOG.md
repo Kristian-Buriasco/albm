@@ -4,6 +4,18 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.14.0] — 2026-07-27
+
+### Added
+- **Custom GA4 events**: `photo_like`, `photo_download`, `bib_search`, `gallery_view`,
+  `selection_add`, `contact_submit`, `testimonial_submit`. New Settings → Analytics
+  checkbox (off by default) — a deliberate second opt-in on top of GA being configured
+  at all. Every event still respects Consent Mode v2 and the visitor's actual cookie
+  choice (checked directly, not just left to GA's internal handling) — nothing fires
+  pre-consent. Client-gallery events use the gallery's opaque ID as their identifier,
+  never a title, slug, or linked Client name — portfolio galleries (already public) use
+  the title.
+
 ## [1.13.0] — 2026-07-27
 
 ### Added
@@ -244,6 +256,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.14.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.14.0
 [1.13.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.13.0
 [1.12.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.1
 [1.12.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.0

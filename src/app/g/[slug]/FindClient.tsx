@@ -5,9 +5,11 @@ import Link from 'next/link';
 import type { Lang } from '@/lib/i18n';
 import { formatMsg, t } from '@/lib/i18n';
 import LanguageSwitcher, { getStoredLang } from '@/components/LanguageSwitcher';
+import { trackEvent } from '@/lib/ga-events';
 
 type Props = {
   slug: string;
+  galleryId: string;
   title: string;
   eventDate: number | null;
   bibSearch: boolean;
@@ -19,6 +21,7 @@ type Props = {
 
 export default function FindClient({
   slug,
+  galleryId,
   title,
   eventDate,
   bibSearch,
@@ -65,6 +68,11 @@ export default function FindClient({
           ? formatMsg(lang, 'bibMatching', { number: data.number })
           : formatMsg(lang, 'bibNoMatches', { number: data.number }),
       );
+      trackEvent('bib_search', {
+        gallery_ref: galleryId,
+        gallery_type: 'client',
+        found: (data.count ?? 0) > 0,
+      });
     } catch {
       setError(t(lang, 'somethingWrong'));
     } finally {

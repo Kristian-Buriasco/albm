@@ -31,6 +31,7 @@ interface Props {
   commentsEnabled?: boolean;
   commentsApiBase?: string;
   onPhotoOpen?: (photoId: string) => void;
+  onDownload?: (photoId: string, size: string) => void;
   slideshowLabel?: { play: string; pause: string };
 }
 
@@ -52,6 +53,7 @@ export default function Lightbox({
   commentsEnabled = false,
   commentsApiBase,
   onPhotoOpen,
+  onDownload,
   slideshowLabel,
 }: Props) {
   const photo = photos[index];
@@ -166,6 +168,7 @@ export default function Lightbox({
               href={`/dl/${photo.id}?size=${downloadSizes[0]}`}
               aria-label={downloadSizeLabels?.label ?? 'Download photo'}
               className="p-1 text-neutral-300 hover:text-white"
+              onClick={() => onDownload?.(photo.id, downloadSizes[0])}
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
@@ -179,6 +182,7 @@ export default function Lightbox({
                   key={sz}
                   href={`/dl/${photo.id}?size=${sz}`}
                   className="rounded border border-white/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-300 hover:text-white"
+                  onClick={() => onDownload?.(photo.id, sz)}
                 >
                   {downloadSizeLabels?.[sz] ?? sz}
                 </a>

@@ -34,8 +34,9 @@ export default async function RootLayout({
   // CookieConsent.tsx), this server-known value always matches the visitor's
   // actual choice — no client-side "update" call needed.
   const analyticsStorage = hasAnalyticsConsent(consent) ? 'granted' : 'denied';
+  const gaCustomEventsEnabled = isPublicPage && getSetting('gaCustomEventsEnabled') === 'true';
   const consentDefaultScript = rawAnalyticsHtml
-    ? `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'${analyticsStorage}'});`
+    ? `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'${analyticsStorage}'});window.__gaCustomEventsEnabled=${gaCustomEventsEnabled};`
     : '';
   const htmlLang = parseLang(getSetting('defaultLanguage'));
 

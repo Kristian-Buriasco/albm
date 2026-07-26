@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import SectionedGalleryGrid, { type SectionGroup } from '@/components/SectionedGalleryGrid';
 import Lightbox, { HeartIcon } from '@/components/Lightbox';
+import { trackEvent } from '@/lib/ga-events';
 
 export default function PortfolioGrid({
   sections,
   slug,
+  title,
   showLikeCounts = false,
   commentsEnabled = false,
 }: {
   sections: SectionGroup[];
   slug: string;
+  title: string;
   showLikeCounts?: boolean;
   commentsEnabled?: boolean;
 }) {
@@ -38,6 +41,9 @@ export default function PortfolioGrid({
   const toggleLike = useCallback(
     async (photoId: string) => {
       const isLiked = liked.has(photoId);
+      if (!isLiked) {
+        trackEvent('photo_like', { gallery_ref: title, gallery_type: 'portfolio' });
+      }
       setLiked((prev) => {
         const next = new Set(prev);
         if (isLiked) next.delete(photoId);
@@ -70,7 +76,7 @@ export default function PortfolioGrid({
         }
       }
     },
-    [liked, slug, showLikeCounts],
+    [liked, slug, title, showLikeCounts],
   );
 
   return (

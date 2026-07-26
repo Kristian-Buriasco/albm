@@ -18,6 +18,7 @@ export default async function AdminSettingsPage() {
         initialAbout: getSetting('aboutContent') ?? '',
         initialContact: getSetting('contactContent') ?? '',
         initialAnalyticsHeadHtml: getSetting('analytics_head_html') ?? '',
+        initialGaCustomEventsEnabled: getSetting('gaCustomEventsEnabled') === 'true',
         initialHomeEyebrow: getSetting('homeEyebrow') ?? '',
         initialHomeHeadline: getSetting('homeHeadline') ?? '',
         initialHomeIntro: getSetting('homeIntro') ?? '',

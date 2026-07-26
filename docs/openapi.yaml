@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 1.13.0
+  version: 1.14.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -803,6 +803,11 @@ components:
           type: string
         analyticsHeadHtml:
           type: string
+        gaCustomEventsEnabled:
+          type: boolean
+          description: >-
+            Whether like/download/search/submit events also send to GA (separate from
+            whether GA itself is configured). Default false.
         homeEyebrow:
           type: string
         homeHeadline:
@@ -858,6 +863,11 @@ components:
           type: string
         analyticsHeadHtml:
           type: string
+        gaCustomEventsEnabled:
+          type: boolean
+          description: >-
+            Whether like/download/search/submit events also send to GA (separate from
+            whether GA itself is configured). Default false.
         homeEyebrow:
           type: string
         homeHeadline:

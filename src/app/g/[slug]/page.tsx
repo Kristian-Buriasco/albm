@@ -16,6 +16,7 @@ import { needsAccessGate, galleryUsesPin } from '@/lib/gallery-auth';
 import { listSelectionLists } from '@/lib/selection-lists';
 import { getAccountEmail } from '@/lib/magic-links';
 import AdminEditLink from '@/components/AdminEditLink';
+import GalleryViewPing from '@/components/GalleryViewPing';
 import PasswordGate from './PasswordGate';
 import PinGate from './PinGate';
 import GalleryClient from './GalleryClient';
@@ -177,8 +178,10 @@ export default async function ClientGalleryPage({
   return (
     <>
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
+      <GalleryViewPing gallery={{ id: gallery.id, type: 'client', title: gallery.title }} />
     <GalleryClient
       slug={slug}
+      galleryId={gallery.id}
       title={gallery.title}
       eventDate={gallery.eventDate}
       clientInfoMode={gallery.clientInfoMode}
@@ -210,7 +213,7 @@ export default async function ClientGalleryPage({
       defaultLang={parseLang(getSetting('defaultLanguage'))}
     />
     {showFeaturedConsentPrompt && <FeaturedConsentPrompt slug={slug} />}
-    {showTestimonialPrompt && <TestimonialPrompt slug={slug} />}
+    {showTestimonialPrompt && <TestimonialPrompt slug={slug} galleryId={gallery.id} />}
     </>
   );
 }

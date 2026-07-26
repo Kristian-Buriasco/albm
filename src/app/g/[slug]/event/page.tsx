@@ -47,6 +47,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   return (
     <FindClient
       slug={slug}
+      galleryId={gallery.id}
       title={gallery.title}
       eventDate={gallery.eventDate}
       bibSearch={gallery.bibSearch}

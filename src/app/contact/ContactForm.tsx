@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { trackEvent } from '@/lib/ga-events';
 
 const EVENT_TYPES = [
   { value: '', label: 'What is the occasion?' },
@@ -35,6 +36,9 @@ export default function ContactForm() {
       });
       if (res.ok) {
         setStatus('sent');
+        trackEvent('contact_submit', {
+          event_type: typeof data.eventType === 'string' ? data.eventType : 'unspecified',
+        });
         form.reset();
       } else {
         const j = await res.json().catch(() => ({}));

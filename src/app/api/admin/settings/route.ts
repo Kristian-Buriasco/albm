@@ -22,6 +22,7 @@ export async function GET() {
     aboutContent: getSetting('aboutContent') ?? '',
     contactContent: getSetting('contactContent') ?? '',
     analyticsHeadHtml: getSetting('analytics_head_html') ?? '',
+    gaCustomEventsEnabled: getSetting('gaCustomEventsEnabled') === 'true',
     homeEyebrow: getSetting('homeEyebrow') ?? '',
     homeHeadline: getSetting('homeHeadline') ?? '',
     homeIntro: getSetting('homeIntro') ?? '',
@@ -81,6 +82,9 @@ export async function POST(req: Request) {
   }
   if (typeof body.analyticsHeadHtml === 'string') {
     setCapped('analytics_head_html', body.analyticsHeadHtml, INTRO_MAX);
+  }
+  if (typeof body.gaCustomEventsEnabled === 'boolean') {
+    setSetting('gaCustomEventsEnabled', body.gaCustomEventsEnabled ? 'true' : 'false');
   }
   if (typeof body.homeEyebrow === 'string') {
     setCapped('homeEyebrow', body.homeEyebrow, SHORT_MAX);

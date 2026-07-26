@@ -15,6 +15,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import ShareTools from '@/components/ShareTools';
 import { DEFAULT_LIST_NAME } from '@/lib/selection-constants';
 import { CONSENT_COOKIE } from '@/lib/consent';
+import { trackEvent } from '@/lib/ga-events';
 
 /** True once the visitor has made any cookie-consent choice. */
 function hasConsentChoice(): boolean {
@@ -29,6 +30,7 @@ interface SelectionListInfo {
 
 interface Props {
   slug: string;
+  galleryId: string;
   title: string;
   eventDate: number | null;
   clientInfoMode: 'off' | 'optional' | 'required';
@@ -60,6 +62,7 @@ interface Props {
 
 export default function GalleryClient({
   slug,
+  galleryId,
   title,
   eventDate,
   clientInfoMode,
@@ -218,6 +221,9 @@ export default function GalleryClient({
     async (photoId: string) => {
       const isSelected = selected.has(photoId);
       if (!isSelected && atLimit) return;
+      if (!isSelected) {
+        trackEvent('selection_add', { gallery_ref: galleryId, gallery_type: 'client' });
+      }
       setSelected((prev) => {
         const next = new Set(prev);
         if (isSelected) next.delete(photoId);
@@ -247,7 +253,7 @@ export default function GalleryClient({
         });
       }
     },
-    [selected, slug, ensureVisitor, atLimit, activeListId],
+    [selected, slug, galleryId, ensureVisitor, atLimit, activeListId],
   );
 
   async function deleteList(listId: string) {
@@ -569,6 +575,13 @@ export default function GalleryClient({
             commentsEnabled={commentsEnabled}
             commentsApiBase={`/api/g/${slug}/comments`}
             onPhotoOpen={recordPhotoView}
+            onDownload={(_photoId, size) =>
+              trackEvent('photo_download', {
+                gallery_ref: galleryId,
+                gallery_type: 'client',
+                kind: `single_${size}`,
+              })
+            }
             slideshowLabel={{
               play: t(lang, 'slideshowPlay'),
               pause: t(lang, 'slideshowPause'),
@@ -628,7 +641,14 @@ export default function GalleryClient({
                       }`
                 }
                 className="flex-1 border border-neutral-900 py-2 text-center text-xs uppercase dark:border-neutral-100"
-                onClick={() => setDownloadConfirm(null)}
+                onClick={() => {
+                  trackEvent('photo_download', {
+                    gallery_ref: galleryId,
+                    gallery_type: 'client',
+                    kind: downloadConfirm === 'all' ? 'zip_all' : 'zip_favorites',
+                  });
+                  setDownloadConfirm(null);
+                }}
               >
                 {t(lang, 'downloadConfirmProceed')}
               </a>
