@@ -4,6 +4,15 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.11.1] — 2026-07-26
+
+### Fixed
+- The app icon was a literal blank solid-color square (no mark at all). Added a real
+  (if temporary) monogram favicon/app icon — `src/app/icon.png`, `src/app/apple-icon.png`
+  (Next's auto favicon convention), and regenerated the PWA manifest icons
+  (`public/icon-192.png`, `icon-512.png`) to match. Placeholder pending a proper
+  logomark design.
+
 ## [1.11.0] — 2026-07-26
 
 ### Added
@@ -203,6 +212,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.11.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.1
 [1.11.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.11.0
 [1.10.6]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.6
 [1.10.5]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.10.5
