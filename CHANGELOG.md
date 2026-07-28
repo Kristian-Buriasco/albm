@@ -4,6 +4,20 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.16.1] — 2026-07-28
+
+### Fixed
+- **API docs had no styling at all.** `@scalar/api-reference-react` ships its
+  required base CSS as a separate `style.css` export that was never actually
+  imported — v1.16.0's palette overrides had nothing to theme, so `/docs/api`
+  rendered as unstyled text. Fixed by importing it.
+- **Custom dropdown arrow didn't render in Safari.** WebKit ignores the
+  unprefixed `appearance: none` on `<select>` unless `-webkit-appearance:
+  none` is also set — added it explicitly. Note: the *open* option list is
+  still the OS's native picker in every browser (Safari, Chrome, Firefox) —
+  only the closed control can be restyled with a real `<select>`; a fully
+  custom list would mean dropping native `<select>` entirely.
+
 ## [1.16.0] — 2026-07-28
 
 ### Changed
@@ -300,6 +314,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.16.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.1
 [1.16.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.0
 [1.15.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.1
 [1.15.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.0

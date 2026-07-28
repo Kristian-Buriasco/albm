@@ -1,6 +1,7 @@
 'use client';
 
 import { ApiReferenceReact } from '@scalar/api-reference-react';
+import '@scalar/api-reference-react/style.css';
 
 // Repaints Scalar's own CSS variables to Albm's palette (see globals.css)
 // instead of its default blue theme — `theme: 'none'` ships no preset so

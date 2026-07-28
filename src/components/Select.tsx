@@ -16,7 +16,12 @@ const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElem
     const isBlock = /\bw-full\b/.test(className);
     return (
       <span className={`relative ${isBlock ? 'block w-full' : 'inline-block'}`}>
-        <select ref={ref} {...props} className={`appearance-none pr-6 ${className}`}>
+        <select
+          ref={ref}
+          {...props}
+          className={`appearance-none pr-6 ${className}`}
+          style={{ WebkitAppearance: 'none', MozAppearance: 'none', ...props.style }}
+        >
           {children}
         </select>
         <svg
