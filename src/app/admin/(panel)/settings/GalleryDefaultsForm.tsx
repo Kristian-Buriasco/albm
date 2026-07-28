@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import Select from '@/components/Select';
 import type { GalleryDefaultsConfig, GalleryDefaultsStore } from '@/lib/gallery-defaults';
 
 const emptyConfig = (): GalleryDefaultsConfig => ({});
@@ -54,7 +55,7 @@ export default function GalleryDefaultsForm({
         />
         <label className="block text-xs">
           <span className="mb-1 block text-neutral-500">Watermark position</span>
-          <select
+          <Select
             value={config.watermarkPosition ?? 'br'}
             onChange={(e) =>
               setConfig((c) => ({
@@ -69,7 +70,7 @@ export default function GalleryDefaultsForm({
             <option value="tr">Top right</option>
             <option value="tl">Top left</option>
             <option value="center">Center</option>
-          </select>
+          </Select>
         </label>
         <label className="block text-xs">
           <span className="mb-1 block text-neutral-500">Watermark opacity ({config.watermarkOpacity ?? 70})</span>
@@ -111,7 +112,7 @@ export default function GalleryDefaultsForm({
         />
         <label className="block text-xs">
           <span className="mb-1 block text-neutral-500">Comments mode</span>
-          <select
+          <Select
             value={config.commentsMode ?? 'off'}
             onChange={(e) =>
               setConfig((c) => ({
@@ -124,11 +125,11 @@ export default function GalleryDefaultsForm({
             <option value="off">Off</option>
             <option value="post">After publish</option>
             <option value="pre">Before publish</option>
-          </select>
+          </Select>
         </label>
         <label className="block text-xs">
           <span className="mb-1 block text-neutral-500">Client info mode</span>
-          <select
+          <Select
             value={config.clientInfoMode ?? 'off'}
             onChange={(e) =>
               setConfig((c) => ({
@@ -141,7 +142,7 @@ export default function GalleryDefaultsForm({
             <option value="off">Off</option>
             <option value="optional">Optional</option>
             <option value="required">Required</option>
-          </select>
+          </Select>
         </label>
         <ToggleSwitch
           label="Limit selections"

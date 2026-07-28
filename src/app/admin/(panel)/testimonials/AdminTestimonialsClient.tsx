@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Select from '@/components/Select';
 
 type Row = {
   id: string;
@@ -41,7 +42,7 @@ export default function AdminTestimonialsClient({ testimonials }: { testimonials
     <div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-sm font-medium tracking-widest uppercase">Testimonials</h1>
-        <select
+        <Select
           value={filter}
           onChange={(e) => setFilter(e.target.value as typeof filter)}
           className="border-b border-neutral-300 bg-transparent py-1 text-xs outline-none dark:border-neutral-700"
@@ -50,7 +51,7 @@ export default function AdminTestimonialsClient({ testimonials }: { testimonials
           <option value="approved">Approved</option>
           <option value="hidden">Hidden</option>
           <option value="all">All</option>
-        </select>
+        </Select>
       </div>
 
       {visible.length === 0 && (

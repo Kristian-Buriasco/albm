@@ -1,6 +1,7 @@
 'use client';
 
 import { LANGS, type Lang, t } from '@/lib/i18n';
+import Select from '@/components/Select';
 
 const STORAGE_KEY = 'albm_lang';
 
@@ -25,7 +26,7 @@ export default function LanguageSwitcher({
   return (
     <label className="flex items-center gap-2 text-xs text-muted dark:text-muted-dark">
       <span>{t(lang, 'language')}</span>
-      <select
+      <Select
         value={lang}
         onChange={(e) => {
           const l = e.target.value as Lang;
@@ -39,7 +40,7 @@ export default function LanguageSwitcher({
             {l.toUpperCase()}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

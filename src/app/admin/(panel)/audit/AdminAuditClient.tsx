@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import Select from '@/components/Select';
 
 type Row = {
   id: string;
@@ -67,7 +68,7 @@ export default function AdminAuditClient({
     <div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-sm font-medium tracking-widest uppercase">Audit log</h1>
-        <select
+        <Select
           value={filter ?? ''}
           onChange={(e) => setFilter(e.target.value || null)}
           className="border-b border-neutral-300 bg-transparent py-1 text-xs outline-none dark:border-neutral-700"
@@ -78,8 +79,8 @@ export default function AdminAuditClient({
               {a}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={actor ?? ''}
           onChange={(e) => setActor(e.target.value || null)}
           className="border-b border-neutral-300 bg-transparent py-1 text-xs outline-none dark:border-neutral-700"
@@ -87,8 +88,8 @@ export default function AdminAuditClient({
           <option value="">All actors</option>
           <option value="owner">Owner</option>
           <option value="collaborator">Collaborator</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={days ?? ''}
           onChange={(e) => setDays(e.target.value || null)}
           className="border-b border-neutral-300 bg-transparent py-1 text-xs outline-none dark:border-neutral-700"
@@ -97,7 +98,7 @@ export default function AdminAuditClient({
           <option value="7">7 days</option>
           <option value="30">30 days</option>
           <option value="90">90 days</option>
-        </select>
+        </Select>
         <a href={csvUrl} className="text-xs underline">
           Export CSV
         </a>

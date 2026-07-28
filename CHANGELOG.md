@@ -4,6 +4,18 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] — 2026-07-28
+
+### Changed
+- **Custom-styled dropdowns everywhere.** Every native `<select>` across the
+  public site and admin panel (contact form, gallery settings, admin
+  filters, language switcher, folder assignment, watermark position, etc.)
+  now goes through a shared `Select` wrapper that strips the OS chevron and
+  draws Albm's own, instead of the raw browser control.
+- **API docs restyled to match Albm.** `/docs/api` (Scalar) now uses the
+  site's own palette (paper/ink/muted/accent, light and dark) instead of
+  Scalar's default blue theme.
+
 ## [1.15.1] — 2026-07-28
 
 ### Fixed
@@ -288,6 +300,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.16.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.0
 [1.15.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.1
 [1.15.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.0
 [1.14.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.14.0

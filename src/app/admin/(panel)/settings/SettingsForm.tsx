@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SettingsCard from '@/components/SettingsCard';
 import SaveBar from '@/components/SaveBar';
+import Select from '@/components/Select';
 
 export default function SettingsForm({
   initialAbout,
@@ -149,7 +150,7 @@ export default function SettingsForm({
         </label>
         <label className="block">
           <span className={labelClass}>Default client gallery language</span>
-          <select
+          <Select
             value={defaultLanguage}
             onChange={(e) => setDefaultLanguage(e.target.value)}
             className="border-b border-neutral-300 bg-transparent py-2 text-sm outline-none dark:border-neutral-700"
@@ -157,7 +158,7 @@ export default function SettingsForm({
             <option value="en">English</option>
             <option value="nl">Nederlands</option>
             <option value="it">Italiano</option>
-          </select>
+          </Select>
         </label>
       </SettingsCard>
 

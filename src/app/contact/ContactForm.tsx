@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trackEvent } from '@/lib/ga-events';
+import Select from '@/components/Select';
 
 const EVENT_TYPES = [
   { value: '', label: 'What is the occasion?' },
@@ -99,13 +100,13 @@ export default function ContactForm() {
           <label className={labelClass} htmlFor="c-type">
             Type
           </label>
-          <select id="c-type" name="eventType" className={fieldClass} defaultValue="">
+          <Select id="c-type" name="eventType" className={fieldClass} defaultValue="">
             {EVENT_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label className={labelClass} htmlFor="c-date">

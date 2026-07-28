@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Gallery, Photo } from '@/db/schema';
 import SegmentedControl from '@/components/SegmentedControl';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import Select from '@/components/Select';
 import { coverObjectPosition } from '@/lib/cover-focus';
 
 type Section = { id: string; title: string; sortOrder: number };
@@ -653,7 +654,7 @@ export function AdminExtraSettings({
       <div className="grid grid-cols-3 gap-3 text-sm">
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500">WM position</span>
-          <select
+          <Select
             defaultValue={gallery.watermarkPosition}
             onChange={(e) => patchGallery({ watermarkPosition: e.target.value })}
             className="w-full border-b border-neutral-300 bg-transparent py-1 dark:border-neutral-700"
@@ -663,7 +664,7 @@ export function AdminExtraSettings({
             <option value="tr">Top right</option>
             <option value="tl">Top left</option>
             <option value="center">Center</option>
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500">Opacity %</span>
@@ -1132,11 +1133,11 @@ export function AdminCommentsPanel({ galleryId }: { galleryId: string }) {
   return (
     <div className="space-y-3 border-t border-neutral-200 pt-6 dark:border-neutral-800">
       <h2 className="text-xs tracking-widest text-neutral-500 uppercase">Comments</h2>
-      <select value={filter} onChange={(e) => setFilter(e.target.value)} className="text-xs">
+      <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="text-xs">
         <option value="all">All</option>
         <option value="pending">Pending</option>
         <option value="visible">Visible</option>
-      </select>
+      </Select>
       <ul className="space-y-2 text-xs">
         {comments.map((c) => (
           <li key={c.id} className="border-l-2 border-neutral-300 pl-2 dark:border-neutral-700">

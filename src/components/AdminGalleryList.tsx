@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatBytes } from '@/lib/format-bytes';
+import Select from '@/components/Select';
 
 export type GalleryListRow = {
   id: string;
@@ -221,7 +222,7 @@ export default function AdminGalleryList({
                   <ul className="divide-y divide-neutral-100 dark:divide-neutral-900">
                     {items.map((r) => (
                       <li key={r.id} className="flex items-center gap-2">
-                        <select
+                        <Select
                           value={r.folderId ?? ''}
                           onChange={(e) =>
                             assignFolder(r.id, e.target.value ? e.target.value : null)
@@ -235,7 +236,7 @@ export default function AdminGalleryList({
                               {f.name}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                         <div className="min-w-0 flex-1">
                           <GalleryRow r={r} />
                         </div>
@@ -256,7 +257,7 @@ export default function AdminGalleryList({
                 {ungrouped.map((r) => (
                   <li key={r.id} className="flex items-center gap-2">
                     {folders.length > 0 && (
-                      <select
+                      <Select
                         value=""
                         onChange={(e) => assignFolder(r.id, e.target.value || null)}
                         className="ml-1 w-28 shrink-0 border-none bg-transparent text-[10px] text-neutral-500"
@@ -267,7 +268,7 @@ export default function AdminGalleryList({
                             {f.name}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
                     <div className="min-w-0 flex-1">
                       <GalleryRow r={r} />

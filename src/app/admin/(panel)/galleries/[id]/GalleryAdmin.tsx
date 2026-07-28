@@ -13,6 +13,7 @@ import {
 } from './AdminGalleryFeatures';
 import ShareTools from '@/components/ShareTools';
 import MostViewedStrip from '@/components/MostViewedStrip';
+import Select from '@/components/Select';
 import CollaboratorsPanel from './CollaboratorsPanel';
 import Tabs, { type TabDef } from '@/components/Tabs';
 import InsightsPanel from './InsightsPanel';
@@ -1178,7 +1179,7 @@ export default function GalleryAdmin({
                     <span className="text-neutral-500 dark:text-neutral-400">
                       Filename export
                     </span>
-                    <select
+                    <Select
                       value={exportVisitor}
                       onChange={(e) => setExportVisitor(e.target.value)}
                       className="border-b border-neutral-300 bg-transparent py-1 outline-none dark:border-neutral-700"
@@ -1189,7 +1190,7 @@ export default function GalleryAdmin({
                           {visitorLabel(visitor, anonIndices.get(visitor.id) ?? 0)}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <button
                       type="button"
                       onClick={() =>
