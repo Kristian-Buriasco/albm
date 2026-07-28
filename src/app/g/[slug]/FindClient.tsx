@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Lang } from '@/lib/i18n';
-import { formatMsg, t } from '@/lib/i18n';
+import { formatMsg, localeForLang, t } from '@/lib/i18n';
 import LanguageSwitcher, { getStoredLang } from '@/components/LanguageSwitcher';
 import { trackEvent } from '@/lib/ga-events';
 
@@ -135,7 +135,7 @@ export default function FindClient({
 
   const dateLabel =
     eventDate != null
-      ? new Date(eventDate).toLocaleDateString(lang === 'nl' ? 'nl-NL' : lang === 'it' ? 'it-IT' : 'en-GB', {
+      ? new Date(eventDate).toLocaleDateString(localeForLang(lang), {
           day: 'numeric',
           month: 'long',
           year: 'numeric',

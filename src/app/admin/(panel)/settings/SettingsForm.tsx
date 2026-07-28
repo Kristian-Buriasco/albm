@@ -158,6 +158,13 @@ export default function SettingsForm({
             <option value="en">English</option>
             <option value="nl">Nederlands</option>
             <option value="it">Italiano</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="ja">日本語</option>
+            <option value="pl">Polski</option>
+            <option value="zh">中文</option>
           </Select>
         </label>
       </SettingsCard>

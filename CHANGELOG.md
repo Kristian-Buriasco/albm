@@ -4,6 +4,15 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.19.0] — 2026-07-29
+
+### Added
+- **7 more languages.** Client-gallery and portfolio UI now supports French,
+  German, Spanish, Portuguese, Japanese, Polish, and Simplified Chinese
+  alongside the existing English/Dutch/Italian — 10 total. Covers the admin
+  default-language setting, the visitor-facing language switcher, and
+  locale-aware date formatting.
+
 ## [1.18.0] — 2026-07-28
 
 ### Added
@@ -369,6 +378,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.19.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.19.0
 [1.18.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.18.0
 [1.17.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.1
 [1.17.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.0

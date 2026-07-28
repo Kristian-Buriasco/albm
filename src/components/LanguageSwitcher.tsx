@@ -1,6 +1,6 @@
 'use client';
 
-import { LANGS, type Lang, t } from '@/lib/i18n';
+import { LANGS, type Lang, parseLang, t } from '@/lib/i18n';
 import Select from '@/components/Select';
 
 const STORAGE_KEY = 'albm_lang';
@@ -8,8 +8,8 @@ const STORAGE_KEY = 'albm_lang';
 export function getStoredLang(): Lang | null {
   if (typeof window === 'undefined') return null;
   const v = localStorage.getItem(STORAGE_KEY);
-  if (v === 'en' || v === 'nl' || v === 'it') return v;
-  return null;
+  if (!v) return null;
+  return (LANGS as string[]).includes(v) ? parseLang(v) : null;
 }
 
 export function storeLang(lang: Lang): void {

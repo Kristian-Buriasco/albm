@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 1.18.0
+  version: 1.19.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -836,6 +836,13 @@ components:
             - en
             - nl
             - it
+            - fr
+            - de
+            - es
+            - pt
+            - ja
+            - pl
+            - zh
         contactResponseTime:
           type: string
         smtpHost:
@@ -892,11 +899,18 @@ components:
           type: string
         defaultLanguage:
           type: string
-          description: Any value other than `nl`/`it` falls back to `en`.
+          description: Any unrecognized value falls back to `en`.
           enum:
             - en
             - nl
             - it
+            - fr
+            - de
+            - es
+            - pt
+            - ja
+            - pl
+            - zh
         contactResponseTime:
           type: string
         smtpHost:

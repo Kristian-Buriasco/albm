@@ -4,6 +4,7 @@ import { getGalleryDefaults, parseGalleryDefaults, saveGalleryDefaults } from '@
 import { watermarkPath } from '@/lib/paths';
 import { getSetting, setSetting } from '@/lib/settings';
 import { logAdmin } from '@/lib/audit-log';
+import { parseLang } from '@/lib/i18n';
 import fs from 'node:fs';
 
 export const dynamic = 'force-dynamic';
@@ -108,8 +109,7 @@ export async function POST(req: Request) {
     setCapped('footerContent', body.footerContent, INTRO_MAX);
   }
   if (typeof body.defaultLanguage === 'string') {
-    const lang = body.defaultLanguage === 'nl' || body.defaultLanguage === 'it' ? body.defaultLanguage : 'en';
-    setSetting('defaultLanguage', lang);
+    setSetting('defaultLanguage', parseLang(body.defaultLanguage));
   }
   if (typeof body.contactResponseTime === 'string') {
     setCapped('contactResponseTime', body.contactResponseTime.trim(), SHORT_MAX);
