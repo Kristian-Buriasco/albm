@@ -4,6 +4,22 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.17.1] — 2026-07-28
+
+### Fixed
+- **Production outage: gallery pages returning 502.** All 21 curated font
+  pairs in `src/lib/gallery-fonts.ts` defaulted to `next/font/google`'s
+  `preload: true`, so every page that imports the theme font registry
+  (every client gallery, portfolio gallery, and the admin gallery editor)
+  emitted a `Link: rel=preload` entry for all 43 font files regardless of
+  which single pair the gallery actually used. That header grew past
+  nginx's proxy buffer size, and NPM returned 502 for every one of those
+  pages — reproduced directly against NPM (bypassing Cloudflare) and
+  confirmed via nginx's `upstream sent too big header` error log. Fixed by
+  setting `preload: false` on all font instantiations — only the active
+  pair's fonts are ever actually used per gallery, so preloading the other
+  20 was both wasteful and, as this incident showed, actively dangerous.
+
 ## [1.17.0] — 2026-07-28
 
 ### Added
@@ -330,6 +346,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.17.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.1
 [1.17.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.0
 [1.16.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.1
 [1.16.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.0
