@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 1.16.1
+  version: 1.17.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -482,6 +482,14 @@ components:
             - integer
             - 'null'
           minimum: 1
+        themeConfig:
+          type:
+            - object
+            - 'null'
+          description: >-
+            Per-gallery design theme (colors, fonts, cover, grid layout). Null resets the
+            gallery to the site default look. See GalleryTheme in src/lib/gallery-theme.ts
+            for the full shape; loosely typed here since it's not the primary API surface.
         password:
           type:
             - string

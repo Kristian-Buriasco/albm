@@ -15,6 +15,7 @@ import { parseLang } from '@/lib/i18n';
 import { needsAccessGate, galleryUsesPin } from '@/lib/gallery-auth';
 import { listSelectionLists } from '@/lib/selection-lists';
 import { getAccountEmail } from '@/lib/magic-links';
+import { parseGalleryTheme } from '@/lib/gallery-theme';
 import AdminEditLink from '@/components/AdminEditLink';
 import GalleryViewPing from '@/components/GalleryViewPing';
 import PasswordGate from './PasswordGate';
@@ -183,6 +184,10 @@ export default async function ClientGalleryPage({
       slug={slug}
       galleryId={gallery.id}
       title={gallery.title}
+      theme={parseGalleryTheme(gallery.themeConfig)}
+      coverPhotoId={previewPhotoId(gallery)}
+      coverFocusX={gallery.coverFocusX}
+      coverFocusY={gallery.coverFocusY}
       eventDate={gallery.eventDate}
       clientInfoMode={gallery.clientInfoMode}
       downloadEnabled={gallery.downloadEnabled}

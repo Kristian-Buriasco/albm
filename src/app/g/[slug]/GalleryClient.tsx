@@ -16,6 +16,9 @@ import ShareTools from '@/components/ShareTools';
 import { DEFAULT_LIST_NAME } from '@/lib/selection-constants';
 import { CONSENT_COOKIE } from '@/lib/consent';
 import { trackEvent } from '@/lib/ga-events';
+import type { GalleryTheme } from '@/lib/gallery-theme';
+import GalleryThemeStyle from '@/components/GalleryThemeStyle';
+import { coverObjectPosition } from '@/lib/cover-focus';
 
 /** True once the visitor has made any cookie-consent choice. */
 function hasConsentChoice(): boolean {
@@ -32,6 +35,10 @@ interface Props {
   slug: string;
   galleryId: string;
   title: string;
+  theme?: GalleryTheme | null;
+  coverPhotoId?: string | null;
+  coverFocusX?: number;
+  coverFocusY?: number;
   eventDate: number | null;
   clientInfoMode: 'off' | 'optional' | 'required';
   downloadEnabled: boolean;
@@ -64,6 +71,10 @@ export default function GalleryClient({
   slug,
   galleryId,
   title,
+  theme = null,
+  coverPhotoId = null,
+  coverFocusX = 50,
+  coverFocusY = 50,
   eventDate,
   clientInfoMode,
   downloadEnabled,
@@ -336,8 +347,47 @@ export default function GalleryClient({
     });
   }
 
+  const titlePlacementClass = {
+    center: 'items-center justify-center text-center',
+    'bottom-left': 'items-end justify-start text-left',
+    'bottom-center': 'items-end justify-center text-center',
+  } as const;
+  const titleSizeClass = {
+    sm: 'text-2xl md:text-3xl',
+    md: 'text-3xl md:text-5xl',
+    lg: 'text-4xl md:text-6xl',
+  } as const;
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" data-gallery-theme={theme ? '' : undefined}>
+      {theme && <GalleryThemeStyle theme={theme} />}
+      {theme && coverPhotoId && (
+        <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/img/${coverPhotoId}/web`}
+            srcSet={`/img/${coverPhotoId}/md 1280w, /img/${coverPhotoId}/web 2000w`}
+            sizes="100vw"
+            alt={title}
+            className="h-full w-full object-cover"
+            style={{ objectPosition: coverObjectPosition(coverFocusX, coverFocusY) }}
+          />
+          <div
+            className="absolute inset-0 bg-black"
+            style={{ opacity: 'var(--gallery-cover-overlay)' }}
+          />
+          <div
+            className={`absolute inset-0 flex p-6 sm:p-10 ${titlePlacementClass[theme.cover.titlePlacement]}`}
+          >
+            <h2
+              className={`font-semibold text-white ${titleSizeClass[theme.cover.titleSize]}`}
+              style={{ fontFamily: 'var(--gallery-font-heading)' }}
+            >
+              {title}
+            </h2>
+          </div>
+        </div>
+      )}
       <header className="sticky top-0 z-20 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">
@@ -528,6 +578,7 @@ export default function GalleryClient({
             selectedIds={selected}
             photoTagIds={photoTagIds}
             tagOptions={tagOptions}
+            themed={!!theme}
             onOpenLightbox={setLightbox}
             labels={{
               allSections: t(lang, 'allSections'),

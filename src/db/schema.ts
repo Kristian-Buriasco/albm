@@ -155,6 +155,13 @@ export const galleries = sqliteTable('galleries', {
     .default('none'),
   /** Optional link to a cross-gallery Client record (Settings, set after creation). */
   clientId: text('client_id').references(() => clients.id, { onDelete: 'set null' }),
+  /**
+   * Per-gallery design theme (colors, fonts, cover treatment, layout
+   * density) as JSON — see src/lib/gallery-theme.ts for the shape and
+   * parse/stringify helpers. Null = site default look (every gallery
+   * before this feature, and any gallery that hasn't opted in).
+   */
+  themeConfig: text('theme_config'),
   ...timestamps,
 });
 

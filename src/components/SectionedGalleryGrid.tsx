@@ -21,6 +21,7 @@ export default function SectionedGalleryGrid({
   photoTagIds,
   tagOptions,
   labels,
+  themed = false,
 }: {
   sections: SectionGroup[];
   renderTileOverlay: (photo: LightboxPhoto) => React.ReactNode;
@@ -31,6 +32,16 @@ export default function SectionedGalleryGrid({
   photoTagIds?: Record<string, string[]>;
   tagOptions?: { id: string; name: string }[];
   labels?: { allSections: string; noPhotos: string };
+  /**
+   * True when the gallery has a design theme applied — switches the grid
+   * from the fixed Tailwind `columns-2 md:columns-3 xl:columns-4` masonry
+   * to the theme's `--gallery-columns`/`--gallery-gap`/`--gallery-radius`
+   * CSS vars via inline style. Left false (default) for every unthemed
+   * gallery so today's layout stays pixel-identical — inline styles always
+   * win over the Tailwind classes, so they must only be set when a theme
+   * is actually driving the vars.
+   */
+  themed?: boolean;
 }) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -115,7 +126,14 @@ export default function SectionedGalleryGrid({
                 {section.title}
               </h2>
             )}
-            <div className="columns-2 gap-2 md:columns-3 xl:columns-4 [&>div]:mb-2">
+            <div
+              className="columns-2 gap-2 md:columns-3 xl:columns-4 [&>div]:mb-2"
+              style={
+                themed
+                  ? { columnCount: 'var(--gallery-columns, 4)', columnGap: 'var(--gallery-gap, 8px)' }
+                  : undefined
+              }
+            >
               {section.photos.map((p, i) => {
                 const isSelected = selectedIds?.has(p.id) ?? false;
                 return (
@@ -126,6 +144,7 @@ export default function SectionedGalleryGrid({
                         ? 'rounded ring-2 ring-accent ring-offset-2 ring-offset-paper dark:ring-accent-dark dark:ring-offset-paper-dark'
                         : ''
                     }`}
+                    style={themed ? { marginBottom: 'var(--gallery-gap, 8px)' } : undefined}
                   >
                     <button
                       type="button"
@@ -141,6 +160,7 @@ export default function SectionedGalleryGrid({
                         height={p.height}
                         placeholder={p.placeholder}
                         className={`w-full ${isSelected ? 'brightness-90' : ''}`}
+                        style={themed ? { borderRadius: 'var(--gallery-radius, 0px)' } : undefined}
                       />
                     </button>
                     {isSelected && (

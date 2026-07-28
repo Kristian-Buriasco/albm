@@ -16,6 +16,9 @@ import { effectiveGallerySeo } from '@/lib/gallery-seo';
 import { sitePersonName } from '@/lib/feed-data';
 import { isAdmin } from '@/lib/session';
 import { recordGalleryView } from '@/lib/views';
+import { parseGalleryTheme } from '@/lib/gallery-theme';
+import { coverObjectPosition } from '@/lib/cover-focus';
+import GalleryThemeStyle from '@/components/GalleryThemeStyle';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,9 +95,22 @@ export default async function PortfolioGalleryPage({
     .all();
   const sectionGroups = buildSectionPayloads(gallery, photos, sectionsDb);
   const cover = previewPhotoId(gallery);
+  const theme = parseGalleryTheme(gallery.themeConfig);
+
+  const titlePlacementClass = {
+    center: 'items-center justify-center text-center',
+    'bottom-left': 'items-end justify-start text-left',
+    'bottom-center': 'items-end justify-center text-center',
+  } as const;
+  const titleSizeClass = {
+    sm: 'text-2xl md:text-3xl',
+    md: 'text-3xl md:text-5xl',
+    lg: 'text-4xl md:text-6xl',
+  } as const;
 
   return (
-    <div>
+    <div data-gallery-theme={theme ? '' : undefined}>
+      {theme && <GalleryThemeStyle theme={theme} />}
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -108,6 +124,30 @@ export default async function PortfolioGalleryPage({
         }}
       />
       <SiteHeader />
+      {theme && cover && (
+        <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/img/${cover}/web`}
+            srcSet={`/img/${cover}/md 1280w, /img/${cover}/web 2000w`}
+            sizes="100vw"
+            alt={gallery.title}
+            className="h-full w-full object-cover"
+            style={{ objectPosition: coverObjectPosition(gallery.coverFocusX, gallery.coverFocusY) }}
+          />
+          <div className="absolute inset-0 bg-black" style={{ opacity: 'var(--gallery-cover-overlay)' }} />
+          <div
+            className={`absolute inset-0 flex p-6 sm:p-10 ${titlePlacementClass[theme.cover.titlePlacement]}`}
+          >
+            <h2
+              className={`font-semibold text-white ${titleSizeClass[theme.cover.titleSize]}`}
+              style={{ fontFamily: 'var(--gallery-font-heading)' }}
+            >
+              {gallery.title}
+            </h2>
+          </div>
+        </div>
+      )}
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
       <GalleryViewPing gallery={{ id: gallery.id, type: 'portfolio', title: gallery.title }} />
       <main className="mx-auto max-w-6xl px-6 pb-24">
@@ -144,6 +184,7 @@ export default async function PortfolioGalleryPage({
             title={gallery.title}
             showLikeCounts={gallery.showLikeCounts}
             commentsEnabled={gallery.commentsMode !== 'off'}
+            themed={!!theme}
           />
         )}
       </main>

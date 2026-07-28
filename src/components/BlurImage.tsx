@@ -11,6 +11,7 @@ export default function BlurImage({
   height,
   placeholder,
   className,
+  style,
 }: {
   src: string;
   srcSet?: string;
@@ -20,13 +21,17 @@ export default function BlurImage({
   height?: number;
   placeholder?: string | null;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
     <span
       className="relative block overflow-hidden"
-      style={width && height ? { aspectRatio: `${width} / ${height}` } : undefined}
+      style={{
+        ...(width && height ? { aspectRatio: `${width} / ${height}` } : undefined),
+        ...style,
+      }}
     >
       {placeholder && !loaded && (
         /* eslint-disable-next-line @next/next/no-img-element */

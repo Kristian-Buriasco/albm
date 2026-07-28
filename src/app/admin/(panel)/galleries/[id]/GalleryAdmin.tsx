@@ -20,6 +20,7 @@ import InsightsPanel from './InsightsPanel';
 import KioskToggle from './KioskToggle';
 import ClientPicker from './ClientPicker';
 import SeoFields from './SeoFields';
+import GalleryDesignPanel from './GalleryDesignPanel';
 import StorageBar from './StorageBar';
 import SettingsCard from '@/components/SettingsCard';
 import type { GalleryInsights } from '@/lib/analytics';
@@ -492,6 +493,7 @@ export default function GalleryAdmin({
     ...(isOwner
       ? [
           { id: 'settings', label: 'Settings' },
+          { id: 'design', label: 'Design' },
           { id: 'insights', label: 'Insights' },
           { id: 'comments', label: 'Comments' },
           { id: 'collaborators', label: 'Collaborators' },
@@ -1252,6 +1254,11 @@ export default function GalleryAdmin({
         </div>
       )}
 
+      {isOwner && (
+        <div hidden={active !== 'design'}>
+          <GalleryDesignPanel gallery={gallery} patchGallery={patchGallery} />
+        </div>
+      )}
       {isOwner && insights && (
         <div hidden={active !== 'insights'}>
           <InsightsPanel

@@ -11,12 +11,14 @@ export default function PortfolioGrid({
   title,
   showLikeCounts = false,
   commentsEnabled = false,
+  themed = false,
 }: {
   sections: SectionGroup[];
   slug: string;
   title: string;
   showLikeCounts?: boolean;
   commentsEnabled?: boolean;
+  themed?: boolean;
 }) {
   const photos = useMemo(() => sections.flatMap((s) => s.photos), [sections]);
   const [open, setOpen] = useState<number | null>(null);
@@ -84,6 +86,7 @@ export default function PortfolioGrid({
       <SectionedGalleryGrid
         sections={sections}
         commentsEnabled={commentsEnabled}
+        themed={themed}
         onOpenLightbox={setOpen}
         renderTileOverlay={(p) => (
           <button

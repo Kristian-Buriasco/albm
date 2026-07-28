@@ -1,4 +1,5 @@
 import { schema } from '@/db';
+import { sanitizeGalleryTheme, stringifyGalleryTheme } from '@/lib/gallery-theme';
 
 type GalleryInsert = Partial<typeof schema.galleries.$inferInsert>;
 
@@ -137,6 +138,14 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
   }
   if ('clientId' in body) {
     updates.clientId = typeof body.clientId === 'string' && body.clientId ? body.clientId : null;
+  }
+  if ('themeConfig' in body) {
+    if (body.themeConfig === null) {
+      updates.themeConfig = null;
+    } else {
+      const sanitized = sanitizeGalleryTheme(body.themeConfig);
+      if (sanitized) updates.themeConfig = stringifyGalleryTheme(sanitized);
+    }
   }
   if ('storageQuotaBytes' in body) {
     const v = body.storageQuotaBytes;

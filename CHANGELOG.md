@@ -4,6 +4,22 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.17.0] — 2026-07-28
+
+### Added
+- **Per-gallery design themes.** Client and portfolio galleries can now get
+  their own look instead of the fixed site-wide style: independent
+  light/dark color palettes (paper/ink/muted/line/accent), a choice of 21
+  curated heading+body font pairs (self-hosted via `next/font/google` at
+  build time — zero runtime third-party requests), or fully custom Google
+  Fonts (opt-in, explicit URLs — the one deliberate exception to the app's
+  zero-outbound-request default, scoped to only the gallery that asks for
+  it), a cinematic cover hero (overlay darkness, title placement/size), and
+  layout density (grid columns, gap, corner radius). New owner-only
+  "Design" tab in gallery admin with live preview. Every existing gallery
+  is unaffected — theming is null/opt-in by default, rendering stays
+  pixel-identical until a photographer explicitly sets one.
+
 ## [1.16.1] — 2026-07-28
 
 ### Fixed
@@ -314,6 +330,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.17.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.0
 [1.16.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.1
 [1.16.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.0
 [1.15.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.1
