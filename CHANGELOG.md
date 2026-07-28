@@ -4,6 +4,29 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.18.0] — 2026-07-28
+
+### Added
+- **Gallery theme: banner height.** New bounded slider (20-80vh) in the
+  Design tab controlling the cover hero's height, alongside the existing
+  overlay/title/layout controls.
+- **Custom-styled sliders everywhere.** Every `<input type="range">` (gallery
+  defaults' watermark opacity, all five theme sliders) now uses a shared
+  `RangeSlider` component instead of the browser's native track/thumb.
+
+### Fixed
+- **Dropdown open list was still native on every browser, including Safari.**
+  `Select`'s closed box was custom-styled since v1.16.1, but the *open*
+  options list is unstyleable for a real `<select>` on any browser — a hard
+  platform limit, not a CSS bug. Rebuilt `Select` as a custom combobox/
+  listbox (button + our own `role="listbox"` panel) with full keyboard
+  support (arrows/home/end/enter/escape) and click-outside-close, while
+  keeping the exact same `value`/`onChange`/`children`-as-`<option>` API so
+  none of its ~10 call sites needed changes. Form-participating usages (e.g.
+  the contact form, which reads submission data via native `FormData`) are
+  backed by a hidden `<input>` kept in sync with the visible selection, so
+  native form submission still works unchanged.
+
 ## [1.17.1] — 2026-07-28
 
 ### Fixed
@@ -346,6 +369,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.18.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.18.0
 [1.17.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.1
 [1.17.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.17.0
 [1.16.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.16.1

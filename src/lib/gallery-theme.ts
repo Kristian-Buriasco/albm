@@ -20,6 +20,7 @@ export type GalleryTheme = {
     overlayOpacity: number; // 0-1
     titlePlacement: 'center' | 'bottom-left' | 'bottom-center';
     titleSize: 'sm' | 'md' | 'lg';
+    height: number; // 20-80 (vh)
   };
   layout: {
     columns: number; // 2-6
@@ -35,7 +36,7 @@ export const DEFAULT_GALLERY_THEME: GalleryTheme = {
     dark: { paper: '#0d0f12', ink: '#e9ebee', muted: '#868d96', line: '#24282d', accent: '#6fb4ce' },
   },
   font: { kind: 'preset', pairId: 'modern-minimal' },
-  cover: { overlayOpacity: 0.35, titlePlacement: 'bottom-left', titleSize: 'md' },
+  cover: { overlayOpacity: 0.35, titlePlacement: 'bottom-left', titleSize: 'md', height: 45 },
   layout: { columns: 4, gap: 8, radius: 0 },
 };
 
@@ -125,6 +126,7 @@ export function sanitizeGalleryTheme(parsed: unknown): GalleryTheme | null {
       overlayOpacity: clamp(Number(coverObj.overlayOpacity ?? DEFAULT_GALLERY_THEME.cover.overlayOpacity), 0, 1),
       titlePlacement,
       titleSize,
+      height: clamp(Math.round(Number(coverObj.height ?? DEFAULT_GALLERY_THEME.cover.height)), 20, 80),
     },
     layout: {
       columns: clamp(Math.round(Number(layoutObj.columns ?? DEFAULT_GALLERY_THEME.layout.columns)), 2, 6),
@@ -164,6 +166,7 @@ export function themeToCss(theme: GalleryTheme, fontVars: { heading: string; bod
   --gallery-gap: ${theme.layout.gap}px;
   --gallery-radius: ${theme.layout.radius}px;
   --gallery-cover-overlay: ${theme.cover.overlayOpacity};
+  --gallery-cover-height: ${theme.cover.height}vh;
   --gallery-font-heading: ${fontVars.heading};
   --gallery-font-body: ${fontVars.body};`;
   // Dark mode here mirrors the app-wide convention: a `.dark` class is added

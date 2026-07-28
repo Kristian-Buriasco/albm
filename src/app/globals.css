@@ -55,6 +55,48 @@ body {
   color: var(--bg);
 }
 
+/* Custom range slider (RangeSlider.tsx) — track fill comes from an inline
+   gradient set per-instance; this just strips native chrome and styles the
+   thumb, which isn't reachable via Tailwind utilities. */
+.range-slider {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  cursor: pointer;
+}
+.range-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-paper);
+  border-radius: 9999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  cursor: pointer;
+}
+.range-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: transparent;
+}
+.dark .range-slider::-webkit-slider-thumb,
+.dark .range-slider::-moz-range-thumb {
+  border-color: var(--color-paper-dark);
+}
+
 /* Scroll-reveal: fade + rise. Respects reduced motion (Reveal component). */
 @media (prefers-reduced-motion: no-preference) {
   .reveal {

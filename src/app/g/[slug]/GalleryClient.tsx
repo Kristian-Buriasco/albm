@@ -362,7 +362,10 @@ export default function GalleryClient({
     <div className="min-h-screen" data-gallery-theme={theme ? '' : undefined}>
       {theme && <GalleryThemeStyle theme={theme} />}
       {theme && coverPhotoId && (
-        <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
+        <div
+          className="relative w-full overflow-hidden"
+          style={{ height: 'var(--gallery-cover-height)' }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/img/${coverPhotoId}/web`}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import Select from '@/components/Select';
+import RangeSlider from '@/components/RangeSlider';
 import type { GalleryDefaultsConfig, GalleryDefaultsStore } from '@/lib/gallery-defaults';
 
 const emptyConfig = (): GalleryDefaultsConfig => ({});
@@ -74,15 +75,11 @@ export default function GalleryDefaultsForm({
         </label>
         <label className="block text-xs">
           <span className="mb-1 block text-neutral-500">Watermark opacity ({config.watermarkOpacity ?? 70})</span>
-          <input
-            type="range"
+          <RangeSlider
             min={0}
             max={100}
             value={config.watermarkOpacity ?? 70}
-            onChange={(e) =>
-              setConfig((c) => ({ ...c, watermarkOpacity: Number(e.target.value) }))
-            }
-            className="w-full"
+            onChange={(v) => setConfig((c) => ({ ...c, watermarkOpacity: v }))}
           />
         </label>
         <ToggleSwitch

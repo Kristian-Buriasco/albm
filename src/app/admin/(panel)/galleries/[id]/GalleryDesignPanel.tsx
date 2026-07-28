@@ -6,6 +6,7 @@ import Select from '@/components/Select';
 import SegmentedControl from '@/components/SegmentedControl';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import GalleryThemeStyle from '@/components/GalleryThemeStyle';
+import RangeSlider from '@/components/RangeSlider';
 import {
   DEFAULT_GALLERY_THEME,
   parseGalleryTheme,
@@ -244,19 +245,24 @@ export default function GalleryDesignPanel({
             <span className={hintClass}>
               Overlay opacity ({theme.cover.overlayOpacity.toFixed(2)})
             </span>
-            <input
-              type="range"
+            <RangeSlider
               min={0}
               max={1}
               step={0.05}
               value={theme.cover.overlayOpacity}
-              onChange={(e) =>
-                setTheme((th) => ({
-                  ...th,
-                  cover: { ...th.cover, overlayOpacity: Number(e.target.value) },
-                }))
+              onChange={(v) =>
+                setTheme((th) => ({ ...th, cover: { ...th.cover, overlayOpacity: v } }))
               }
-              className="w-full"
+            />
+          </label>
+          <label className={labelClass}>
+            <span className={hintClass}>Banner height ({theme.cover.height}vh)</span>
+            <RangeSlider
+              min={20}
+              max={80}
+              step={1}
+              value={theme.cover.height}
+              onChange={(v) => setTheme((th) => ({ ...th, cover: { ...th.cover, height: v } }))}
             />
           </label>
           <SegmentedControl
@@ -287,50 +293,32 @@ export default function GalleryDesignPanel({
           </span>
           <label className={labelClass}>
             <span className={hintClass}>Columns ({theme.layout.columns})</span>
-            <input
-              type="range"
+            <RangeSlider
               min={2}
               max={6}
               step={1}
               value={theme.layout.columns}
-              onChange={(e) =>
-                setTheme((th) => ({
-                  ...th,
-                  layout: { ...th.layout, columns: Number(e.target.value) },
-                }))
-              }
-              className="w-full"
+              onChange={(v) => setTheme((th) => ({ ...th, layout: { ...th.layout, columns: v } }))}
             />
           </label>
           <label className={labelClass}>
             <span className={hintClass}>Gap ({theme.layout.gap}px)</span>
-            <input
-              type="range"
+            <RangeSlider
               min={0}
               max={24}
               step={1}
               value={theme.layout.gap}
-              onChange={(e) =>
-                setTheme((th) => ({ ...th, layout: { ...th.layout, gap: Number(e.target.value) } }))
-              }
-              className="w-full"
+              onChange={(v) => setTheme((th) => ({ ...th, layout: { ...th.layout, gap: v } }))}
             />
           </label>
           <label className={labelClass}>
             <span className={hintClass}>Corner radius ({theme.layout.radius}px)</span>
-            <input
-              type="range"
+            <RangeSlider
               min={0}
               max={16}
               step={1}
               value={theme.layout.radius}
-              onChange={(e) =>
-                setTheme((th) => ({
-                  ...th,
-                  layout: { ...th.layout, radius: Number(e.target.value) },
-                }))
-              }
-              className="w-full"
+              onChange={(v) => setTheme((th) => ({ ...th, layout: { ...th.layout, radius: v } }))}
             />
           </label>
         </div>
@@ -362,8 +350,8 @@ export default function GalleryDesignPanel({
         <div data-gallery-theme="" className="border border-line dark:border-line-dark">
           <GalleryThemeStyle theme={theme} />
           <div
-            className="relative aspect-[16/9] w-full overflow-hidden bg-line dark:bg-line-dark"
-            style={{ backgroundColor: 'var(--color-line)' }}
+            className="relative w-full overflow-hidden bg-line dark:bg-line-dark"
+            style={{ backgroundColor: 'var(--color-line)', height: 'min(var(--gallery-cover-height), 220px)' }}
           >
             <div className="absolute inset-0 bg-black" style={{ opacity: 'var(--gallery-cover-overlay)' }} />
             <div
