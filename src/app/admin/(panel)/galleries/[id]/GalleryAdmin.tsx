@@ -1084,7 +1084,7 @@ export default function GalleryAdmin({
                   <button
                     type="button"
                     onClick={(e) => togglePhotoSelection(p.id, e)}
-                    className="absolute top-1 left-1 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                    className="absolute top-1 left-1 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 sm:h-7 sm:w-7"
                     aria-label={isSelected ? 'Deselect photo' : 'Select photo'}
                   >
                     {isSelected ? '✓' : ''}
@@ -1103,7 +1103,7 @@ export default function GalleryAdmin({
                       {isClientGallery ? selCount : likeCount}
                     </span>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-black/60 p-1.5 opacity-100 transition-opacity sm:p-1 sm:opacity-0 sm:group-hover:opacity-100">
                     {isOwner && (
                       <button
                         type="button"
@@ -1111,7 +1111,7 @@ export default function GalleryAdmin({
                           const alt = prompt('Alt text (max 300 chars)', p.altText ?? '');
                           if (alt !== null) void patchAlt(p.id, alt);
                         }}
-                        className="text-[10px] text-white hover:underline"
+                        className="text-[11px] text-white hover:underline sm:text-[10px]"
                       >
                         Alt
                       </button>
@@ -1120,13 +1120,13 @@ export default function GalleryAdmin({
                       <button
                         type="button"
                         onClick={() => setCover(p.id)}
-                        className="text-[10px] text-white hover:underline"
+                        className="text-[11px] text-white hover:underline sm:text-[10px]"
                       >
                         Cover
                       </button>
                     )}
                     <span
-                      className="truncate text-[9px] text-neutral-300"
+                      className="hidden truncate text-[9px] text-neutral-300 sm:inline"
                       title={p.filename}
                     >
                       {p.filename}
@@ -1134,7 +1134,7 @@ export default function GalleryAdmin({
                     <button
                       type="button"
                       onClick={() => deletePhoto(p)}
-                      className="text-[10px] text-red-300 hover:underline"
+                      className="text-[11px] text-red-300 hover:underline sm:text-[10px]"
                     >
                       Delete
                     </button>

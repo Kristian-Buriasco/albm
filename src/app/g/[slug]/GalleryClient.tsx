@@ -478,7 +478,7 @@ export default function GalleryClient({
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
                     placeholder={t(lang, 'newList')}
-                    className="w-20 border-b border-line bg-transparent py-0.5 dark:border-line-dark"
+                    className="w-20 border-b border-line bg-transparent py-0.5 text-base sm:text-xs dark:border-line-dark"
                   />
                   <button type="button" onClick={createList} className="underline">
                     +
@@ -722,7 +722,7 @@ function MagicLinkModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t(lang, 'email')}
-              className="w-full border-b border-line bg-transparent py-2 text-sm dark:border-line-dark"
+              className="w-full border-b border-line bg-transparent py-2 text-base dark:border-line-dark"
             />
             <button type="submit" disabled={busy} className="w-full border py-2 text-xs uppercase">
               {t(lang, 'continue')}
@@ -798,14 +798,14 @@ function InfoGateModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={required ? `${t(lang, 'name')} *` : t(lang, 'name')}
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none dark:border-neutral-700"
+            className="w-full border-b border-neutral-300 bg-transparent py-2 text-base outline-none dark:border-neutral-700"
           />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={required ? `${t(lang, 'email')} *` : t(lang, 'email')}
-            className="w-full border-b border-neutral-300 bg-transparent py-2 text-sm outline-none dark:border-neutral-700"
+            className="w-full border-b border-neutral-300 bg-transparent py-2 text-base outline-none dark:border-neutral-700"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <button type="submit" disabled={busy} className="w-full border py-2 text-xs uppercase">

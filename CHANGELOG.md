@@ -4,6 +4,19 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.15.1] — 2026-07-28
+
+### Fixed
+- **Admin gallery page mobile pass**: the per-photo action bar (Alt text, Cover,
+  Delete) was `opacity-0` with only a `group-hover` reveal — completely
+  unreachable on touch devices, not just hidden until hover. Now visible by
+  default, hover-fade preserved on mouse. Bumped the photo select-toggle button
+  to a real touch target. The gallery tab bar (Photos/Settings/Insights/
+  Comments/Collaborators) had no overflow handling and would blow out the page
+  width on a phone — now scrolls horizontally instead. Also caught two more
+  <16px inputs left over from the previous mobile pass (client-gallery welcome
+  modal, magic-link modal) that triggered iOS Safari's zoom-on-focus.
+
 ## [1.15.0] — 2026-07-28
 
 ### Fixed
@@ -275,6 +288,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.15.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.1
 [1.15.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.0
 [1.14.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.14.0
 [1.13.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.13.0

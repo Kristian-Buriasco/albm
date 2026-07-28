@@ -49,7 +49,7 @@ export default function Tabs({
       <div
         role="tablist"
         aria-orientation="horizontal"
-        className="flex gap-6 border-b border-neutral-200 dark:border-neutral-800"
+        className="flex gap-6 overflow-x-auto border-b border-neutral-200 dark:border-neutral-800"
       >
         {tabs.map((t, i) => {
           const isActive = t.id === active;
@@ -67,7 +67,7 @@ export default function Tabs({
               tabIndex={isActive ? 0 : -1}
               onClick={() => select(t.id)}
               onKeyDown={(e) => onKeyDown(e, i)}
-              className={`-mb-px flex items-center gap-2 border-b-2 pb-3 text-xs tracking-widest uppercase transition-colors ${
+              className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 pb-3 text-xs tracking-widest whitespace-nowrap uppercase transition-colors ${
                 isActive
                   ? 'border-neutral-900 text-neutral-900 dark:border-neutral-100 dark:text-neutral-100'
                   : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100'
