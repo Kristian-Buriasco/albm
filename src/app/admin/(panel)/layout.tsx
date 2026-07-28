@@ -6,6 +6,7 @@ import { getPrincipal } from '@/lib/session';
 import ThemeToggle from '@/components/ThemeToggle';
 import UpdateBadge from '@/components/UpdateBadge';
 import LogoutButton from './LogoutButton';
+import AdminNav from './AdminNav';
 
 export default async function AdminLayout({
   children,
@@ -21,10 +22,10 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-neutral-200 dark:border-neutral-800">
+      <header className="relative border-b border-neutral-200 dark:border-neutral-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-6 text-sm">
-            <Link href="/admin" className="font-medium tracking-widest uppercase">
+          <div className="flex min-w-0 flex-1 items-center gap-6 text-sm">
+            <Link href="/admin" className="shrink-0 font-medium tracking-widest uppercase">
               {isOwner ? 'Admin' : 'Collaborator'}
               {pending > 0 && (
                 <span className="ml-2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">
@@ -32,71 +33,9 @@ export default async function AdminLayout({
                 </span>
               )}
             </Link>
-            {isOwner && (
-              <>
-                <Link
-                  href="/admin/audit"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Audit
-                </Link>
-                <Link
-                  href="/admin/forensic"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Forensic
-                </Link>
-                <Link
-                  href="/admin/inquiries"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Inquiries
-                  {newInquiries > 0 && (
-                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">
-                      {newInquiries}
-                    </span>
-                  )}
-                </Link>
-                <Link
-                  href="/admin/clients"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Clients
-                </Link>
-                <Link
-                  href="/admin/testimonials"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Testimonials
-                </Link>
-                <Link
-                  href="/admin/maintenance"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Maintenance
-                </Link>
-                <Link
-                  href="/admin/settings"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  Settings
-                </Link>
-                <Link
-                  href="/docs/api"
-                  className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  API docs
-                </Link>
-              </>
-            )}
-            <Link
-              href="/"
-              className="text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-            >
-              View site
-            </Link>
+            <AdminNav isOwner={isOwner} newInquiries={newInquiries} />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             {isOwner && <UpdateBadge />}
             <ThemeToggle />
             <LogoutButton />

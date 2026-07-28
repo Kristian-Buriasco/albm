@@ -89,8 +89,8 @@ export default function PortfolioGrid({
           <button
             type="button"
             onClick={() => toggleLike(p.id)}
-            className={`absolute right-2 bottom-2 hidden items-center gap-1 rounded-full p-1.5 text-xs text-white drop-shadow transition-opacity sm:flex ${
-              liked.has(p.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-70'
+            className={`absolute right-2 bottom-2 flex items-center gap-1 rounded-full p-2 text-xs text-white drop-shadow transition-opacity sm:p-1.5 ${
+              liked.has(p.id) ? 'opacity-100' : 'opacity-70 sm:opacity-0 sm:group-hover:opacity-70'
             }`}
           >
             <HeartIcon filled={liked.has(p.id)} className="h-5 w-5" />

@@ -13,7 +13,7 @@ const EVENT_TYPES = [
 ];
 
 const fieldClass =
-  'w-full border border-line bg-transparent px-3 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-accent dark:border-line-dark dark:text-ink-dark dark:focus:border-accent-dark';
+  'w-full border border-line bg-transparent px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-accent dark:border-line-dark dark:text-ink-dark dark:focus:border-accent-dark';
 const labelClass =
   'mb-1.5 block text-[11px] tracking-[0.12em] text-muted uppercase dark:text-muted-dark';
 

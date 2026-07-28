@@ -9,14 +9,14 @@ const navLink =
 
 export default function SiteHeader() {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-7">
+    <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-7 sm:px-6">
       <Link
         href="/"
-        className="text-[15px] leading-none font-semibold tracking-tight"
+        className="min-w-0 truncate text-[15px] leading-none font-semibold tracking-tight"
       >
         {SITE_NAME}
       </Link>
-      <nav className="flex items-center gap-7 text-[13px] tracking-wide">
+      <nav className="flex shrink-0 items-center gap-3 text-[13px] tracking-wide sm:gap-7">
         <Link href="/" className={navLink}>
           Work
         </Link>

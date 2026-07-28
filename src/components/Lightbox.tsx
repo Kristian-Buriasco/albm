@@ -142,7 +142,7 @@ export default function Lightbox({
                 e.stopPropagation();
                 setPlaying((p) => !p);
               }}
-              className="p-1 text-neutral-300 hover:text-white"
+              className="p-2 text-neutral-300 hover:text-white sm:p-1"
               aria-label={playing ? slideshowLabel?.pause : slideshowLabel?.play}
             >
               {playing ? '⏸' : '▶'}
@@ -153,7 +153,7 @@ export default function Lightbox({
               type="button"
               onClick={() => onToggleSelect(photo.id)}
               aria-label={selected ? 'Remove from selection' : 'Add to selection'}
-              className="flex items-center gap-1 p-1"
+              className="flex items-center gap-1 p-2 sm:p-1"
             >
               <HeartIcon filled={selected} className="h-5 w-5" />
               {showLikeCounts && (
@@ -167,7 +167,7 @@ export default function Lightbox({
             <a
               href={`/dl/${photo.id}?size=${downloadSizes[0]}`}
               aria-label={downloadSizeLabels?.label ?? 'Download photo'}
-              className="p-1 text-neutral-300 hover:text-white"
+              className="p-2 text-neutral-300 hover:text-white sm:p-1"
               onClick={() => onDownload?.(photo.id, downloadSizes[0])}
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -181,7 +181,7 @@ export default function Lightbox({
                 <a
                   key={sz}
                   href={`/dl/${photo.id}?size=${sz}`}
-                  className="rounded border border-white/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-300 hover:text-white"
+                  className="rounded border border-white/20 px-2.5 py-1.5 text-[10px] uppercase tracking-wide text-neutral-300 hover:text-white sm:px-1.5 sm:py-0.5"
                   onClick={() => onDownload?.(photo.id, sz)}
                 >
                   {downloadSizeLabels?.[sz] ?? sz}
@@ -189,7 +189,7 @@ export default function Lightbox({
               ))}
             </div>
           )}
-          <button type="button" onClick={onClose} aria-label="Close" className="p-1 text-neutral-300 hover:text-white">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-2 text-neutral-300 hover:text-white sm:p-1">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>

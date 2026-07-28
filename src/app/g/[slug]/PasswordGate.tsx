@@ -50,7 +50,7 @@ export default function PasswordGate({
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t(lang, 'password')}
           autoFocus
-          className="w-full border-b border-neutral-300 bg-transparent py-2 text-center text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
+          className="w-full border-b border-neutral-300 bg-transparent py-2 text-center text-base outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
         />
         {error && (
           <p className="mt-4 text-center text-xs text-red-600 dark:text-red-400">

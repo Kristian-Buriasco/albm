@@ -4,6 +4,25 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.15.0] — 2026-07-28
+
+### Fixed
+- **Mobile usability pass** across public and admin surfaces:
+  - Portfolio grid's like button was `hidden` below the `sm` breakpoint (real bug,
+    not just hover-gated) — invisible on every touch device. Now always visible,
+    dimmed until liked, with the desktop hover-fade preserved at `sm+`.
+  - Lightbox toolbar icons (slideshow, select, download, close) and the multi-size
+    download links had touch targets around 28px, well under the ~44px guideline —
+    bumped padding on mobile, unchanged on desktop.
+  - Admin panel header had ~9 nav links in one unwrapped row with no mobile
+    fallback — would overflow on any phone width. Extracted into `AdminNav`, a
+    collapsible hamburger menu below `sm`, unchanged inline nav at `sm+`.
+  - Public site header (name + nav) had no mobile headroom — tightened gaps/padding
+    responsively and let an overlong custom site name truncate instead of forcing
+    nav off-screen.
+  - Contact form fields and the client-gallery password gate used <16px font-size,
+    which triggers iOS Safari's auto-zoom on focus — bumped both to 16px (`text-base`).
+
 ## [1.14.0] — 2026-07-27
 
 ### Added
@@ -256,6 +275,7 @@ Combined release covering three roadmap themes: storage, live events, and market
 - Initial self-hosted portfolio + client-proofing platform: password/PIN galleries, favorites,
   downloads, watermarks, sections, comments, EXIF (GPS excluded), event pages, PWA, passkey admin.
 
+[1.15.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.15.0
 [1.14.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.14.0
 [1.13.0]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.13.0
 [1.12.1]: https://github.com/Kristian-Buriasco/albm/releases/tag/v1.12.1
