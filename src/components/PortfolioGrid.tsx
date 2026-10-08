@@ -12,6 +12,8 @@ export default function PortfolioGrid({
   showLikeCounts = false,
   commentsEnabled = false,
   themed = false,
+  copyrightLine,
+  creditLabel,
 }: {
   sections: SectionGroup[];
   slug: string;
@@ -19,6 +21,8 @@ export default function PortfolioGrid({
   showLikeCounts?: boolean;
   commentsEnabled?: boolean;
   themed?: boolean;
+  copyrightLine?: string;
+  creditLabel?: string;
 }) {
   const photos = useMemo(() => sections.flatMap((s) => s.photos), [sections]);
   const [open, setOpen] = useState<number | null>(null);
@@ -109,6 +113,8 @@ export default function PortfolioGrid({
           index={open}
           onClose={() => setOpen(null)}
           onNavigate={setOpen}
+          copyrightLine={copyrightLine}
+          creditLabel={creditLabel}
           selectedIds={liked}
           onToggleSelect={toggleLike}
           showLikeCounts={showLikeCounts}

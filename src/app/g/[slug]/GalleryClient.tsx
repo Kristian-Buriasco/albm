@@ -31,6 +31,10 @@ interface SelectionListInfo {
 }
 
 interface Props {
+  /** "© 2026 KU Leuven Sport" */
+  copyrightLine: string;
+  /** Photographer names for the footer credit line (empty = none). */
+  creditNames: string[];
   slug: string;
   galleryId: string;
   title: string;
@@ -99,6 +103,8 @@ export default function GalleryClient({
   photoTagIds,
   tagOptions,
   defaultLang,
+  copyrightLine,
+  creditNames,
 }: Props) {
   const [lang, setLang] = useState<Lang>(() => getStoredLang() ?? defaultLang);
   const [sections, setSections] = useState(initialSections);
@@ -605,6 +611,16 @@ export default function GalleryClient({
             )}
           />
         </main>
+        )}
+      {!gateContent && (
+        <footer className="mx-auto max-w-7xl px-4 pt-6 pb-12 text-center text-xs text-muted dark:text-muted-dark">
+          <p>{copyrightLine}</p>
+          {creditNames.length > 0 && (
+            <p className="mt-1">
+              {t(lang, 'creditsPhotos')}: {creditNames.join(', ')}
+            </p>
+          )}
+        </footer>
       )}
 
       {lightbox !== null && visible.length > 0 && (
@@ -614,6 +630,8 @@ export default function GalleryClient({
             index={Math.min(lightbox, visible.length - 1)}
             onClose={() => setLightbox(null)}
             onNavigate={setLightbox}
+            copyrightLine={copyrightLine}
+            creditLabel={t(lang, 'creditsPhoto')}
             showFilename
             selectedIds={selected}
             onToggleSelect={toggleSelect}

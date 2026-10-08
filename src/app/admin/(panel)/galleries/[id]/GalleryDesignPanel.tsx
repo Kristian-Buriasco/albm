@@ -9,6 +9,7 @@ import GalleryThemeStyle from '@/components/GalleryThemeStyle';
 import RangeSlider from '@/components/RangeSlider';
 import {
   DEFAULT_GALLERY_THEME,
+  GALLERY_THEME_PRESETS,
   parseGalleryTheme,
   type GalleryTheme,
   type GalleryThemeColors,
@@ -109,6 +110,36 @@ export default function GalleryDesignPanel({
             rest of the site untouched.
             {saving && ' · saving…'}
             {savedFlash && !saving && ' · saved'}
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="design-preset"
+            className="mb-1 block text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400"
+          >
+            Start from a preset
+          </label>
+          <Select
+            id="design-preset"
+            value=""
+            onChange={(e) => {
+              const preset = GALLERY_THEME_PRESETS.find((p) => p.id === e.target.value);
+              if (!preset) return;
+              setTheme(preset.theme);
+              setCustomFonts(preset.theme.font.kind === 'custom');
+            }}
+            className="w-full border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+          >
+            <option value="">Choose a preset…</option>
+            {GALLERY_THEME_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            Fills the editor below — review it, then press &ldquo;Save design&rdquo;.
           </p>
         </div>
 

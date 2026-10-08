@@ -2,8 +2,10 @@ import type { Gallery, Photo } from '@/db/schema';
 import { formatExifLine, parseStoredExif } from './exif';
 import { photoAltText } from './photo-media';
 import type { LightboxPhoto } from '@/components/Lightbox';
+import { creditNamesByUploader, photoCredit } from './credits';
 
 export function mapPhotosForLightbox(gallery: Gallery, photos: Photo[]): LightboxPhoto[] {
+  const names = gallery.showCredits ? creditNamesByUploader() : null;
   return photos.map((p) => ({
     id: p.id,
     filename: p.filename,
@@ -12,6 +14,7 @@ export function mapPhotosForLightbox(gallery: Gallery, photos: Photo[]): Lightbo
     placeholder: p.placeholder,
     updatedAt: p.updatedAt,
     alt: photoAltText(p, gallery.title),
+    credit: names ? photoCredit(p, names) : null,
     exifLine:
       gallery.showExif && p.exif
         ? formatExifLine(parseStoredExif(p.exif) ?? {})

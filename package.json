@@ -1,6 +1,6 @@
 {
   "name": "albm",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3200",
@@ -8,6 +8,7 @@
     "start": "next start -p 3200",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:unit": "node --test tests/unit/*.test.mjs",
     "test:ftp-ingest": "node --test --test-timeout=15000 tools/ftp-ingest/test/ingest.test.mjs",
     "db:generate": "drizzle-kit generate",
     "test:e2e": "playwright test",

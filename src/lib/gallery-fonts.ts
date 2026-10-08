@@ -1,6 +1,7 @@
 import {
   Playfair_Display,
   Source_Sans_3,
+  Source_Serif_4,
   Cormorant_Garamond,
   Inter,
   Poppins,
@@ -45,6 +46,7 @@ import {
 // it, otherwise a small practical weight set.
 const playfairDisplay = Playfair_Display({ subsets: ['latin'], weight: ['400', '700'] , preload: false });
 const sourceSans3 = Source_Sans_3({ subsets: ['latin'], weight: ['400', '600'] , preload: false });
+const sourceSerif4 = Source_Serif_4({ subsets: ['latin'], weight: ['400', '600'] , preload: false });
 const cormorantGaramond = Cormorant_Garamond({ subsets: ['latin'], weight: ['400', '600'] , preload: false });
 const inter = Inter({ subsets: ['latin'] , preload: false });
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600'] , preload: false });
@@ -107,6 +109,7 @@ const pair = (
 /** ~20 curated heading+body pairs, self-hosted via next/font/google. */
 export const GALLERY_FONT_PAIRS: FontPair[] = [
   pair('editorial-serif', 'Editorial Serif', 'Classic magazine elegance — weddings, fine-art portraits', playfairDisplay, sourceSans3),
+  pair('academic-serif', 'Academic Serif', 'Institutional serif over a clean humanist sans — universities, sport federations', sourceSerif4, sourceSans3),
   pair('quiet-luxury', 'Quiet Luxury', 'Delicate, high-contrast serif — luxury/bridal', cormorantGaramond, inter),
   pair('modern-minimal', 'Modern Minimal', 'The neutral default — commercial, architectural', inter, inter),
   pair('geometric-clean', 'Geometric Clean', 'Friendly geometry — lifestyle, family sessions', poppins, workSans),

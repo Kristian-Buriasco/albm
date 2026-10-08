@@ -4,6 +4,33 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.22.0] — 2026-10-09
+
+### Added
+- **Per-gallery copyright and photographer credits.** New "Copyright & credits" card
+  in a gallery's Settings tab: the copyright holder shown to visitors
+  ("© 2026 KU Leuven Sport"; blank = the site owner), a switch for photographer
+  credits, and a separate copyright for downloaded JPEGs. The gallery footer lists
+  who shot the photos and the lightbox captions each photo with its photographer.
+  Credits come from who uploaded each photo; collaborators need a display name
+  (editable per collaborator in the Collaborators panel, or set at invite time).
+- **Authorship travels with the file.** Every JPEG download (single, ZIP and favourites
+  ZIP; original and print sizes) gets `dc:rights` and `dc:creator` written into its XMP,
+  losslessly (no re-encode). Default is the site owner's own copyright, independent of
+  the holder shown on the page; the owner can override it per gallery.
+- **Design presets and a KU Leuven Sport theme.** The Design tab has a "Start from a
+  preset" picker. "KU Leuven Sport" uses the navy (`#004070`), sky blue, deep navy and
+  teal from kuleuven.be with an institutional serif (new "Academic Serif" font pair:
+  Source Serif 4 + Source Sans 3, self-hosted). Contrast-checked for light and dark.
+- 10-language labels for the credit lines; `npm run test:unit`.
+- Migration 0027 (`copyright_holder`, `show_credits`, `xmp_copyright`).
+
+### Fixed
+- **Dark-mode gallery themes never reached the page.** The theme only set the light
+  colour tokens while the app's dark styling reads separate `-dark` tokens, and the
+  themed wrapper did not paint the page. Dark and light now both apply.
+- Collaborator panel said invite links expire in 24 hours (they last 7 days).
+
 ## [1.21.0] — 2026-10-08
 
 ### Added

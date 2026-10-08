@@ -58,6 +58,12 @@ export const galleries = sqliteTable('galleries', {
     .notNull()
     .default(false),
   showExif: integer('show_exif', { mode: 'boolean' }).notNull().default(false),
+  /** Public copyright line for this gallery ("KU Leuven Sport"); null = the site owner's name. */
+  copyrightHolder: text('copyright_holder'),
+  /** Show photographer credits (who shot the photos) on the gallery pages. */
+  showCredits: integer('show_credits', { mode: 'boolean' }).notNull().default(true),
+  /** Copyright written into downloaded JPEGs' XMP; null = the site owner's own name. */
+  xmpCopyright: text('xmp_copyright'),
   showLocation: integer('show_location', { mode: 'boolean' })
     .notNull()
     .default(false),

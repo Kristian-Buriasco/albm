@@ -13,6 +13,8 @@ import {
   workingJpegPath,
 } from '@/lib/paths';
 import { stripGpsFromJpeg } from '@/lib/exif-strip';
+import { injectXmpRights } from '@/lib/xmp';
+import { creditNamesByUploader, embeddedCopyright, photoCredit } from '@/lib/credits';
 
 export type DownloadSize = 'web' | 'print' | 'original';
 
@@ -134,11 +136,33 @@ export type PreparedDownload = {
 
 /**
  * Build the bytes (or path) for a client download, applying size, RAW→JPEG,
- * forensic mark, and EXIF/GPS policy.
+ * forensic mark, EXIF/GPS policy, and finally the copyright/artist XMP.
+ * Single downloads and both ZIP routes all come through here.
  */
 export async function preparePhotoDownload(
   opts: PrepareDownloadOpts,
 ): Promise<PreparedDownload> {
+  const prepared = await prepareDownloadBytes(opts);
+  return embedRights(prepared, opts);
+}
+
+/**
+ * Last step: write the photographer's copyright + the artist's name into a JPEG's XMP
+ * (lossless — pixels are never re-encoded). The EXIF/forensic steps above rewrite or
+ * strip metadata, so this must run after them. Non-JPEG (WebP previews, RAW) is skipped.
+ */
+function embedRights(prepared: PreparedDownload, opts: PrepareDownloadOpts): PreparedDownload {
+  if (prepared.contentType !== 'image/jpeg') return prepared;
+  const source = prepared.body ?? (prepared.filePath ? fs.readFileSync(prepared.filePath) : null);
+  if (!source) return prepared;
+  const body = injectXmpRights(source, {
+    copyright: embeddedCopyright(opts.gallery),
+    artist: photoCredit(opts.photo, creditNamesByUploader()),
+  });
+  return { ...prepared, body, filePath: null, streamFile: false };
+}
+
+async function prepareDownloadBytes(opts: PrepareDownloadOpts): Promise<PreparedDownload> {
   const { gallery, photo, size, visitorId, accountId } = opts;
 
   if (size === 'web') {

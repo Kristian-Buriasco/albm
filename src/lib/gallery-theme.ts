@@ -40,6 +40,35 @@ export const DEFAULT_GALLERY_THEME: GalleryTheme = {
   layout: { columns: 4, gap: 8, radius: 0 },
 };
 
+/** Named starting points for the Design tab. Applying one only fills the editor; nothing is saved until "Save design". */
+export type GalleryThemePreset = { id: string; name: string; description: string; theme: GalleryTheme };
+
+export const GALLERY_THEME_PRESETS: GalleryThemePreset[] = [
+  {
+    id: 'default',
+    name: 'Site default',
+    description: 'The neutral look every gallery starts with.',
+    theme: DEFAULT_GALLERY_THEME,
+  },
+  {
+    id: 'ku-leuven-sport',
+    name: 'KU Leuven Sport',
+    // Palette taken from the colours kuleuven.be itself uses: the navy #004070
+    // (their navbar/brand colour), the pale blue #d4e7f3, the deep navy #00194b
+    // and the teal #147fa1; typography mirrors their Source Serif + Source Sans.
+    description: 'KU Leuven navy and sky blue with an institutional serif — for KU Leuven Sport galleries.',
+    theme: {
+      colors: {
+        light: { paper: '#f6fafd', ink: '#00194b', muted: '#4b6178', line: '#d4e7f3', accent: '#004070' },
+        dark: { paper: '#00122f', ink: '#e8f1f8', muted: '#93a9bc', line: '#12304f', accent: '#5bb8d9' },
+      },
+      font: { kind: 'preset', pairId: 'academic-serif' },
+      cover: { overlayOpacity: 0.4, titlePlacement: 'bottom-left', titleSize: 'md', height: 45 },
+      layout: { columns: 4, gap: 8, radius: 0 },
+    },
+  },
+];
+
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
@@ -161,6 +190,12 @@ export function themeToCss(theme: GalleryTheme, fontVars: { heading: string; bod
   --color-paper: ${c.paper}; --color-ink: ${c.ink}; --color-muted: ${c.muted};
   --color-line: ${c.line}; --color-accent: ${c.accent};
   ${extra}`;
+  // The app's dark styling reads the separate `-dark` tokens (`dark:bg-paper-dark`,
+  // `dark:text-ink-dark`, ...), so the dark theme must set those too — otherwise the
+  // "Dark mode" colours in the Design tab never reach the actual chrome.
+  const darkTokens = (c: GalleryThemeColors) => `
+  --color-paper-dark: ${c.paper}; --color-ink-dark: ${c.ink}; --color-muted-dark: ${c.muted};
+  --color-line-dark: ${c.line}; --color-accent-dark: ${c.accent};`;
   const shared = `
   --gallery-columns: ${theme.layout.columns};
   --gallery-gap: ${theme.layout.gap}px;
@@ -174,8 +209,11 @@ export function themeToCss(theme: GalleryTheme, fontVars: { heading: string; bod
   // `@custom-variant dark (&:where(.dark, .dark *))`), not to this element
   // itself — so the override must target [data-gallery-theme] as a
   // descendant of .dark, not an element carrying both selectors at once.
+  // The wrapper paints the page: without its own background/colour, only the elements
+  // that happen to use the paper token would pick up the theme.
   return `[data-gallery-theme] {${block(theme.colors.light, shared)}
+  background-color: var(--color-paper); color: var(--color-ink);
 }
-:where(.dark) [data-gallery-theme] {${block(theme.colors.dark, '')}
+:where(.dark) [data-gallery-theme] {${block(theme.colors.dark, darkTokens(theme.colors.dark))}
 }`;
 }

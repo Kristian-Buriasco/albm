@@ -12,6 +12,7 @@ const BOOL_KEYS = [
   'featured',
   'showLikeCounts',
   'showExif',
+  'showCredits',
   'showLocation',
   'autoExpire',
   'limitSelections',
@@ -120,6 +121,18 @@ export function parseGalleryUpdates(body: Record<string, unknown>): GalleryInser
   if ('folderId' in body) {
     updates.folderId =
       typeof body.folderId === 'string' && body.folderId ? body.folderId : null;
+  }
+  if ('copyrightHolder' in body) {
+    updates.copyrightHolder =
+      typeof body.copyrightHolder === 'string' && body.copyrightHolder.trim()
+        ? body.copyrightHolder.trim().slice(0, 200)
+        : null;
+  }
+  if ('xmpCopyright' in body) {
+    updates.xmpCopyright =
+      typeof body.xmpCopyright === 'string' && body.xmpCopyright.trim()
+        ? body.xmpCopyright.trim().slice(0, 200)
+        : null;
   }
   if ('metaTitle' in body) {
     updates.metaTitle =

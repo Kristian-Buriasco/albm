@@ -20,6 +20,7 @@ import InsightsPanel from './InsightsPanel';
 import KioskToggle from './KioskToggle';
 import ClientPicker from './ClientPicker';
 import SeoFields from './SeoFields';
+import CopyrightFields from './CopyrightFields';
 import GalleryDesignPanel from './GalleryDesignPanel';
 import StorageBar from './StorageBar';
 import SettingsCard from '@/components/SettingsCard';
@@ -842,6 +843,13 @@ export default function GalleryAdmin({
             enabled={gallery.kioskEnabled}
           />
         </SettingsCard>
+
+        <CopyrightFields
+          galleryId={gallery.id}
+          initialHolder={gallery.copyrightHolder}
+          initialShowCredits={gallery.showCredits}
+          initialXmpCopyright={gallery.xmpCopyright}
+        />
 
         {!isClientGallery && (
           <SeoFields

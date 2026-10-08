@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 1.21.0
+  version: 1.22.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -284,6 +284,19 @@ components:
           type:
             - string
             - 'null'
+        copyrightHolder:
+          type:
+            - string
+            - 'null'
+          description: Public copyright holder shown on the gallery ("© year holder"). null = the site owner.
+        showCredits:
+          type: boolean
+          description: Show photographer credits (footer and lightbox).
+        xmpCopyright:
+          type:
+            - string
+            - 'null'
+          description: Copyright written into downloaded JPEGs' XMP. null = the site owner's own name.
         metaTitle:
           type:
             - string
@@ -461,6 +474,18 @@ components:
           type: boolean
         eventPage:
           type: boolean
+        copyrightHolder:
+          type:
+            - string
+            - 'null'
+          maxLength: 200
+        showCredits:
+          type: boolean
+        xmpCopyright:
+          type:
+            - string
+            - 'null'
+          maxLength: 200
         metaTitle:
           type:
             - string

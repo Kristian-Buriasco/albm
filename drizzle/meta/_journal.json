@@ -190,6 +190,13 @@
       "when": 1784718000000,
       "tag": "0026_gallery_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1784804400000,
+      "tag": "0027_copyright_credits",
+      "breakpoints": true
     }
   ]
 }

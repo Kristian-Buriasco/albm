@@ -29,6 +29,8 @@ export type I18nDict = {
   continue: string;
   skip: string;
   somethingWrong: string;
+  creditsPhotos: string;
+  creditsPhoto: string;
   downloadConfirmTitle: string;
   downloadConfirmCancel: string;
   downloadConfirmProceed: string;
@@ -117,6 +119,8 @@ const en: I18nDict = {
   continue: 'Continue',
   skip: 'Skip',
   somethingWrong: 'Something went wrong.',
+  creditsPhotos: 'Photos',
+  creditsPhoto: 'Photo',
   downloadConfirmTitle: 'Download {count} photos (~{size})?',
   downloadConfirmCancel: 'Cancel',
   downloadConfirmProceed: 'Download',
@@ -207,6 +211,8 @@ const nl: I18nDict = {
   continue: 'Doorgaan',
   skip: 'Overslaan',
   somethingWrong: 'Er ging iets mis.',
+  creditsPhotos: "Foto's",
+  creditsPhoto: 'Foto',
   downloadConfirmTitle: '{count} foto\'s downloaden (~{size})?',
   downloadConfirmCancel: 'Annuleren',
   downloadConfirmProceed: 'Downloaden',
@@ -297,6 +303,8 @@ const it: I18nDict = {
   continue: 'Continua',
   skip: 'Salta',
   somethingWrong: 'Qualcosa è andato storto.',
+  creditsPhotos: 'Foto',
+  creditsPhoto: 'Foto',
   downloadConfirmTitle: 'Scaricare {count} foto (~{size})?',
   downloadConfirmCancel: 'Annulla',
   downloadConfirmProceed: 'Scarica',
@@ -387,6 +395,8 @@ const fr: I18nDict = {
   continue: 'Continuer',
   skip: 'Passer',
   somethingWrong: "Une erreur s'est produite.",
+  creditsPhotos: 'Photos',
+  creditsPhoto: 'Photo',
   downloadConfirmTitle: 'Télécharger {count} photos (~{size}) ?',
   downloadConfirmCancel: 'Annuler',
   downloadConfirmProceed: 'Télécharger',
@@ -477,6 +487,8 @@ const de: I18nDict = {
   continue: 'Weiter',
   skip: 'Überspringen',
   somethingWrong: 'Etwas ist schiefgelaufen.',
+  creditsPhotos: 'Fotos',
+  creditsPhoto: 'Foto',
   downloadConfirmTitle: '{count} Fotos herunterladen (~{size})?',
   downloadConfirmCancel: 'Abbrechen',
   downloadConfirmProceed: 'Herunterladen',
@@ -567,6 +579,8 @@ const es: I18nDict = {
   continue: 'Continuar',
   skip: 'Omitir',
   somethingWrong: 'Algo salió mal.',
+  creditsPhotos: 'Fotos',
+  creditsPhoto: 'Foto',
   downloadConfirmTitle: '¿Descargar {count} fotos (~{size})?',
   downloadConfirmCancel: 'Cancelar',
   downloadConfirmProceed: 'Descargar',
@@ -657,6 +671,8 @@ const pt: I18nDict = {
   continue: 'Continuar',
   skip: 'Saltar',
   somethingWrong: 'Algo correu mal.',
+  creditsPhotos: 'Fotos',
+  creditsPhoto: 'Foto',
   downloadConfirmTitle: 'Descarregar {count} fotos (~{size})?',
   downloadConfirmCancel: 'Cancelar',
   downloadConfirmProceed: 'Descarregar',
@@ -747,6 +763,8 @@ const ja: I18nDict = {
   continue: '続ける',
   skip: 'スキップ',
   somethingWrong: '問題が発生しました。',
+  creditsPhotos: '写真',
+  creditsPhoto: '写真',
   downloadConfirmTitle: '{count}枚の写真をダウンロードしますか？（約{size}）',
   downloadConfirmCancel: 'キャンセル',
   downloadConfirmProceed: 'ダウンロード',
@@ -837,6 +855,8 @@ const pl: I18nDict = {
   continue: 'Dalej',
   skip: 'Pomiń',
   somethingWrong: 'Coś poszło nie tak.',
+  creditsPhotos: 'Zdjęcia',
+  creditsPhoto: 'Zdjęcie',
   downloadConfirmTitle: 'Pobrać {count} zdjęć (~{size})?',
   downloadConfirmCancel: 'Anuluj',
   downloadConfirmProceed: 'Pobierz',
@@ -927,6 +947,8 @@ const zh: I18nDict = {
   continue: '继续',
   skip: '跳过',
   somethingWrong: '出现了一些问题。',
+  creditsPhotos: '摄影',
+  creditsPhoto: '摄影',
   downloadConfirmTitle: '下载 {count} 张照片（约 {size}）？',
   downloadConfirmCancel: '取消',
   downloadConfirmProceed: '下载',

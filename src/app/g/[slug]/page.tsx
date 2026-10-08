@@ -7,6 +7,7 @@ import { getVisitorSession, hasGalleryAccess, isAdmin } from '@/lib/session';
 import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
+import { copyrightLine, galleryCredits } from '@/lib/credits';
 import { isGalleryExpired } from '@/lib/downloads';
 import { recordGalleryView } from '@/lib/views';
 import { getDistinctPhotoTagsForClientGallery, getPhotoTagMapForClient } from '@/lib/tags';
@@ -181,6 +182,8 @@ export default async function ClientGalleryPage({
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
       <GalleryViewPing gallery={{ id: gallery.id, type: 'client', title: gallery.title }} />
     <GalleryClient
+      copyrightLine={copyrightLine(gallery)}
+      creditNames={gallery.showCredits ? galleryCredits(photos) : []}
       slug={slug}
       galleryId={gallery.id}
       title={gallery.title}

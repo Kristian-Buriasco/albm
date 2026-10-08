@@ -10,6 +10,8 @@ export interface LightboxPhoto {
   height: number;
   exifLine?: string | null;
   alt?: string;
+  /** Photographer who shot this photo (shown in the caption); null/absent = none. */
+  credit?: string | null;
   placeholder?: string | null;
   /** Derivative version stamp (photo.updatedAt) for immutable image caching. */
   updatedAt?: number;
@@ -33,6 +35,10 @@ interface Props {
   onPhotoOpen?: (photoId: string) => void;
   onDownload?: (photoId: string, size: string) => void;
   slideshowLabel?: { play: string; pause: string };
+  /** e.g. "© 2026 KU Leuven Sport" — shown in the caption under every photo. */
+  copyrightLine?: string;
+  /** Localised "Photo" label for the per-photo credit. */
+  creditLabel?: string;
 }
 
 const SLIDE_MS = 4000;
@@ -55,6 +61,8 @@ export default function Lightbox({
   onPhotoOpen,
   onDownload,
   slideshowLabel,
+  copyrightLine,
+  creditLabel = 'Photo',
 }: Props) {
   const photo = photos[index];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -240,10 +248,17 @@ export default function Lightbox({
         />
       </div>
 
-      {(showFilename || photo.exifLine) && (
+      {(showFilename || photo.exifLine || photo.credit || copyrightLine) && (
         <div className="space-y-1 pb-2 text-center text-[11px] tracking-wide text-neutral-500">
           {showFilename && <div>{photo.filename}</div>}
           {photo.exifLine && <div>{photo.exifLine}</div>}
+          {(photo.credit || copyrightLine) && (
+            <div>
+              {photo.credit ? `${creditLabel}: ${photo.credit}` : ''}
+              {photo.credit && copyrightLine ? ' · ' : ''}
+              {copyrightLine}
+            </div>
+          )}
         </div>
       )}
 

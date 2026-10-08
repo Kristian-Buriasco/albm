@@ -11,6 +11,9 @@ import PortfolioGrid from '@/components/PortfolioGrid';
 import JsonLd from '@/components/JsonLd';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
+import { copyrightLine, galleryCredits } from '@/lib/credits';
+import { dictionaries, parseLang } from '@/lib/i18n';
+import { getSetting } from '@/lib/settings';
 import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
 import { effectiveGallerySeo } from '@/lib/gallery-seo';
 import { sitePersonName } from '@/lib/feed-data';
@@ -87,6 +90,11 @@ export default async function PortfolioGalleryPage({
   if (gallery.published) await recordGalleryView(gallery.id, null);
 
   const photos = getReadyPhotos(gallery.id);
+  const dict = dictionaries[parseLang(getSetting('defaultLanguage'))];
+  const creditNames = gallery.showCredits ? galleryCredits(photos) : [];
+  // The site footer already carries the owner's © line; only add this gallery's own
+  // notice when it names a different holder.
+  const galleryNotice = gallery.copyrightHolder?.trim() ? copyrightLine(gallery) : null;
   const sectionsDb = getDb()
     .select()
     .from(schema.sections)
@@ -188,7 +196,16 @@ export default async function PortfolioGalleryPage({
             showLikeCounts={gallery.showLikeCounts}
             commentsEnabled={gallery.commentsMode !== 'off'}
             themed={!!theme}
+            copyrightLine={copyrightLine(gallery)}
+            creditLabel={dict.creditsPhoto}
           />
+        )}
+        {(galleryNotice || creditNames.length > 0) && (
+          <p className="pt-12 text-center text-xs text-muted dark:text-muted-dark">
+            {galleryNotice}
+            {galleryNotice && creditNames.length > 0 ? ' · ' : ''}
+            {creditNames.length > 0 ? `${dict.creditsPhotos}: ${creditNames.join(', ')}` : ''}
+          </p>
         )}
       </main>
       <SiteFooter />

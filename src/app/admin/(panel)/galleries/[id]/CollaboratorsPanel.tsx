@@ -84,6 +84,15 @@ export default function CollaboratorsPanel({ galleryId }: { galleryId: string })
     await load();
   }
 
+  async function saveName(collaboratorId: string, value: string) {
+    await fetch(`/api/admin/collaborators/${collaboratorId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: value }),
+    });
+    await load();
+  }
+
   async function toggleDisabled(collaboratorId: string, disabled: boolean) {
     await fetch(`/api/admin/collaborators/${collaboratorId}/disable`, {
       method: 'POST',
@@ -116,7 +125,7 @@ export default function CollaboratorsPanel({ galleryId }: { galleryId: string })
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-xs text-neutral-500">Name (optional)</span>
+          <span className="mb-1 block text-xs text-neutral-500">Name (shown in photo credits)</span>
           <input
             type="text"
             value={name}
@@ -139,7 +148,7 @@ export default function CollaboratorsPanel({ galleryId }: { galleryId: string })
 
       {onboardingUrl && (
         <div className="space-y-2 rounded border border-accent/30 bg-accent/5 p-3 text-xs dark:border-accent-dark/30 dark:bg-accent-dark/5">
-          <p className="font-medium">Send this link to the collaborator (expires in 24h):</p>
+          <p className="font-medium">Send this link to the collaborator (expires in 7 days):</p>
           <code className="block max-w-full truncate rounded bg-neutral-100 px-2 py-1 dark:bg-neutral-900">
             {onboardingUrl}
           </code>
@@ -158,9 +167,27 @@ export default function CollaboratorsPanel({ galleryId }: { galleryId: string })
               key={r.grantId}
               className="flex flex-wrap items-center gap-3 border-b border-neutral-100 pb-2 dark:border-neutral-900"
             >
-              <span className="font-medium">
-                {r.name ? `${r.name} · ${r.email}` : r.email}
-              </span>
+              <span className="font-medium">{r.email}</span>
+              <label className="flex items-center gap-1">
+                <span className="sr-only">Display name for photo credits</span>
+                <input
+                  type="text"
+                  defaultValue={r.name ?? ''}
+                  maxLength={200}
+                  placeholder="Display name (credits)"
+                  aria-label={`Display name for ${r.email}`}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== (r.name ?? '')) void saveName(r.collaboratorId, e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
+                  className="w-44 border-b border-neutral-300 bg-transparent py-0.5 dark:border-neutral-700"
+                />
+              </label>
+              {!r.name?.trim() && (
+                <span className="text-amber-600 dark:text-amber-400">no name — not credited</span>
+              )}
               <span className="text-neutral-400">{capsLabel(r.capabilities)}</span>
               <span className="text-neutral-400">Last login: {formatDate(r.lastLoginAt)}</span>
               {r.disabledAt && <span className="text-red-500">Disabled</span>}

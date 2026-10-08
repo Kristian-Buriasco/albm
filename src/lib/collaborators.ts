@@ -33,7 +33,13 @@ function findOrCreateCollaborator(email: string, name: string | null): string {
     .from(schema.collaborators)
     .where(eq(schema.collaborators.email, email))
     .get();
-  if (existing) return existing.id;
+  if (existing) {
+    // Re-inviting with a name fills in a missing display name (never overwrites one).
+    if (name && !existing.name?.trim()) {
+      db.update(schema.collaborators).set({ name }).where(eq(schema.collaborators.id, existing.id)).run();
+    }
+    return existing.id;
+  }
   const id = nanoid();
   db.insert(schema.collaborators)
     .values({ id, email, name: name ?? null })
@@ -230,6 +236,15 @@ export function setDisabled(collaboratorId: string, disabled: boolean): void {
   getDb()
     .update(schema.collaborators)
     .set({ disabledAt: disabled ? Date.now() : null })
+    .where(eq(schema.collaborators.id, collaboratorId))
+    .run();
+}
+
+/** Display name used for photographer credits; null clears it. */
+export function setCollaboratorName(collaboratorId: string, name: string | null): void {
+  getDb()
+    .update(schema.collaborators)
+    .set({ name })
     .where(eq(schema.collaborators.id, collaboratorId))
     .run();
 }
