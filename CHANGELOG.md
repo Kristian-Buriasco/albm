@@ -4,6 +4,19 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.21.0] — 2026-10-08
+
+### Added
+- **Live camera upload over FTP.** `tools/ftp-ingest/` is a dependency-free bridge
+  (FTP server → `/api/publish`) so a camera such as the Canon R5 Mk II can send each
+  frame to a gallery while you shoot. One FTP user + upload token per camera, a
+  crash-safe disk spool with retry/backoff, truncated-transfer detection, RNTO
+  (temp-name) support, PASV/EPSV/active modes. 14 tests (`npm run test:ftp-ingest`).
+
+### Changed
+- Publish API rate limit raised from 300 to 1500 uploads / 15 min per token+IP so
+  burst shooting isn't throttled.
+
 ## [1.20.0] — 2026-10-08
 
 Hardening and multi-photographer readiness ahead of a large shoot.

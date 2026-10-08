@@ -7,7 +7,7 @@ import { verifyUploadToken } from '@/lib/upload-tokens';
 
 export const dynamic = 'force-dynamic';
 
-const PUBLISH_RL_MAX = 300;
+const PUBLISH_RL_MAX = 1500; // ~100/min: a camera sending every frame of a burst
 const PUBLISH_RL_WINDOW = 15 * 60 * 1000;
 
 type Params = { params: Promise<{ galleryId: string }> };

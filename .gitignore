@@ -44,3 +44,7 @@ demo-data/
 /PASSKEY-SPEC.md
 /RELEASE-SPEC.md
 /docs/superpowers/
+
+# ftp-ingest runtime files (hold tokens/passwords and spooled photos)
+tools/ftp-ingest/config.json
+tools/ftp-ingest/spool/

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 1.20.0
+  version: 1.21.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -5994,7 +5994,7 @@ paths:
         Pushes a new photo into an existing gallery. Accepts JPEG or PNG; filenames are sanitized
         and deduplicated by content hash — a repeat upload of the same content returns `200` with
         `duplicate: true` instead of creating a new photo. Optionally assigns the photo to an
-        existing gallery section via the `sectionId` form field. Rate-limited to 300 uploads / 15
+        existing gallery section via the `sectionId` form field. Rate-limited to 1500 uploads / 15
         min per token+IP.
       operationId: uploadPublishPhoto
       security:
@@ -6065,7 +6065,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Rate limit exceeded (300 uploads / 15 min per token+IP).
+          description: Rate limit exceeded (1500 uploads / 15 min per token+IP).
           content:
             application/json:
               schema:

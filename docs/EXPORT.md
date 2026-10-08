@@ -39,7 +39,7 @@ Optional form field:
 | `404` | Gallery not found |
 | `413` | File over 50 MB (100 MB for RAW) |
 | `415` | Not JPEG/PNG/RAW, or unreadable image |
-| `429` | Rate limit (300 uploads / 15 min per token+IP) |
+| `429` | Rate limit (1500 uploads / 15 min per token+IP) |
 
 ## curl example
 
@@ -87,6 +87,12 @@ Authorization: Bearer <token>
 
 > **Security note:** an upload token can now upload, replace, **and delete** photos in
 > any gallery. Treat tokens like passwords; revoke a leaked one in Settings → Sharing.
+
+## FTP from a camera
+
+Cameras that can only send over FTP (e.g. Canon R-series) can publish live through the
+bundled bridge in [`tools/ftp-ingest/`](../tools/ftp-ingest/): it receives the FTP upload
+and calls the endpoint above for every frame, with retries and a crash-safe spool.
 
 ## Lightroom
 

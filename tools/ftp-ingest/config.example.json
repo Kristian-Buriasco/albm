@@ -1,0 +1,21 @@
+{
+  "albmUrl": "http://127.0.0.1:3200",
+  "listen": {
+    "host": "0.0.0.0",
+    "port": 2121,
+    "pasvHost": null,
+    "pasvMin": 50000,
+    "pasvMax": 50100
+  },
+  "spoolDir": "./spool",
+  "concurrency": 2,
+  "extensions": [".jpg", ".jpeg", ".png"],
+  "users": [
+    {
+      "name": "r5-kristian",
+      "password": "CHANGE-ME-long-random",
+      "galleryId": "PASTE-GALLERY-ID",
+      "token": "PASTE-ALBM-UPLOAD-TOKEN"
+    }
+  ]
+}
