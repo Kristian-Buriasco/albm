@@ -5,14 +5,14 @@ import AdminLoginButton from './AdminLoginButton';
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 const navLink =
-  'text-muted transition-colors hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark';
+  '-my-3 py-3 text-muted transition-colors hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark';
 
 export default function SiteHeader() {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-7 sm:px-6">
       <Link
         href="/"
-        className="min-w-0 truncate text-[15px] leading-none font-semibold tracking-tight"
+        className="-my-3 min-w-0 truncate py-3 text-[15px] leading-none font-semibold tracking-tight"
       >
         {SITE_NAME}
       </Link>

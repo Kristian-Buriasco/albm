@@ -16,7 +16,11 @@ const globalForQueue = globalThis as unknown as {
 };
 
 function getQueue(): PQueue {
-  return (globalForQueue.__derivativeQueue ??= new PQueue({ concurrency: 1 }));
+  // Photo processing is CPU-bound. DERIVATIVE_CONCURRENCY (default 1) lets a
+  // multi-core host work through a big shoot's backlog in parallel.
+  const n = Number.parseInt(process.env.DERIVATIVE_CONCURRENCY ?? '', 10);
+  const concurrency = Number.isFinite(n) && n >= 1 ? Math.min(n, 8) : 1;
+  return (globalForQueue.__derivativeQueue ??= new PQueue({ concurrency }));
 }
 
 type WmPosition = 'br' | 'bl' | 'tr' | 'tl' | 'center';

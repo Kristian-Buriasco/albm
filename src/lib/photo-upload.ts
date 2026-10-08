@@ -108,16 +108,6 @@ export async function ingestGalleryPhoto(
     return { ok: true, duplicate: true, existingFilename: duplicate.filename, created: false };
   }
 
-  const taken = new Set(
-    db
-      .select({ filename: schema.photos.filename })
-      .from(schema.photos)
-      .where(eq(schema.photos.galleryId, galleryId))
-      .all()
-      .map((r) => r.filename),
-  );
-  const filename = resolveCollision(sanitized, (c) => taken.has(c));
-
   let resolvedSectionId: string | null = null;
   if (sectionId) {
     const sec = db
@@ -144,6 +134,21 @@ export async function ingestGalleryPhoto(
   } catch {
     return { ok: false, status: 415, error: 'Could not read image' };
   }
+
+  // From here to the DB insert there is NO await: filename resolution, the file
+  // write and the row insert must be one atomic step. Otherwise two uploads of
+  // e.g. IMG_0001.jpg (different cameras, same counter) racing through the
+  // awaits above both pick the same free name and the second silently
+  // overwrites the first original on disk.
+  const taken = new Set(
+    db
+      .select({ filename: schema.photos.filename })
+      .from(schema.photos)
+      .where(eq(schema.photos.galleryId, galleryId))
+      .all()
+      .map((r) => r.filename),
+  );
+  const filename = resolveCollision(sanitized, (c) => taken.has(c));
 
   const dest = originalPath(galleryId, filename);
   fs.mkdirSync(path.dirname(dest), { recursive: true });

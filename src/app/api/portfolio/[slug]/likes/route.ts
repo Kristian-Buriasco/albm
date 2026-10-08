@@ -10,7 +10,7 @@ import { isAdmin } from '@/lib/session';
 const LIKER_COOKIE = 'liker';
 const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-const LIKE_WRITE_MAX = 60;
+const LIKE_WRITE_MAX = 300;
 const LIKE_WRITE_WINDOW_MS = 60 * 1000;
 
 type Params = { params: Promise<{ slug: string }> };

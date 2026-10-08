@@ -4,7 +4,8 @@ import { nanoid } from 'nanoid';
 import { getDb, schema } from '@/db';
 import type { Capability } from '@/lib/grants';
 
-const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+// A week: the owner typically sends invites well before the shoot.
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase().slice(0, 320);

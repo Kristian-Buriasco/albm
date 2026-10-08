@@ -153,7 +153,7 @@ export default async function PortfolioGalleryPage({
       )}
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
       <GalleryViewPing gallery={{ id: gallery.id, type: 'portfolio', title: gallery.title }} />
-      <main className="mx-auto max-w-6xl px-6 pb-24">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-6 pb-24">
         <h1 className="display pt-14 pb-3 text-center text-3xl font-semibold md:text-4xl">
           {gallery.title}
         </h1>

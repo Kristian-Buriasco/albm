@@ -27,7 +27,7 @@ export default function BlurImage({
 
   return (
     <span
-      className="relative block overflow-hidden"
+      className="relative block overflow-hidden bg-line/30 dark:bg-line-dark/30"
       style={{
         ...(width && height ? { aspectRatio: `${width} / ${height}` } : undefined),
         ...style,

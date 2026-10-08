@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { getDb, schema } from '@/db';
 import { lookupGeo, referrerSource } from './geo';
 import { BASE_URL } from './env';
+import { ipFromHeaders } from './rate-limit';
 
 let baseHost = '';
 try {
@@ -20,16 +21,7 @@ const globalForViews = globalThis as unknown as {
 const debounceStore = (globalForViews.__viewDebounce ??= new Map());
 
 async function clientIp(): Promise<string> {
-  const h = await headers();
-  const xff = h.get('x-forwarded-for');
-  if (xff) {
-    const parts = xff
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return parts[parts.length - 1] ?? 'unknown';
-  }
-  return h.get('x-real-ip') ?? 'unknown';
+  return ipFromHeaders(await headers());
 }
 
 export function pruneOldViewEvents(): void {

@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ slug: string }> };
 
-const ISSUE_MAX_IP = 5;
+const ISSUE_MAX_IP = 40;
 const ISSUE_MAX_EMAIL = 5;
 const ISSUE_WINDOW = 15 * 60 * 1000;
 

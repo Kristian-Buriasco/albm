@@ -279,40 +279,51 @@ export default function GalleryAdmin({
       } catch {
         /* ignore */
       }
-      for (const file of accepted) {
-        setUploadState((s) => ({ ...s, currentName: file.name, currentPct: 0 }));
-        let ok = false;
-        // 1 initial attempt + up to 3 retries with exponential backoff.
-        for (let attempt = 0; attempt < 4 && !ok; attempt++) {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
-          }
-          try {
-            const photo = await uploadOne(file);
-            setPhotos((prev) => [...prev, photo]);
-            ok = true;
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : '';
-            if (msg.startsWith('duplicate:')) {
-              setUploadState((s) => ({
-                ...s,
-                duplicates: [
-                  ...s.duplicates,
-                  { file: file.name, existing: msg.slice('duplicate:'.length) },
-                ],
-              }));
+      // A small worker pool: a single sequential stream leaves most of a fast
+      // connection idle (and a 500-photo shoot takes forever). The server is
+      // safe under concurrent uploads (filename reservation is atomic).
+      const UPLOAD_CONCURRENCY = 3;
+      let next = 0;
+      const uploadWorker = async () => {
+        while (next < accepted.length) {
+          const file = accepted[next++];
+          setUploadState((s) => ({ ...s, currentName: file.name, currentPct: 0 }));
+          let ok = false;
+          // 1 initial attempt + up to 3 retries with exponential backoff.
+          for (let attempt = 0; attempt < 4 && !ok; attempt++) {
+            if (attempt > 0) {
+              await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+            }
+            try {
+              const photo = await uploadOne(file);
+              setPhotos((prev) => [...prev, photo]);
               ok = true;
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : '';
+              if (msg.startsWith('duplicate:')) {
+                setUploadState((s) => ({
+                  ...s,
+                  duplicates: [
+                    ...s.duplicates,
+                    { file: file.name, existing: msg.slice('duplicate:'.length) },
+                  ],
+                }));
+                ok = true;
+              }
             }
           }
+          setUploadState((s) => ({
+            ...s,
+            done: s.done + 1,
+            failures: ok
+              ? s.failures
+              : [...s.failures, { file, reason: 'upload failed' }],
+          }));
         }
-        setUploadState((s) => ({
-          ...s,
-          done: s.done + 1,
-          failures: ok
-            ? s.failures
-            : [...s.failures, { file, reason: 'upload failed' }],
-        }));
-      }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(UPLOAD_CONCURRENCY, accepted.length) }, uploadWorker),
+      );
       try {
         localStorage.removeItem(uploadManifestKey);
       } catch {
@@ -509,7 +520,7 @@ export default function GalleryAdmin({
           <h1 className="text-lg font-medium">{gallery.title}</h1>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
             {isClientGallery ? 'Client gallery' : 'Portfolio gallery'} ·{' '}
-            {photos.length} photos · {formatBytes(sizeBytes)}
+            {photos.length} photos{isOwner ? ` · ${formatBytes(sizeBytes)}` : ''}
             {!isClientGallery && totalLikes > 0 && ` · ${totalLikes} likes`}
             {saving && ' · saving…'}
             {savedFlash && !saving && ' · saved'}
@@ -843,6 +854,39 @@ export default function GalleryAdmin({
       </div>
       )}
       <div hidden={active !== 'photos'}>
+      {/* Sticky upload bar: the dropzone sits below the full photo grid, so on a
+          big shoot gallery the main action would otherwise be a long scroll away. */}
+      <div className="sticky top-0 z-20 -mx-1 mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 bg-paper/95 px-1 py-2 backdrop-blur dark:bg-paper-dark/95">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="border border-neutral-900 px-4 py-2.5 text-xs tracking-widest uppercase transition-colors hover:bg-neutral-900 hover:text-white dark:border-neutral-100 dark:hover:bg-neutral-100 dark:hover:text-black"
+        >
+          Upload photos
+        </button>
+        {uploadState.total > 0 && (
+          <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+            <span className="shrink-0 tabular-nums" aria-live="polite">
+              {uploading
+                ? `Uploading ${Math.min(uploadState.done + 1, uploadState.total)} of ${uploadState.total}…`
+                : `Uploaded ${uploadState.total - uploadState.failures.length} of ${uploadState.total}`}
+              {!uploading && uploadState.failures.length > 0 && (
+                <span className="ml-2 text-red-600 dark:text-red-400">
+                  {uploadState.failures.length} failed
+                </span>
+              )}
+            </span>
+            <span className="h-1 min-w-12 flex-1 bg-neutral-200 dark:bg-neutral-800" aria-hidden>
+              <span
+                className="block h-full bg-neutral-900 transition-[width] dark:bg-neutral-100"
+                style={{
+                  width: `${Math.min(100, Math.round((uploadState.done / uploadState.total) * 100))}%`,
+                }}
+              />
+            </span>
+          </div>
+        )}
+      </div>
       <AdminSectionsPanel
         galleryId={gallery.id}
         photos={photos}

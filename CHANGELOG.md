@@ -4,6 +4,53 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.20.0] — 2026-10-08
+
+Hardening and multi-photographer readiness ahead of a large shoot.
+
+### Fixed
+- **Two photographers uploading the same filename at the same moment could
+  overwrite each other's original** (cameras share `IMG_0001.jpg` counters).
+  Filename reservation, file write and DB insert are now one atomic step; the
+  loser gets a unique `-1` name instead of a 500 and a clobbered file.
+- **Collaborators saw broken thumbnails in draft galleries.** `/img` only let
+  the owner view unpublished galleries; collaborators with a grant now can
+  (and only for galleries they hold a grant on).
+- **Expired galleries kept serving images** through `/img`; they now 404 for
+  visitors like downloads already did.
+- **Changing a gallery's password or PIN now signs out existing visitors.**
+  The unlock cookie carries a fingerprint of the current credentials.
+- **Rate limits were sized for abuse, not for events.** Behind one venue IP,
+  only 30 guests per 10 minutes could start a session, 20 comments and 3
+  face searches were allowed in total, and 20 wrong PIN tries locked the whole
+  gallery. Limits are now generous per IP (PIN cap 10/IP, 60 per gallery).
+- `deploy/update.sh`: WAL-safe database backup, and a guard against destructive
+  `APP_DIR` values.
+- 3C analytics e2e test updated for the always-load/consent-denied behaviour
+  introduced in 1.12.1.
+
+### Added
+- **Client IP diagnostics.** Maintenance → "Client IP check" shows the IP the
+  app derives for you. New `TRUSTED_PROXY_HOPS` (spoof-resistant) and
+  `CLIENT_IP_HEADER` settings fix rate limiting behind Cloudflare/nginx.
+- `DERIVATIVE_CONCURRENCY` to process uploaded photos in parallel on
+  multi-core hosts (default 1).
+- Admin uploads run 3 files in parallel, and a sticky **Upload photos** bar with
+  live progress sits at the top of the Photos tab.
+- Collaborator invite links are valid for 7 days (was 24 hours).
+- Lightbox: visible previous/next buttons on desktop, opaque backdrop, and it
+  now sits above the cookie banner.
+- Accessibility: labelled like buttons, real `<h1>` on About/Contact, skip link,
+  per-field contact-form errors with focus on the first problem.
+- Admin login shows the password form immediately on a fresh install, and the
+  passkey screen explains how collaborators sign in.
+
+### Changed
+- Cookie banner is compact on phones; larger tap targets on the site header.
+- Dependencies: Next.js 15.5.27 (clears the critical advisories) plus patch
+  bumps for drizzle-orm, nanoid, p-queue and @simplewebauthn/server.
+- `SECURITY.md` / `docs/EXPORT.md` brought up to date with shipped features.
+
 ## [1.19.0] — 2026-07-29
 
 ### Added

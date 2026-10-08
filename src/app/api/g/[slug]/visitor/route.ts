@@ -9,7 +9,8 @@ import { getVisitorSession } from '@/lib/session';
 
 type Params = { params: Promise<{ slug: string }> };
 
-const VISITOR_WRITE_MAX = 30;
+// Sized for an event: a whole venue can share one public IP.
+const VISITOR_WRITE_MAX = 400;
 const VISITOR_WRITE_WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: Request, { params }: Params) {

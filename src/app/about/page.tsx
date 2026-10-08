@@ -17,10 +17,10 @@ export default function AboutPage() {
   return (
     <div>
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-6 py-20 md:py-28">
-        <p className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-6 py-20 md:py-28">
+        <h1 className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
           About
-        </p>
+        </h1>
         <div className="display space-y-5 text-lg leading-relaxed text-ink/90 dark:text-ink-dark/90">
           {content.split(/\n\s*\n/).map((para, i) => (
             <p key={i} className="whitespace-pre-wrap">

@@ -92,6 +92,8 @@ export default function PortfolioGrid({
           <button
             type="button"
             onClick={() => toggleLike(p.id)}
+            aria-label={liked.has(p.id) ? 'Unlike photo' : 'Like photo'}
+            aria-pressed={liked.has(p.id)}
             className={`absolute right-2 bottom-2 flex items-center gap-1 rounded-full p-2 text-xs text-white drop-shadow transition-opacity sm:p-1.5 ${
               liked.has(p.id) ? 'opacity-100' : 'opacity-70 sm:opacity-0 sm:group-hover:opacity-70'
             }`}

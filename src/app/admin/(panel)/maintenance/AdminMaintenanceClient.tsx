@@ -2,6 +2,13 @@
 
 import { useState } from 'react';
 
+type ClientIpCheck = {
+  detectedIp: string;
+  looksPrivateOrUnknown: boolean;
+  headers: Record<string, string | null>;
+  config: { CLIENT_IP_HEADER: string | null; TRUSTED_PROXY_HOPS: string | null };
+};
+
 type DerivativeKind = 'thumb' | 'md' | 'web' | 'workingJpeg' | 'print';
 
 type MissingPhoto = {
@@ -74,6 +81,19 @@ export default function AdminMaintenanceClient({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [ipCheck, setIpCheck] = useState<ClientIpCheck | null>(null);
+  const [ipError, setIpError] = useState<string | null>(null);
+
+  async function checkClientIp() {
+    setIpError(null);
+    try {
+      const res = await fetch('/api/admin/client-ip');
+      if (!res.ok) throw new Error();
+      setIpCheck(await res.json());
+    } catch {
+      setIpError('Check failed.');
+    }
+  }
 
   const volumePct = (initialVolume.usedBytes / Math.max(1, initialVolume.totalBytes)) * 100;
 
@@ -142,6 +162,46 @@ export default function AdminMaintenanceClient({
         <h1 className="mb-6 text-sm font-medium tracking-widest uppercase">
           Maintenance
         </h1>
+
+        <section className="mb-10">
+          <h2 className="mb-3 text-xs font-medium tracking-widest uppercase text-neutral-500">
+            Client IP check
+          </h2>
+          <div className="border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+            <p className="mb-3 text-xs text-neutral-500">
+              Rate limits (logins, PIN tries, comments, uploads) are counted per visitor IP. If the
+              address below isn&apos;t your own public IP, every visitor shares one bucket — set{' '}
+              <code>TRUSTED_PROXY_HOPS</code> or <code>CLIENT_IP_HEADER</code> on the server. Open this
+              page from your phone on mobile data to compare.
+            </p>
+            <button
+              type="button"
+              onClick={checkClientIp}
+              className="border border-neutral-300 px-3 py-1.5 text-xs tracking-wide uppercase dark:border-neutral-700"
+            >
+              Check my IP
+            </button>
+            {ipError && <p className="mt-3 text-xs text-red-600">{ipError}</p>}
+            {ipCheck && (
+              <div className="mt-3 space-y-1 text-xs">
+                <p>
+                  Detected: <strong>{ipCheck.detectedIp}</strong>
+                  {ipCheck.looksPrivateOrUnknown && (
+                    <span className="ml-2 text-red-600">
+                      looks like a proxy/private address — visitors are probably sharing one rate-limit bucket
+                    </span>
+                  )}
+                </p>
+                <p className="text-neutral-500">
+                  X-Forwarded-For: {ipCheck.headers['x-forwarded-for'] ?? '—'} · CF-Connecting-IP:{' '}
+                  {ipCheck.headers['cf-connecting-ip'] ?? '—'} · hops:{' '}
+                  {ipCheck.config.TRUSTED_PROXY_HOPS ?? '0'} · header:{' '}
+                  {ipCheck.config.CLIENT_IP_HEADER ?? '—'}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
 
         <section className="mb-10">
           <h2 className="mb-3 text-xs font-medium tracking-widest uppercase text-neutral-500">

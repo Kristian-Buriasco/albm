@@ -65,16 +65,37 @@ export function writeAllowed(
   return true;
 }
 
-export function ipFromRequest(req: Request): string {
-  const xff = req.headers.get('x-forwarded-for');
+/**
+ * Best-effort client IP from proxy headers. If CLIENT_IP_HEADER is set (e.g.
+ * `cf-connecting-ip` behind Cloudflare), that header wins — only set it when
+ * the edge proxy always overwrites it. Otherwise the LAST X-Forwarded-For hop
+ * is used, which is the address the nearest proxy saw (the client only when
+ * exactly one proxy fronts the app); TRUSTED_PROXY_HOPS skips further proxies.
+ */
+export function ipFromHeaders(h: Pick<Headers, 'get'>): string {
+  const preferred = process.env.CLIENT_IP_HEADER?.trim().toLowerCase();
+  if (preferred) {
+    const v = h.get(preferred)?.split(',')[0]?.trim();
+    if (v) return v;
+  }
+  const xff = h.get('x-forwarded-for');
   if (xff) {
     const parts = xff
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    return parts[parts.length - 1] ?? 'unknown';
+    // TRUSTED_PROXY_HOPS = proxies in front of the app BEYOND the one that
+    // appended the last entry (e.g. Cloudflare -> nginx: the last entry is
+    // Cloudflare's edge, so set 1 to take the client address before it).
+    // Entries to the left of those hops are client-supplied and ignored.
+    const hops = Math.max(0, Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? '0', 10) || 0);
+    return parts[Math.max(0, parts.length - 1 - hops)] ?? 'unknown';
   }
-  return req.headers.get('x-real-ip') ?? 'unknown';
+  return h.get('x-real-ip') ?? 'unknown';
+}
+
+export function ipFromRequest(req: Request): string {
+  return ipFromHeaders(req.headers);
 }
 
 /** Standard auth attempt limits: 10 / 15 min per IP. */
@@ -95,13 +116,15 @@ export const PASSKEY_CHALLENGE_RL: RateLimitOpts = {
 
 /**
  * Gallery PIN gate: stricter, scoped per slug. The global cap bounds a
- * distributed (IP-rotating) attacker: 20/15min ≈ 1,920/day, so even the
- * full 1e6 six-digit keyspace stays ~a year out of reach.
+ * distributed (IP-rotating) attacker: 60/15min ≈ 5,760/day, so the full 1e6
+ * six-digit keyspace still takes ~half a year to exhaust (expected hit ~3 mo).
+ * The cap is deliberately not tiny: at an event many guests type the shared
+ * PIN at once, and a handful of typos must not lock the whole gallery out.
  */
 export function pinRateLimitOpts(slug: string): RateLimitOpts {
   return {
-    maxPerIp: 5,
-    maxGlobal: 20,
+    maxPerIp: 10,
+    maxGlobal: 60,
     windowMs: WINDOW_MS,
     logLabel: `gallery-pin:${slug}`,
   };

@@ -218,7 +218,7 @@ export async function PUT(req: Request, { params }: Params) {
   if (ctx instanceof Response) return ctx;
 
   const ip = ipFromRequest(req);
-  if (!writeAllowed('selection-list-create', ip, 20, 15 * 60 * 1000)) {
+  if (!writeAllowed('selection-list-create', ip, 150, 15 * 60 * 1000)) {
     return errorJson('Too many requests', 429);
   }
 

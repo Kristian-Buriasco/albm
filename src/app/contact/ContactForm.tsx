@@ -15,20 +15,40 @@ const EVENT_TYPES = [
 
 const fieldClass =
   'w-full border border-line bg-transparent px-3 py-2.5 text-base text-ink outline-none transition-colors focus:border-accent dark:border-line-dark dark:text-ink-dark dark:focus:border-accent-dark';
+const errClass = 'border-red-600 dark:border-red-400';
+const errTextClass = 'mt-1.5 text-[12px] text-red-700 dark:text-red-300';
 const labelClass =
   'mb-1.5 block text-[11px] tracking-[0.12em] text-muted uppercase dark:text-muted-dark';
 
 export default function ContactForm() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; email?: string; message?: string }>({});
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (status === 'sending') return;
-    setStatus('sending');
-    setError('');
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
+
+    // Validate everything up front so ALL problems show at once and the first
+    // bad field gets focus (the server re-checks the same rules).
+    const errs: { name?: string; email?: string; message?: string } = {};
+    const name = String(data.name ?? '').trim();
+    const email = String(data.email ?? '').trim();
+    const message = String(data.message ?? '').trim();
+    if (!name) errs.name = 'Please enter your name.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Please enter a valid email.';
+    if (message.length < 2) errs.message = 'Please write a short message.';
+    setFieldErrors(errs);
+    const firstBad = (['name', 'email', 'message'] as const).find((k) => errs[k]);
+    if (firstBad) {
+      (form.elements.namedItem(firstBad) as HTMLElement | null)?.focus();
+      return;
+    }
+
+    setStatus('sending');
+    setError('');
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -85,13 +105,15 @@ export default function ContactForm() {
           <label className={labelClass} htmlFor="c-name">
             Name
           </label>
-          <input id="c-name" name="name" type="text" required maxLength={120} className={fieldClass} />
+          <input id="c-name" name="name" type="text" required maxLength={120} className={`${fieldClass} ${fieldErrors.name ? errClass : ''}`} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'c-name-err' : undefined} onChange={() => fieldErrors.name && setFieldErrors((f) => ({ ...f, name: undefined }))} />
+          {fieldErrors.name && <p id="c-name-err" role="alert" className={errTextClass}>{fieldErrors.name}</p>}
         </div>
         <div>
           <label className={labelClass} htmlFor="c-email">
             Email
           </label>
-          <input id="c-email" name="email" type="email" required maxLength={200} className={fieldClass} />
+          <input id="c-email" name="email" type="email" required maxLength={200} className={`${fieldClass} ${fieldErrors.email ? errClass : ''}`} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'c-email-err' : undefined} onChange={() => fieldErrors.email && setFieldErrors((f) => ({ ...f, email: undefined }))} />
+          {fieldErrors.email && <p id="c-email-err" role="alert" className={errTextClass}>{fieldErrors.email}</p>}
         </div>
       </div>
 
@@ -126,13 +148,17 @@ export default function ContactForm() {
           required
           rows={5}
           maxLength={4000}
-          className={`${fieldClass} resize-y`}
+          className={`${fieldClass} resize-y ${fieldErrors.message ? errClass : ''}`}
+          aria-invalid={!!fieldErrors.message}
+          aria-describedby={fieldErrors.message ? 'c-message-err' : undefined}
+          onChange={() => fieldErrors.message && setFieldErrors((f) => ({ ...f, message: undefined }))}
           placeholder="Tell me a little about what you have in mind."
         />
+        {fieldErrors.message && <p id="c-message-err" role="alert" className={errTextClass}>{fieldErrors.message}</p>}
       </div>
 
       {status === 'error' && (
-        <p className="text-[13px] text-red-600 dark:text-red-400">{error}</p>
+        <p role="alert" className="text-[13px] text-red-700 dark:text-red-300">{error}</p>
       )}
 
       <button

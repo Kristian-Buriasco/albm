@@ -6,7 +6,7 @@ import { loadTestEnv } from './helpers/env';
 
 test.describe.configure({ mode: 'serial' });
 
-test('idle timeout revokes a stale session', async ({ playwright }) => {
+test('idle timeout revokes a stale session', async () => {
   const env = loadTestEnv();
   const ctx = await playwrightRequest.newContext();
   await adminLogin(ctx, env.baseUrl, env.password);
@@ -26,7 +26,7 @@ test('idle timeout revokes a stale session', async ({ playwright }) => {
   await ctx.dispose();
 });
 
-test('login is audit-logged and audit supports actor filter + CSV export', async ({ playwright }) => {
+test('login is audit-logged and audit supports actor filter + CSV export', async () => {
   const env = loadTestEnv();
   const ctx = await playwrightRequest.newContext();
   await adminLogin(ctx, env.baseUrl, env.password);
@@ -48,7 +48,7 @@ test('login is audit-logged and audit supports actor filter + CSV export', async
   await ctx.dispose();
 });
 
-test('sessions list exposes device + location fields', async ({ playwright }) => {
+test('sessions list exposes device + location fields', async () => {
   const env = loadTestEnv();
   const ctx = await playwrightRequest.newContext();
   await adminLogin(ctx, env.baseUrl, env.password);

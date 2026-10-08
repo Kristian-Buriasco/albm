@@ -14,8 +14,8 @@ export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ slug: string }> };
 
-/** Hard rate-limit: 3 selfie searches / 15 min per IP. */
-const SELFIE_MAX = 3;
+/** Rate-limit: 30 selfie searches / 15 min per IP+gallery (a venue shares one IP). */
+const SELFIE_MAX = 30;
 const SELFIE_WINDOW_MS = 15 * 60 * 1000;
 
 /**

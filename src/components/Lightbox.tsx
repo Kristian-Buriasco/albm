@@ -110,7 +110,7 @@ export default function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#050505]/97 text-neutral-200"
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#050505] text-neutral-200"
       role="dialog"
       aria-modal="true"
       onClick={() => setPlaying(false)}
@@ -198,6 +198,36 @@ export default function Lightbox({
       </div>
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-2">
+        {photos.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                prev();
+              }}
+              aria-label="Previous photo"
+              className="absolute top-1/2 left-3 z-10 hidden -translate-y-1/2 rounded-full bg-black/40 p-3 text-neutral-300 transition-colors hover:bg-black/70 hover:text-white focus-visible:text-white sm:block"
+            >
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                next();
+              }}
+              aria-label="Next photo"
+              className="absolute top-1/2 right-3 z-10 hidden -translate-y-1/2 rounded-full bg-black/40 p-3 text-neutral-300 transition-colors hover:bg-black/70 hover:text-white focus-visible:text-white sm:block"
+            >
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={photo.id}

@@ -49,7 +49,7 @@ export default function Tabs({
       <div
         role="tablist"
         aria-orientation="horizontal"
-        className="flex gap-6 overflow-x-auto border-b border-neutral-200 dark:border-neutral-800"
+        className="flex gap-6 overflow-x-auto border-b border-neutral-200 [scrollbar-width:none] dark:border-neutral-800 [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((t, i) => {
           const isActive = t.id === active;

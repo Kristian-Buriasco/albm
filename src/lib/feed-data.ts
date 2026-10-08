@@ -1,5 +1,3 @@
-import { and, asc, eq } from 'drizzle-orm';
-import { getDb, schema } from '@/db';
 import { BASE_URL } from '@/lib/env';
 import { getSetting } from '@/lib/settings';
 import { coverPhotoId, getPublishedPortfolioGalleries } from '@/lib/public-data';

@@ -50,7 +50,7 @@ export default function ShareTools({ url }: { url: string }) {
           title="Click to download QR as PNG"
         >
           <div
-            className="rounded border border-neutral-200 bg-white p-2 dark:border-neutral-700"
+            className="rounded border border-neutral-200 bg-white p-2 dark:border-neutral-700 [&>svg]:h-auto [&>svg]:w-32 sm:[&>svg]:w-44"
             dangerouslySetInnerHTML={{ __html: qrSvg }}
           />
           <span className="mt-1 block text-[10px] text-neutral-500 group-hover:underline">

@@ -54,7 +54,7 @@ async function resolveVisitor(gallery: Gallery): Promise<Visitor | Response> {
 export async function POST(req: Request, { params }: Params) {
   const { slug } = await params;
   const ip = ipFromRequest(req);
-  if (!writeAllowed(`find-save:${slug}`, ip, 20, 15 * 60 * 1000)) {
+  if (!writeAllowed(`find-save:${slug}`, ip, 150, 15 * 60 * 1000)) {
     return errorJson('Too many requests', 429);
   }
 

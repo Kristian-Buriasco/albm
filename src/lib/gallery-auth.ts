@@ -3,10 +3,7 @@ import { galleryRequiresAccess, galleryUsesPin } from './pin';
 import { hasGalleryAccess, isAdmin } from './session';
 import { isGalleryExpired } from './downloads';
 
-export async function canViewGallery(
-  gallery: Gallery,
-  opts?: { preview?: boolean },
-): Promise<boolean> {
+export async function canViewGallery(gallery: Gallery): Promise<boolean> {
   if (await isAdmin()) return true;
   if (!gallery.published) return false;
   if (isGalleryExpired(gallery)) return false;

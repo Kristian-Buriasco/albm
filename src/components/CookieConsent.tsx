@@ -55,14 +55,14 @@ export default function CookieConsent({ lang }: { lang: Lang }) {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper/95 p-4 shadow-lg backdrop-blur dark:border-line-dark dark:bg-paper-dark/95"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 p-3 shadow-lg sm:p-4 backdrop-blur dark:border-line-dark dark:bg-paper-dark/95"
       role="dialog"
       aria-label={t(lang, 'cookieTitle')}
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="max-w-2xl">
           <p className="text-sm font-medium">{t(lang, 'cookieTitle')}</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
+          <p className="mt-0.5 text-[12px] leading-snug text-muted sm:mt-1 sm:text-[13px] sm:leading-relaxed dark:text-muted-dark">
             {t(lang, 'cookieBody')}
           </p>
           {choice && (
@@ -73,18 +73,18 @@ export default function CookieConsent({ lang }: { lang: Lang }) {
             </p>
           )}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 gap-2 max-sm:[&>button]:flex-1">
           <button
             type="button"
             onClick={() => save(CONSENT_NECESSARY)}
-            className="border border-line px-4 py-2 text-xs tracking-widest uppercase transition-colors hover:border-ink dark:border-line-dark dark:hover:border-ink-dark"
+            className="border border-line px-4 py-2.5 text-xs tracking-widest uppercase transition-colors hover:border-ink dark:border-line-dark dark:hover:border-ink-dark"
           >
             {t(lang, 'cookieDecline')}
           </button>
           <button
             type="button"
             onClick={() => save(CONSENT_ANALYTICS)}
-            className="border border-ink bg-ink px-4 py-2 text-xs tracking-widest text-paper uppercase transition-colors dark:border-ink-dark dark:bg-ink-dark dark:text-paper-dark"
+            className="border border-ink bg-ink px-4 py-2.5 text-xs tracking-widest text-paper uppercase transition-colors dark:border-ink-dark dark:bg-ink-dark dark:text-paper-dark"
           >
             {t(lang, 'cookieAccept')}
           </button>

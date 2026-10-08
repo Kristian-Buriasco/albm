@@ -13,7 +13,8 @@ import { canViewGallery, galleryCommentsEnabled } from '@/lib/gallery-auth';
 import { ipFromRequest, writeAllowed } from '@/lib/rate-limit';
 import { getVisitorSession } from '@/lib/session';
 
-const COMMENT_WRITE_MAX = 20;
+// Per IP; generous because event guests commonly share one IP.
+const COMMENT_WRITE_MAX = 120;
 const COMMENT_WRITE_WINDOW_MS = 10 * 60 * 1000;
 const COMMENTER_NAME_COOKIE = 'commenter_name';
 

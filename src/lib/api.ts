@@ -42,6 +42,21 @@ export async function requireGalleryCapability(
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
+/**
+ * True when the caller is the owner, or a collaborator holding any active
+ * capability on this gallery. Used for read-only media access so a collaborator
+ * can see the thumbnails of photos they are uploading to a draft gallery.
+ */
+export async function canAdminViewGallery(galleryId: string): Promise<boolean> {
+  const principal = await getPrincipal();
+  if (!principal) return false;
+  if (principal.role === 'owner') return true;
+  return (
+    collaboratorHasCapability(galleryId, principal.collaboratorId, 'upload') ||
+    collaboratorHasCapability(galleryId, principal.collaboratorId, 'organize')
+  );
+}
+
 export function json(data: unknown, status = 200): NextResponse {
   return NextResponse.json(data, { status });
 }

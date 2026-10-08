@@ -13,7 +13,7 @@ import {
 } from '@/lib/rate-limit';
 import { galleryUsesPin, verifyPin } from '@/lib/pin';
 import { isGalleryExpired } from '@/lib/downloads';
-import { getGalleryAccessSession } from '@/lib/session';
+import { galleryAccessToken, getGalleryAccessSession } from '@/lib/session';
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -71,8 +71,12 @@ export async function POST(req: Request, { params }: Params) {
 
   clearFailures(scope, ip);
   const session = await getGalleryAccessSession();
-  const unlocked = new Set(session.unlocked ?? []);
-  unlocked.add(gallery.id);
+  // Drop stale entries for this gallery (older credentials) before adding the
+  // current fingerprint; legacy bare-ID entries are discarded here too.
+  const unlocked = new Set(
+    (session.unlocked ?? []).filter((t) => !t.startsWith(`${gallery.id}.`) && t !== gallery.id),
+  );
+  unlocked.add(galleryAccessToken(gallery));
   session.unlocked = [...unlocked];
   await session.save();
   return json({ ok: true });

@@ -73,7 +73,7 @@ test('3B: revoking an admin session returns 401 on next request', async ({ playw
   await b.dispose();
 });
 
-test('3C: analytics HTML gated on consent cookie', async ({ playwright, page }) => {
+test('3C: analytics tag always loads; consent mode flips on the consent cookie', async ({ playwright, page }) => {
   const admin = await playwright.request.newContext();
   await adminLogin(admin, env.baseUrl, env.password);
   const marker = `window.__E2E_ANALYTICS_${Date.now()}__=1`;
@@ -86,8 +86,12 @@ test('3C: analytics HTML gated on consent cookie', async ({ playwright, page }) 
 
   await page.context().clearCookies();
   await page.goto('/');
+  // Since v1.12.1 the tag always loads (Google's verifier must see it) but
+  // Consent Mode starts with analytics_storage denied until the visitor opts in.
   const htmlNoConsent = await page.content();
-  expect(htmlNoConsent).not.toContain(marker);
+  expect(htmlNoConsent).toContain(marker);
+  expect(htmlNoConsent).toContain("analytics_storage:'denied'");
+  expect(htmlNoConsent).not.toContain("analytics_storage:'granted'");
   await expect(page.getByRole('dialog', { name: /Cookie/i })).toBeVisible();
 
   await page.context().addCookies([
@@ -100,4 +104,5 @@ test('3C: analytics HTML gated on consent cookie', async ({ playwright, page }) 
   await page.goto('/');
   const htmlWithConsent = await page.content();
   expect(htmlWithConsent).toContain(marker);
+  expect(htmlWithConsent).toContain("analytics_storage:'granted'");
 });

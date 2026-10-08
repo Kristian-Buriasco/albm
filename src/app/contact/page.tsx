@@ -21,10 +21,10 @@ export default function ContactPage() {
   return (
     <div>
       <SiteHeader />
-      <main className="mx-auto max-w-4xl px-6 py-20 md:py-28">
-        <p className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-4xl px-6 py-20 md:py-28">
+        <h1 className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
           Contact
-        </p>
+        </h1>
         <p className="display max-w-[46ch] text-2xl leading-snug font-medium">{intro}</p>
 
         <div className="mt-14 grid gap-14 md:grid-cols-[1.4fr_1fr] md:gap-16">

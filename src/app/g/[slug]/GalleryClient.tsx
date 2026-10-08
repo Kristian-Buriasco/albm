@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import SectionedGalleryGrid, {
   HeartIcon,
   Lightbox,
-  PhotoComments,
   type LightboxPhoto,
   type SectionGroup,
 } from '@/components/SectionedGalleryGrid';
@@ -123,7 +122,7 @@ export default function GalleryClient({
   const [onlyMine, setOnlyMine] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [commentCounts] = useState<Record<string, number>>({});
   const [downloadConfirm, setDownloadConfirm] = useState<'all' | 'favorites' | null>(null);
   const [downloadInfo, setDownloadInfo] = useState<{ count: number; sizeLabel: string } | null>(null);
   const [zipSize, setZipSize] = useState<'web' | 'print' | 'original'>('original');
@@ -573,7 +572,7 @@ export default function GalleryClient({
       </header>
 
       {!gateContent && (
-        <main className="mx-auto max-w-7xl px-2 py-4 sm:px-4">
+        <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-2 py-4 sm:px-4">
           <SectionedGalleryGrid
             sections={filteredSections}
             commentsEnabled={commentsEnabled}

@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { hasGalleryAccess, isAdmin } from '@/lib/session';
+import { hasGalleryAccess } from '@/lib/session';
+import { canAdminViewGallery } from '@/lib/api';
 import { galleryRequiresAccess } from '@/lib/pin';
 import { thumbPath, mdPath, webPath } from '@/lib/paths';
 import { streamFileResponse } from '@/lib/stream';
+import { isGalleryExpired } from '@/lib/downloads';
 import { derivativeSource, renderWebpVariant, watermarkOptsFor } from '@/lib/queue';
 
 type Params = { params: Promise<{ photoId: string; variant: string }> };
@@ -34,10 +36,11 @@ export async function GET(req: Request, { params }: Params) {
     .get();
   if (!gallery) return new Response('Not found', { status: 404 });
 
-  if (!(await isAdmin())) {
+  if (!(await canAdminViewGallery(gallery.id))) {
     // Unpublished must be indistinguishable from nonexistent (no existence
     // oracle); 403 is reserved for published-but-locked galleries.
     if (!gallery.published) return new Response('Not found', { status: 404 });
+    if (isGalleryExpired(gallery)) return new Response('Not found', { status: 404 });
     if (
       gallery.type === 'client' &&
       galleryRequiresAccess(gallery) &&

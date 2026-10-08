@@ -26,7 +26,12 @@ export default function AdminLoginPage() {
   useEffect(() => {
     fetch('/api/admin/login/config')
       .then((r) => r.json())
-      .then((data: LoginConfig) => setConfig(data))
+      .then((data: LoginConfig) => {
+        setConfig(data);
+        // Fresh install (no passkeys yet): the password form is the only way in,
+        // so show it straight away instead of hiding it behind a small link.
+        if (!data.hasPasskeys && data.passwordLoginEnabled) setView('password');
+      })
       .catch(() => setConfig({ passwordLoginEnabled: true, hasPasskeys: false }));
   }, []);
 
@@ -156,6 +161,13 @@ export default function AdminLoginPage() {
             ) : (
               <p className="text-center text-xs text-neutral-500">
                 No passkeys registered yet.
+              </p>
+            )}
+
+            {showPasskey && (
+              <p className="text-center text-[11px] leading-relaxed text-neutral-500">
+                Invited as a collaborator? Sign in with the passkey you registered. Lost your
+                device? Ask the photographer for a new invite link.
               </p>
             )}
 

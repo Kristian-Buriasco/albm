@@ -1,5 +1,8 @@
 import { getIronSession, type IronSession, type SessionOptions } from 'iron-session';
 import { cookies } from 'next/headers';
+import crypto from 'node:crypto';
+import { eq } from 'drizzle-orm';
+import { getDb, schema } from '@/db';
 import { sessionSecret } from './env';
 import {
   createAdminSession,
@@ -115,9 +118,40 @@ export async function getGalleryAccessSession(): Promise<
   );
 }
 
+/**
+ * Fingerprint of a gallery's current credentials. Stored in the unlock cookie
+ * so changing/removing the password or PIN invalidates existing unlocks.
+ */
+export function galleryAccessToken(gallery: {
+  id: string;
+  passwordHash: string | null;
+  pinHash: string | null;
+  pinEnabled: boolean;
+}): string {
+  const fp = crypto
+    .createHash('sha256')
+    .update(`${gallery.passwordHash ?? ''}|${gallery.pinEnabled ? (gallery.pinHash ?? '') : ''}`)
+    .digest('hex')
+    .slice(0, 16);
+  return `${gallery.id}.${fp}`;
+}
+
 export async function hasGalleryAccess(galleryId: string): Promise<boolean> {
   const session = await getGalleryAccessSession();
-  return (session.unlocked ?? []).includes(galleryId);
+  const unlocked = session.unlocked ?? [];
+  if (unlocked.length === 0) return false;
+  const gallery = getDb()
+    .select({
+      id: schema.galleries.id,
+      passwordHash: schema.galleries.passwordHash,
+      pinHash: schema.galleries.pinHash,
+      pinEnabled: schema.galleries.pinEnabled,
+    })
+    .from(schema.galleries)
+    .where(eq(schema.galleries.id, galleryId))
+    .get();
+  if (!gallery) return false;
+  return unlocked.includes(galleryAccessToken(gallery));
 }
 
 export async function getVisitorSession(
