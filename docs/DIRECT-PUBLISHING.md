@@ -81,7 +81,7 @@ Every frame is saved on the laptop first and then uploaded with automatic retrie
 - The camera and a laptop **on the same network**. The most reliable setup is your **phone's hotspot or a travel router** that you control. Venue Wi-Fi often blocks devices from seeing each other ("client isolation") and will not work.
 - The laptop needs **Node.js 20 or newer**, and a copy of the Albm repository (or just the `tools/ftp-ingest` folder).
 - Internet for the laptop (the hotspot's mobile data is enough — a JPEG is a few MB).
-- **Do not** expose FTP to the internet. Keep it on the local network; FTP is not encrypted.
+- **Do not** expose *plain* FTP to the internet. Keep it on the local network, or enable FTPS (see `tools/ftp-ingest/README.md`) before putting the bridge on a public server.
 
 ### B2. Set up the bridge (do this at home, before the shoot)
 
@@ -136,7 +136,7 @@ Menu names differ slightly between firmware versions — look for the **network 
 | Login / user name | the `name` from `config.json` (e.g. `r5-kristian`) |
 | Password | the `password` from `config.json` |
 | Destination folder | leave empty or `/` (folders are ignored) |
-| Secure connection (FTPS / SFTP) | **Off** — the bridge speaks plain FTP, so keep it on your own network |
+| Secure connection (FTPS / SFTP) | **Off** on your own hotspot (plain FTP). **FTPES / explicit FTPS** only if you enabled `tls` in the bridge and imported its certificate into the camera. SFTP is not supported |
 | **Auto transfer after each shot** | **On** |
 | Image type to send | **JPEG only**, if the camera offers a choice (RAW files are ignored by the bridge anyway) |
 
@@ -214,5 +214,5 @@ The server processes each photo into thumbnails and web sizes, and **the Mac min
 ## Security notes
 
 - Upload tokens and the FTP password are secrets. Keep `config.json` private (`chmod 600`), never commit it, and revoke tokens after the event.
-- FTP is unencrypted: use it only on a network you control (your hotspot or router), never across the public internet, and never port-forward it.
+- Plain FTP is unencrypted: use it only on a network you control (your hotspot or router). Across the public internet use FTPS only, and never port-forward plain FTP.
 - Anyone with a token can add, replace and delete photos in any gallery — give tokens only to people you trust, one per person or device.

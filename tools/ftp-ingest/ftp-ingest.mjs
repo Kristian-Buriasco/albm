@@ -11,10 +11,13 @@
  *
  * Usage:  node ftp-ingest.mjs [config.json]      (default ./config.json)
  *
- * FTP is plaintext. Run it on a trusted LAN / hotspot, and give every camera
+ * Plain FTP is unencrypted: on a trusted LAN / hotspot only. Over the internet
+ * enable explicit FTPS (config "tls": cert + key; see README). Give every camera
  * its own FTP user (each user maps to one gallery + one Albm upload token).
  */
 import net from 'node:net';
+import tls from 'node:tls';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -31,6 +34,7 @@ const DEFAULTS = {
   keepUploaded: false,
   maxAuthFailuresPerIp: 10,
   retryBaseMs: 1000,
+  tls: null, // { cert: 'tls/cert.pem', key: 'tls/key.pem', require: true }
 };
 
 // Cameras/clients often upload to a temporary name, then RNTO the final one.
@@ -85,6 +89,23 @@ export function createIngest(userConfig, hooks = {}) {
   cfg.extensions = cfg.extensions.map((e) => e.toLowerCase());
   const spoolRoot = path.resolve(cfg.spoolDir);
   const users = new Map(cfg.users.map((u) => [u.name, u]));
+  // Explicit FTPS (RFC 4228/4217): the client sends AUTH TLS, then PROT P for data.
+  // One shared context so data connections can resume the control session.
+  let secureContext = null;
+  const tlsRequired = !!cfg.tls && cfg.tls.require !== false;
+  if (cfg.tls) {
+    if (!cfg.tls.cert || !cfg.tls.key) throw new Error('tls needs "cert" and "key" file paths');
+    secureContext = tls.createSecureContext({
+      cert: fs.readFileSync(path.resolve(cfg.tls.cert)),
+      key: fs.readFileSync(path.resolve(cfg.tls.key)),
+      minVersion: 'TLSv1.2',
+    });
+  }
+  const wrapTls = (raw) => {
+    const t = new tls.TLSSocket(raw, { isServer: true, secureContext });
+    t.on('error', () => {});
+    return t;
+  };
   const log = hooks.log ?? ((...a) => console.log(new Date().toISOString().slice(11, 19), ...a));
 
   const stats = { received: 0, uploaded: 0, duplicates: 0, failed: 0, skipped: 0, incomplete: 0 };
@@ -233,9 +254,9 @@ export function createIngest(userConfig, hooks = {}) {
     return arr.length;
   }
 
-  function handleControl(sock) {
+  function handleControl(rawSock) {
+    let sock = rawSock;
     sockets.add(sock);
-    sock.setEncoding('utf8');
     sock.setTimeout(30 * 60_000, () => sock.destroy());
     const remote = (sock.remoteAddress ?? '').replace(/^::ffff:/, '');
     const local = (sock.localAddress ?? '').replace(/^::ffff:/, '');
@@ -248,6 +269,8 @@ export function createIngest(userConfig, hooks = {}) {
       active: null, // { host, port }
       temps: new Map(), // temp filename -> .part path (awaiting RNTO)
       transfers: 0,
+      secure: false, // control channel upgraded via AUTH TLS
+      prot: 'C', // data channel protection: C(lear) | P(rivate)
     };
     const reply = (code, text) => sock.write(`${code} ${text}\r\n`);
     const multi = (code, lines, end) => sock.write(`${code}-${lines.join('\r\n')}\r\n${code} ${end}\r\n`);
@@ -272,9 +295,9 @@ export function createIngest(userConfig, hooks = {}) {
             c.destroy(); // data connections must come from the control peer
             return;
           }
-          conn = c;
+          conn = s.prot === 'P' && secureContext ? wrapTls(c) : c;
           clearTimeout(timer);
-          waiter?.(c);
+          waiter?.(conn);
           srv.close();
         });
         const tryPort = (n) => {
@@ -308,6 +331,7 @@ export function createIngest(userConfig, hooks = {}) {
     }
 
     function dataConnection() {
+      if (tlsRequired && s.prot !== 'P') return Promise.reject(new Error('data channel must be encrypted (PROT P)'));
       if (s.pasv) {
         const p = s.pasv;
         s.pasv = null;
@@ -317,7 +341,7 @@ export function createIngest(userConfig, hooks = {}) {
         const a = s.active;
         s.active = null;
         return new Promise((res, rej) => {
-          const c = net.connect({ host: a.host, port: a.port }, () => res(c));
+          const c = net.connect({ host: a.host, port: a.port }, () => res(s.prot === 'P' && secureContext ? wrapTls(c) : c));
           c.once('error', rej);
         });
       }
@@ -383,6 +407,35 @@ export function createIngest(userConfig, hooks = {}) {
       const cmd = (sp === -1 ? line : line.slice(0, sp)).toUpperCase();
       const arg = sp === -1 ? '' : line.slice(sp + 1);
 
+      if (cmd === 'AUTH') {
+        if (!secureContext) return reply(534, 'TLS not supported by this server');
+        if (s.secure) return reply(503, 'Already using TLS');
+        if (!/^(TLS|TLS-C|SSL|TLS-P)$/i.test(arg.trim())) return reply(504, 'Unsupported AUTH mechanism');
+        reply(234, 'Proceed with negotiation');
+        const old = sock;
+        old.removeAllListeners('data');
+        buffer = '';
+        const t = wrapTls(old);
+        t.setTimeout(30 * 60_000, () => t.destroy());
+        sockets.add(t);
+        sock = t;
+        s.secure = true;
+        s.user = null;
+        s.pendingUser = null;
+        attach(t);
+        return;
+      }
+      if (cmd === 'PBSZ') return secureContext && s.secure ? reply(200, 'PBSZ=0') : reply(503, 'Send AUTH TLS first');
+      if (cmd === 'PROT') {
+        if (!s.secure) return reply(503, 'Send AUTH TLS first');
+        const level = arg.trim().toUpperCase();
+        if (level === 'P') return (s.prot = 'P'), reply(200, 'Data channel will be encrypted');
+        if (level === 'C' && !tlsRequired) return (s.prot = 'C'), reply(200, 'Data channel will be clear');
+        return reply(level === 'C' ? 534 : 504, level === 'C' ? 'Clear data channel not allowed' : 'Unsupported protection level');
+      }
+      if (tlsRequired && !s.secure && (cmd === 'USER' || cmd === 'PASS')) {
+        return reply(530, 'Encrypted connection required: send AUTH TLS first');
+      }
       if (cmd === 'USER') {
         s.pendingUser = arg.trim();
         s.user = null;
@@ -410,9 +463,12 @@ export function createIngest(userConfig, hooks = {}) {
       if (cmd === 'QUIT') return reply(221, 'Goodbye'), sock.end();
       if (cmd === 'SYST') return reply(215, 'UNIX Type: L8');
       if (cmd === 'NOOP') return reply(200, 'OK');
-      if (cmd === 'FEAT') return multi(211, ['Features:', ' UTF8', ' EPSV', ' SIZE'], 'End');
+      if (cmd === 'FEAT') {
+        const f = ['Features:', ' UTF8', ' EPSV', ' SIZE'];
+        if (secureContext) f.push(' AUTH TLS', ' PBSZ', ' PROT');
+        return multi(211, f, 'End');
+      }
       if (cmd === 'OPTS') return reply(200, 'OK');
-      if (cmd === 'AUTH' || cmd === 'PBSZ' || cmd === 'PROT') return reply(534, 'TLS not supported by this server');
 
       if (!s.user) return reply(530, 'Please log in first');
 
@@ -526,31 +582,35 @@ export function createIngest(userConfig, hooks = {}) {
     // Serialise commands per connection (a camera never pipelines, but be safe).
     let buffer = '';
     let chain = Promise.resolve();
-    sock.on('data', (chunk) => {
-      buffer += chunk;
-      let idx;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        const line = buffer.slice(0, idx).replace(/\r$/, '');
-        buffer = buffer.slice(idx + 1);
-        if (!line.trim()) continue;
-        chain = chain
-          .then(() => onCommand(line))
-          .catch((err) => {
-            log('command error:', err.message);
-            try {
-              reply(451, 'Local error');
-            } catch {
-              /* socket gone */
-            }
-          });
-      }
-    });
-    sock.on('error', () => {});
-    sock.on('close', () => {
-      sockets.delete(sock);
-      closePasv();
-      for (const part of s.temps.values()) void fsp.rm(part, { force: true });
-    });
+    function attach(c) {
+      c.on('data', (chunk) => {
+        buffer += chunk.toString('utf8');
+        let idx;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, idx).replace(/\r$/, '');
+          buffer = buffer.slice(idx + 1);
+          if (!line.trim()) continue;
+          chain = chain
+            .then(() => onCommand(line))
+            .catch((err) => {
+              log('command error:', err.message);
+              try {
+                reply(451, 'Local error');
+              } catch {
+                /* socket gone */
+              }
+            });
+        }
+      });
+      c.on('error', () => {});
+      c.on('close', () => {
+        sockets.delete(c);
+        if (c !== sock) return;
+        closePasv();
+        for (const part of s.temps.values()) void fsp.rm(part, { force: true });
+      });
+    }
+    attach(sock);
   }
 
   // ---------- lifecycle ----------
@@ -607,7 +667,33 @@ export function createIngest(userConfig, hooks = {}) {
 }
 
 // ---------- CLI ----------
+/** Self-signed cert for FTPS: node:crypto cannot build X.509, so use openssl. */
+export function generateCert(host, dir = 'tls') {
+  fs.mkdirSync(dir, { recursive: true });
+  const isIp = /^[\d.]+$/.test(host) || host.includes(':');
+  const key = path.join(dir, 'key.pem');
+  const cert = path.join(dir, 'cert.pem');
+  execFileSync(
+    'openssl',
+    ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '825', '-keyout', key, '-out', cert,
+      '-subj', `/CN=${host}`, '-addext', `subjectAltName=${isIp ? 'IP' : 'DNS'}:${host}`],
+    { stdio: 'pipe' },
+  );
+  fs.chmodSync(key, 0o600);
+  return { key, cert };
+}
+
 async function main() {
+  if (process.argv[2] === '--gen-cert') {
+    const host = process.argv[3];
+    if (!host) {
+      console.error('usage: node ftp-ingest.mjs --gen-cert <hostname-or-ip-the-camera-connects-to>');
+      process.exit(1);
+    }
+    const { key, cert } = generateCert(host);
+    console.log(`wrote ${cert} and ${key}\nconfig: "tls": { "cert": "${cert}", "key": "${key}" }\nImport ${cert} into the camera as a root/CA certificate.`);
+    return;
+  }
   const file = path.resolve(process.argv[2] ?? 'config.json');
   let config;
   try {

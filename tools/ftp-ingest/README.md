@@ -34,6 +34,7 @@ chmod 600 config.json          # it contains tokens and FTP passwords
 | `users[]` | One entry per camera: FTP `name` + `password`, the target `galleryId`, and its Albm upload `token` |
 | `extensions` | Accepted types (default JPEG/PNG). Other files (e.g. `.CR3`) are accepted by FTP but ignored, so the camera never errors |
 | `concurrency` | Parallel uploads to Albm (default 2) |
+| `tls` | Enable encrypted FTPS, see below: `{ "cert": "tls/cert.pem", "key": "tls/key.pem", "require": true }` |
 | `keepUploaded` | Keep a copy of uploaded files in `spool/<user>/uploaded/` (default off) |
 
 ## 3. Run
@@ -60,13 +61,42 @@ by firmware):
 
 The camera must be on the **same network** as the machine running ftp-ingest.
 
+## Encrypted FTP (FTPS)
+
+Plain FTP sends the password and every photo in the clear: fine on your own hotspot,
+**not** over the internet. For anything beyond a trusted LAN, turn on explicit FTPS
+(`AUTH TLS` on the same port, data channel `PROT P`):
+
+```bash
+node ftp-ingest.mjs --gen-cert ftp.example.com     # or the IP the camera connects to
+# -> tls/cert.pem + tls/key.pem (self-signed, 825 days, SAN = that name/IP)
+```
+
+```json
+"tls": { "cert": "tls/cert.pem", "key": "tls/key.pem" }
+```
+
+- `require` defaults to **true**: login and the data channel are refused unless encrypted
+  (`530` before `AUTH TLS`, `534` for `PROT C`). Set `"require": false` to allow both
+  encrypted and plain clients side by side.
+- The camera must support **FTPS (explicit / FTPES)** and let you import a CA/root
+  certificate (import `cert.pem`), or the server needs a cert from a public CA
+  (e.g. Let's Encrypt, DNS-01) for a hostname you own. Check your firmware's FTP menu
+  before relying on this; plain "FTP" or "SFTP" (SSH) entries are different protocols.
+  Implicit FTPS (port 990) and SFTP are not supported.
+- Open the control port **and** the passive range (`pasvMin`–`pasvMax`) on the server's
+  firewall, and set `listen.pasvHost` to the server's public IP/hostname.
+- Test any client: `curl --ftp-ssl-reqd --cacert tls/cert.pem -T IMG.jpg -u user:pass ftp://host:2121/`.
+
 ## Network layouts
 
 - **Recommended — laptop on site.** Camera and laptop join the same hotspot/travel
   router/venue Wi-Fi; ftp-ingest on the laptop uploads over HTTPS to your public
   gallery. Plain-text FTP never leaves the room, and tokens only travel over TLS.
 - **Ingest on the mini.** Only if the camera can reach the mini over a trusted network
-  (home LAN or a VPN). **Do not port-forward FTP to the internet** — it is unencrypted.
+  (home LAN or a VPN). **Do not port-forward plain FTP to the internet** — enable FTPS first.
+- **Ingest on an internet-facing server (no laptop on site).** Only with FTPS on and the
+  camera on any internet-connected network (phone hotspot); the camera still cannot use eduroam.
 - Venue Wi-Fi often has *client isolation* (devices can't see each other) — use your own
   hotspot or travel router, or an Ethernet adapter on the camera.
 

@@ -5,7 +5,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createIngest } from '../ftp-ingest.mjs';
+import tls from 'node:tls';
+import { createIngest, generateCert } from '../ftp-ingest.mjs';
 
 // ---------- fake Albm ----------
 async function fakeAlbm(handler) {
@@ -266,5 +267,100 @@ test('PNG completeness is checked via IEND', async () => {
   const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.alloc(100), Buffer.from('IEND'), Buffer.from([0xae, 0x42, 0x60, 0x82])]);
   assert.match((await t.client.stor('ok.png', png))[1], /^226/);
   assert.match((await t.client.stor('cut.png', png.subarray(0, 50)))[1], /^426/);
+  await t.done();
+});
+
+// ---------- FTPS ----------
+function ftpsSetup(handler, tlsExtra = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingest-tls-'));
+  const { cert, key } = generateCert('127.0.0.1', dir);
+  return setup(handler, { tls: { cert, key, ...tlsExtra } }).then((t) => ({ ...t, cert }));
+}
+
+/** Upgrade a connected ftpClient's control channel via AUTH TLS. */
+async function upgrade(t) {
+  const c = t.client;
+  assert.match(await c.cmd('AUTH TLS'), /^234/);
+  c.sock.removeAllListeners('data');
+  const secure = tls.connect({ socket: c.sock, ca: fs.readFileSync(t.cert), servername: '127.0.0.1' });
+  await new Promise((r, j) => (secure.once('secureConnect', r), secure.once('error', j)));
+  return secure;
+}
+
+function secureSession(secure) {
+  let buf = '';
+  const waiters = [];
+  secure.on('data', (d) => {
+    buf += d;
+    flush();
+  });
+  function flush() {
+    while (waiters.length) {
+      const lines = buf.split('\r\n');
+      const idx = lines.findIndex((l) => /^\d{3} /.test(l));
+      if (idx === -1) return;
+      const reply = lines.slice(0, idx + 1).join('\r\n');
+      buf = lines.slice(idx + 1).join('\r\n');
+      waiters.shift()(reply);
+    }
+  }
+  const read = () => new Promise((r) => (waiters.push(r), flush()));
+  const cmd = (c) => (secure.write(c + '\r\n'), read());
+  return { cmd, read };
+}
+
+test('FTPS: login is refused in clear when TLS is required', async () => {
+  const t = await ftpsSetup(() => [201, {}]);
+  assert.match(await t.client.cmd('USER cam1'), /^530/);
+  assert.match(await t.client.cmd('FEAT'), /AUTH TLS/);
+  await t.done();
+});
+
+test('FTPS: AUTH TLS + PROT P uploads over an encrypted data channel', async () => {
+  const t = await ftpsSetup(() => [201, { id: 'p1' }]);
+  const secure = await upgrade(t);
+  const f = secureSession(secure);
+  assert.match(await f.cmd('PBSZ 0'), /^200/);
+  assert.match(await f.cmd('PROT P'), /^200/);
+  assert.match(await f.cmd('USER cam1'), /^331/);
+  assert.match(await f.cmd('PASS pw1'), /^230/);
+  const r = await f.cmd('EPSV');
+  const port = Number(r.match(/\|\|\|(\d+)\|/)[1]);
+  const d = tls.connect({ port, host: '127.0.0.1', ca: fs.readFileSync(t.cert), servername: '127.0.0.1', session: secure.getSession() });
+  await new Promise((res, rej) => (d.once('secureConnect', res), d.once('error', rej)));
+  assert.match(await f.cmd('STOR IMG_0001.JPG'), /^150/);
+  d.end(JPEG);
+  assert.match(await f.read(), /^226/);
+  assert.ok(await until(() => t.ingest.stats.uploaded === 1));
+  assert.equal(t.albm.hits[0].filename, 'IMG_0001.JPG');
+  assert.equal(t.albm.hits[0].auth, 'Bearer TOK1');
+  secure.destroy();
+  await t.done();
+});
+
+test('FTPS: a clear data channel is refused when TLS is required', async () => {
+  const t = await ftpsSetup(() => [201, {}]);
+  const f = secureSession(await upgrade(t));
+  await f.cmd('PBSZ 0');
+  assert.match(await f.cmd('PROT C'), /^534/);
+  await f.cmd('USER cam1');
+  await f.cmd('PASS pw1');
+  await f.cmd('EPSV');
+  assert.match(await f.cmd('STOR a.jpg'), /^150|^425/);
+  assert.equal(t.ingest.stats.received, 0);
+  await t.done();
+});
+
+test('FTPS: wrong password still rejected after TLS', async () => {
+  const t = await ftpsSetup(() => [201, {}]);
+  const f = secureSession(await upgrade(t));
+  await f.cmd('USER cam1');
+  assert.match(await f.cmd('PASS nope'), /^530/);
+  await t.done();
+});
+
+test('AUTH TLS is refused when no certificate is configured', async () => {
+  const t = await setup(() => [201, {}]);
+  assert.match(await t.client.cmd('AUTH TLS'), /^534/);
   await t.done();
 });
