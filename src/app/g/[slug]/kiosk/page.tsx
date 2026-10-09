@@ -1,4 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { iconMetadataForSlug } from '@/lib/gallery-icon';
 import { and, desc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { findCurrentSlugFor } from '@/lib/slug-history';
@@ -14,6 +16,10 @@ import KioskView from './KioskView';
 export const dynamic = 'force-dynamic';
 
 /** Live event wall / kiosk mode. Same access gate as the gallery itself. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return iconMetadataForSlug((await params).slug);
+}
+
 export default async function KioskPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const db = getDb();

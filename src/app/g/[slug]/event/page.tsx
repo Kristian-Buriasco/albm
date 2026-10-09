@@ -1,4 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { iconMetadataForSlug } from '@/lib/gallery-icon';
 import { and, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { findCurrentSlugFor } from '@/lib/slug-history';
@@ -15,6 +17,10 @@ import FindClient from '../FindClient';
 export const dynamic = 'force-dynamic';
 
 /** Public event landing (3C) — venue QR target. Default off via eventPage option. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return iconMetadataForSlug((await params).slug);
+}
+
 export default async function EventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const db = getDb();

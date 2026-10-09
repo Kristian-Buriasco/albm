@@ -61,6 +61,11 @@ export function thumbPath(galleryId: string, filename: string): string {
   );
 }
 
+/** The gallery's custom browser-tab icon (a 512x512 PNG master; other sizes are derived on request). */
+export function galleryIconPath(galleryId: string): string {
+  return assertInsideDataDir(path.join(galleryDir(galleryId), 'icon.png'));
+}
+
 export function watermarkPath(): string {
   return assertInsideDataDir(path.join(DATA_DIR, 'watermark.png'));
 }

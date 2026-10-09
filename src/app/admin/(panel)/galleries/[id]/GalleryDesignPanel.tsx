@@ -7,6 +7,7 @@ import SegmentedControl from '@/components/SegmentedControl';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import GalleryThemeStyle from '@/components/GalleryThemeStyle';
 import RangeSlider from '@/components/RangeSlider';
+import GalleryIconPanel from './GalleryIconPanel';
 import {
   DEFAULT_GALLERY_THEME,
   GALLERY_THEME_PRESETS,
@@ -353,6 +354,8 @@ export default function GalleryDesignPanel({
             />
           </label>
         </div>
+
+        <GalleryIconPanel galleryId={gallery.id} />
 
         <div className="flex gap-3">
           <button

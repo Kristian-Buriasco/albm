@@ -7,6 +7,7 @@ import { getVisitorSession, hasGalleryAccess, isAdmin } from '@/lib/session';
 import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
+import { galleryIconMetadata } from '@/lib/gallery-icon';
 import { copyrightLine, galleryCredits } from '@/lib/credits';
 import { isGalleryExpired } from '@/lib/downloads';
 import { recordGalleryView } from '@/lib/views';
@@ -45,13 +46,17 @@ export async function generateMetadata({
     .from(schema.galleries)
     .where(and(eq(schema.galleries.slug, slug), eq(schema.galleries.type, 'client')))
     .get();
-  if (!gallery || !gallery.published || !gallery.socialPreview) return base;
-  if (needsAccessGate(gallery) || isGalleryExpired(gallery)) return base;
+  // This gallery's own browser-tab icon (if it has one) applies on every path below,
+  // including the password gate, so the tab is branded before anyone unlocks it.
+  const icons = gallery ? galleryIconMetadata(gallery.id) : undefined;
+  const branded: Metadata = icons ? { ...base, icons } : base;
+  if (!gallery || !gallery.published || !gallery.socialPreview) return branded;
+  if (needsAccessGate(gallery) || isGalleryExpired(gallery)) return branded;
   const preview = previewPhotoId(gallery);
-  if (!preview) return { ...base, title: gallery.title };
+  if (!preview) return { ...branded, title: gallery.title };
   const imageUrl = `${BASE_URL}/img/${preview}/web`;
   return {
-    ...base,
+    ...branded,
     title: gallery.title,
     openGraph: { title: gallery.title, images: [{ url: imageUrl }] },
     twitter: {

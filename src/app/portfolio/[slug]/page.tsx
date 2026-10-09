@@ -12,6 +12,7 @@ import JsonLd from '@/components/JsonLd';
 import { BASE_URL } from '@/lib/env';
 import { buildSectionPayloads } from '@/lib/gallery-page-data';
 import { copyrightLine, galleryCredits } from '@/lib/credits';
+import { galleryIconMetadata } from '@/lib/gallery-icon';
 import { dictionaries, parseLang } from '@/lib/i18n';
 import { getSetting } from '@/lib/settings';
 import { previewPhotoId, getReadyPhotos } from '@/lib/public-data';
@@ -38,10 +39,12 @@ export async function generateMetadata({
     .get();
   if (!gallery || !gallery.published) return {};
   const seo = effectiveGallerySeo(gallery);
+  const icons = galleryIconMetadata(gallery.id);
   const base: Metadata = {
     title: seo.title,
     description: seo.description,
     robots: seo.robots,
+    ...(icons ? { icons } : {}),
   };
   if (!gallery.socialPreview) return base;
   const preview = previewPhotoId(gallery);

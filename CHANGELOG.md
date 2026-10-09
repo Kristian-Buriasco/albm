@@ -4,6 +4,23 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.23.0] — 2026-10-09
+
+### Added
+- **Per-gallery browser-tab icon (favicon).** The Design tab has a new "Browser tab icon"
+  section: upload a PNG, JPEG, WebP or SVG and that gallery's tab icon, Apple touch icon and
+  Android icon change — on the gallery, its password/PIN screen, its find/event/kiosk pages and
+  portfolio pages. Other galleries and the rest of the site keep the site icon. Uploads are
+  normalised to a 512px transparent PNG (non-square images are padded, not stretched) and
+  served at 32/180/192/512px from `/gallery-icon/<id>/<size>` with immutable, version-stamped
+  caching. Published galleries serve the icon publicly (even password-protected ones, since the
+  browser asks before anyone unlocks); drafts serve it to the owner only. Owner-only to change.
+- SVG uploads are rasterised and anything that could run script or reach external resources
+  (`<script>`, entities, `file:`/`http:` references, CSS `url()`) is refused; the SVG itself is
+  never served.
+- Audit entries `gallery.icon.set` / `gallery.icon.remove`; unit tests for the image core and
+  e2e batch17.
+
 ## [1.22.2] — 2026-10-09
 
 ### Fixed
