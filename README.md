@@ -72,6 +72,7 @@ Full walkthrough: [**Wiki → Quick Start**](https://github.com/Kristian-Buriasc
 | | |
 |---|---|
 | [**Wiki**](https://github.com/Kristian-Buriasco/albm/wiki) | Features, config, deployment, FAQ |
+| [docs/DIRECT-PUBLISHING.md](docs/DIRECT-PUBLISHING.md) | Step-by-step guide: publish from Lightroom and live from a Canon R5 Mark II (FTP) |
 | [docs/EXPORT.md](docs/EXPORT.md) | Lightroom / Capture One publish API |
 | [SECURITY.md](SECURITY.md) | Threat model & vulnerability reporting |
 | [**Releases**](https://github.com/Kristian-Buriasco/albm/releases) | Changelog & version tags |

@@ -90,6 +90,8 @@ Authorization: Bearer <token>
 
 ## FTP from a camera
 
+For a step-by-step walkthrough (Lightroom and the Canon R5 Mark II) see [DIRECT-PUBLISHING.md](./DIRECT-PUBLISHING.md).
+
 Cameras that can only send over FTP (e.g. Canon R-series) can publish live through the
 bundled bridge in [`tools/ftp-ingest/`](../tools/ftp-ingest/): it receives the FTP upload
 and calls the endpoint above for every frame, with retries and a crash-safe spool.
