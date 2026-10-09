@@ -15,52 +15,73 @@ function AdminSelectableThumb({
   selected,
   tags,
   onToggle,
+  onRemoveTag,
 }: {
   photo: Photo;
   selected: boolean;
   tags?: { id: string; name: string }[];
   onToggle: (e: React.MouseEvent) => void;
+  /** Remove one tag from this photo. Omit to render the chips read-only. */
+  onRemoveTag?: (tagId: string) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative w-[140px] shrink-0 overflow-hidden rounded border-2 transition-all ${
-        selected
-          ? 'border-accent ring-2 ring-accent/40 dark:border-accent-dark dark:ring-accent-dark/40'
-          : 'border-transparent hover:border-neutral-300 dark:hover:border-neutral-600'
-      }`}
-    >
-      <div className={`aspect-square w-full ${selected ? 'opacity-75' : ''}`}>
-        {photo.status === 'ready' ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={`/img/${photo.id}/thumb?v=${photo.updatedAt}`}
-            alt={photo.filename}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-[10px] text-neutral-400 dark:bg-neutral-900">
-            {photo.status}
-          </div>
-        )}
-      </div>
-      {selected && (
-        <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white dark:bg-accent-dark">
-          ✓
-        </span>
-      )}
-      {tags && tags.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-0.5 bg-black/60 p-1">
-          {tags.slice(0, 2).map((t) => (
-            <span key={t.id} className="rounded bg-white/20 px-1 text-[8px] text-white">
-              {t.name}
-            </span>
-          ))}
+    <div data-photo-tile={photo.id} className="w-[140px] shrink-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`Select ${photo.filename}`}
+        aria-pressed={selected}
+        className={`relative block w-full overflow-hidden rounded border-2 transition-all ${
+          selected
+            ? 'border-accent ring-2 ring-accent/40 dark:border-accent-dark dark:ring-accent-dark/40'
+            : 'border-transparent hover:border-neutral-300 dark:hover:border-neutral-600'
+        }`}
+      >
+        <div className={`aspect-square w-full ${selected ? 'opacity-75' : ''}`}>
+          {photo.status === 'ready' ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={`/img/${photo.id}/thumb?v=${photo.updatedAt}`}
+              alt={photo.filename}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-[10px] text-neutral-400 dark:bg-neutral-900">
+              {photo.status}
+            </div>
+          )}
         </div>
+        {selected && (
+          <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white dark:bg-accent-dark">
+            ✓
+          </span>
+        )}
+      </button>
+      {tags && tags.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-1">
+          {tags.map((t) => (
+            <li
+              key={t.id}
+              className="inline-flex items-center gap-0.5 rounded bg-neutral-200 py-0.5 pr-0.5 pl-1.5 text-[10px] leading-none dark:bg-neutral-800"
+            >
+              <span data-tag-chip>{t.name}</span>
+              {onRemoveTag && (
+                <button
+                  type="button"
+                  aria-label={`Remove tag ${t.name}`}
+                  title={`Remove “${t.name}” from this photo`}
+                  onClick={() => onRemoveTag(t.id)}
+                  className="flex h-4 w-4 items-center justify-center rounded text-neutral-500 hover:bg-neutral-300 hover:text-red-600 dark:hover:bg-neutral-700"
+                >
+                  ×
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -868,6 +889,24 @@ export function AdminSectionsPanel({
     await load();
   }
 
+  /** Remove one tag from the given photos (the API enforces organize rights per gallery). */
+  async function removeTag(photoIds: string[], tagId: string) {
+    if (photoIds.length === 0) return;
+    await fetch('/api/admin/photos/tags', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoIds, tagId }),
+    });
+    await load();
+  }
+
+  /** Distinct tags carried by the selected photos, so one click can strip a tag from all of them. */
+  const selectedTags = useMemo(() => {
+    const seen = new Map<string, Tag>();
+    for (const id of selected) for (const t of photoTags[id] ?? []) seen.set(t.id, t);
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [selected, photoTags]);
+
   async function sortPhotos(mode: string, sectionId: string | null) {
     await fetch(`/api/admin/galleries/${galleryId}/photos/sort`, {
       method: 'POST',
@@ -1091,6 +1130,29 @@ export function AdminSectionsPanel({
         ))}
       </div>
 
+      {selectedTags.length > 0 && (
+        <div data-selected-tags className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-neutral-500">Tags on the {selected.size} selected:</span>
+          {selectedTags.map((t) => (
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-1 rounded border border-neutral-300 py-0.5 pr-0.5 pl-2 dark:border-neutral-700"
+            >
+              {t.name}
+              <button
+                type="button"
+                aria-label={`Remove tag ${t.name} from selected photos`}
+                title={`Remove “${t.name}” from the selected photos`}
+                onClick={() => void removeTag([...selected], t.id)}
+                className="flex h-5 w-5 items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 hover:text-red-600 dark:hover:bg-neutral-800"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {photos.length > 1 && (
         <p className="text-[11px] text-neutral-400">
           Tip: click to select, <kbd className="rounded border border-neutral-300 px-1 dark:border-neutral-700">Shift</kbd>-click to select a range.
@@ -1109,6 +1171,7 @@ export function AdminSectionsPanel({
                 selected={selected.has(p.id)}
                 tags={photoTags[p.id]}
                 onToggle={(e) => onTogglePhoto(p.id, e)}
+                onRemoveTag={(tagId) => void removeTag([p.id], tagId)}
               />
             ))}
           </div>

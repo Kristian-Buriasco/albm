@@ -16,7 +16,9 @@ export const metadata: Metadata = {
 };
 
 // Applied before paint to avoid a flash of the wrong theme.
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+// Order of precedence: the server-set `theme` cookie (survives Safari's storage purges), then
+// localStorage (may throw in private/blocked modes), then the OS setting.
+const themeScript = `(function(){try{var m=document.cookie.match(/(?:^|; )theme=(dark|light)/);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('theme');}catch(e){}}var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
 export default async function RootLayout({
   children,
@@ -41,7 +43,7 @@ export default async function RootLayout({
   const htmlLang = parseLang(getSetting('defaultLanguage'));
 
   return (
-    <html lang={htmlLang} suppressHydrationWarning>
+    <html lang={htmlLang} suppressHydrationWarning className={cookieStore.get('theme')?.value === 'dark' ? 'dark' : undefined}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="manifest" href="/manifest.json" />

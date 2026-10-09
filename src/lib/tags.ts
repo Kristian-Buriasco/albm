@@ -61,6 +61,9 @@ export function getPhotoTagsForGallery(
     .innerJoin(schema.tags, eq(schema.photoTags.tagId, schema.tags.id))
     .innerJoin(schema.photos, eq(schema.photoTags.photoId, schema.photos.id))
     .where(eq(schema.photos.galleryId, galleryId))
+    // Without an explicit order SQLite returns rows by the primary-key index, i.e. sorted by
+    // the tag's random id — so tags appeared in an arbitrary order. rowid = insertion order.
+    .orderBy(sql`"photo_tags"."rowid"`)
     .all();
 
   const map: Record<string, { id: string; name: string }[]> = {};

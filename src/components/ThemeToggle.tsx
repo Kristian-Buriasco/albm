@@ -12,11 +12,26 @@ export default function ThemeToggle() {
   function toggle() {
     const next = !document.documentElement.classList.contains('dark');
     document.documentElement.classList.toggle('dark', next);
+    const choice = next ? 'dark' : 'light';
     try {
-      localStorage.setItem('theme', next ? 'dark' : 'light');
+      localStorage.setItem('theme', choice);
     } catch {
-      /* private mode */
+      /* private mode / blocked storage — the cookie below still carries the choice */
     }
+    // Immediate cookie so the very next page load already sees it; the request below
+    // replaces it with a server-set one that Safari does not purge after 7 days.
+    try {
+      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `theme=${choice}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+    } catch {
+      /* cookies disabled */
+    }
+    void fetch('/api/theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: choice }),
+      keepalive: true,
+    }).catch(() => {});
     setDark(next);
   }
 

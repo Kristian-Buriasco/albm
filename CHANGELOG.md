@@ -4,6 +4,24 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.22.1] — 2026-10-09
+
+### Fixed
+- **Photo tags: adding more than two made the first one "disappear".** Nothing was ever
+  deleted — the photo tile showed only two tags, and the server returned them in
+  arbitrary order (sorted by random tag id), so the visible pair could exclude the one
+  added first. Tiles now show every tag, in the order they were added.
+- **Dark mode was forgotten in Safari.** The choice lived only in `localStorage`, which
+  Safari purges after ~7 days without interaction and blocks entirely in some privacy
+  modes (the failure was silent). The choice is now also kept in a year-long server-set
+  cookie (`/api/theme`) that the server uses to render the right theme with no flash;
+  `localStorage` and the OS setting remain fallbacks. An explicit choice beats the OS.
+
+### Added
+- **Tags are removable.** Each tag on a photo tile has a × button, and a "Tags on the N
+  selected" bar removes a tag from every selected photo at once (collaborators with
+  organize rights too; the API already enforced that).
+
 ## [1.22.0] — 2026-10-09
 
 ### Added
