@@ -4,6 +4,21 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.22.2] — 2026-10-09
+
+### Fixed
+- **The automatic pre-migration database backup deleted itself.** Retention pruned every
+  `gallery-*.db` file by name, and manual backups such as `gallery-predeploy-…` sort
+  after the dated automatic ones — so once more than 10 such files existed, the backup
+  taken just before a migration was removed immediately. Retention now only considers the
+  app's own dated backups (and their WAL/SHM files) and never touches manual ones.
+- **Deleting a photo left files behind.** The 1280px (`md`), print and RAW-working copies
+  were never removed, wasting disk and leaving a deleted client photo on the server. The
+  single-photo delete also duplicated the shared delete logic and skipped clearing the
+  gallery preview pointer; it now uses the shared helper.
+- **Photo deletions are now audited** (`photo.delete` and `photos.delete`), with the acting
+  owner or collaborator recorded. Previously a deletion left no trace in the audit log.
+
 ## [1.22.1] — 2026-10-09
 
 ### Fixed

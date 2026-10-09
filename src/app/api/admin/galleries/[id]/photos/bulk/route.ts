@@ -46,6 +46,12 @@ export async function POST(req: Request, { params }: Params) {
     for (const pid of photoIds) {
       if (deletePhotoById(pid)) deleted++;
     }
+    const gal = db.select({ title: schema.galleries.title }).from(schema.galleries).where(eq(schema.galleries.id, id)).get();
+    logAdmin('photos.delete', {
+      targetType: 'gallery',
+      targetId: id,
+      summary: `Deleted ${deleted} photo(s) from "${gal?.title ?? id}"`,
+    });
     return json({ ok: true, deleted });
   }
 

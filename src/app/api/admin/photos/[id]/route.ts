@@ -1,8 +1,9 @@
-import fs from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json, requireAdmin, requireGalleryCapability } from '@/lib/api';
-import { originalPath, thumbPath, webPath } from '@/lib/paths';
+import { auditActor, errorJson, json, requireAdmin, requireGalleryCapability } from '@/lib/api';
+import { deletePhotoById } from '@/lib/delete-photo';
+import { logAdmin } from '@/lib/audit-log';
+import { getPrincipal } from '@/lib/session';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -56,20 +57,15 @@ export async function DELETE(_req: Request, { params }: Params) {
   const denied = await requireGalleryCapability(photo.galleryId, 'organize');
   if (denied) return denied;
 
-  db.delete(schema.photos).where(eq(schema.photos.id, id)).run();
+  deletePhotoById(id);
 
-  db.update(schema.galleries)
-    .set({ coverPhotoId: null, updatedAt: Date.now() })
-    .where(eq(schema.galleries.coverPhotoId, id))
-    .run();
-
-  for (const p of [
-    originalPath(photo.galleryId, photo.filename),
-    webPath(photo.galleryId, photo.filename),
-    thumbPath(photo.galleryId, photo.filename),
-  ]) {
-    fs.rmSync(p, { force: true });
-  }
+  const gallery = db.select({ title: schema.galleries.title }).from(schema.galleries).where(eq(schema.galleries.id, photo.galleryId)).get();
+  logAdmin('photo.delete', {
+    targetType: 'gallery',
+    targetId: photo.galleryId,
+    summary: `Deleted photo "${photo.filename}" from "${gallery?.title ?? photo.galleryId}"`,
+    ...auditActor(await getPrincipal()),
+  });
 
   return json({ ok: true });
 }

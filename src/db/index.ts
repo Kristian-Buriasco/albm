@@ -5,6 +5,7 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from './schema';
 import { DATA_DIR, sessionSecret } from '@/lib/env';
+import { pruneBackups } from '@/lib/backup-retention';
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
@@ -61,15 +62,8 @@ function backupDatabase(sqlite: Database.Database, dbPath: string): string {
   // Flush WAL into the main file so a plain copy is a complete snapshot.
   sqlite.pragma('wal_checkpoint(TRUNCATE)');
   fs.copyFileSync(dbPath, dest);
-  // Retention: keep the newest BACKUP_RETENTION, prune the rest.
-  const backups = fs
-    .readdirSync(dir)
-    .filter((f) => f.startsWith('gallery-') && f.endsWith('.db'))
-    .sort();
-  while (backups.length > BACKUP_RETENTION) {
-    const old = backups.shift();
-    if (old) fs.rmSync(path.join(dir, old), { force: true });
-  }
+  // Retention: keep the newest BACKUP_RETENTION automatic backups; never touch manual ones.
+  pruneBackups(dir, BACKUP_RETENTION);
   return dest;
 }
 
