@@ -95,8 +95,8 @@ async function setup(handler, extra = {}) {
   };
   const ingest = createIngest(cfg, { log: () => {} });
   const port = await ingest.start();
-  const client = ftpClient(port);
-  await client.greeting;
+  const client = port ? ftpClient(port) : { close() {} };
+  if (port) await client.greeting;
   return { albm, ingest, client, spool, cfg, port, async done() { client.close(); await ingest.stop(); await albm.close(); } };
 }
 
@@ -362,5 +362,47 @@ test('FTPS: wrong password still rejected after TLS', async () => {
 test('AUTH TLS is refused when no certificate is configured', async () => {
   const t = await setup(() => [201, {}]);
   assert.match(await t.client.cmd('AUTH TLS'), /^534/);
+  await t.done();
+});
+
+// ---------- watch-folder mode ----------
+test('watch folder: a stable JPEG is picked up and uploaded; RAW and partial files are not', async () => {
+  const drop = fs.mkdtempSync(path.join(os.tmpdir(), 'drop-'));
+  const t = await setup(() => [201, { id: 'p1' }], {
+    ftp: false,
+    watchPollMs: 20,
+    watchSettleMs: 80,
+    users: [{ name: 'cam1', galleryId: 'G1', token: 'TOK1', watchDir: drop }],
+  });
+  fs.writeFileSync(path.join(drop, 'IMG_1.JPG'), JPEG);
+  fs.writeFileSync(path.join(drop, 'IMG_1.CR3'), Buffer.alloc(100, 1));
+  fs.writeFileSync(path.join(drop, 'half.jpg'), JPEG.subarray(0, 1000)); // truncated
+  fs.mkdirSync(path.join(drop, 'sub'));
+  fs.writeFileSync(path.join(drop, 'sub', 'IMG_2.JPG'), Buffer.concat([JPEG, Buffer.from([0])]));
+  fs.writeFileSync(path.join(drop, 'upload.jpg.part'), JPEG);
+  assert.ok(await until(() => t.ingest.stats.uploaded === 2));
+  assert.deepEqual(t.albm.hits.map((h) => h.filename).sort(), ['IMG_1.JPG', 'IMG_2.JPG']);
+  assert.equal(t.albm.hits[0].auth, 'Bearer TOK1');
+  assert.ok(await until(() => t.ingest.stats.skipped === 1 && t.ingest.stats.incomplete === 1));
+  assert.ok(fs.existsSync(path.join(drop, 'upload.jpg.part')), 'temp names are left alone');
+  assert.ok(!fs.existsSync(path.join(drop, 'IMG_1.JPG')), 'picked-up files leave the drop folder');
+  await t.done();
+});
+
+test('watch folder: a file still growing waits until it settles', async () => {
+  const drop = fs.mkdtempSync(path.join(os.tmpdir(), 'drop-'));
+  const t = await setup(() => [201, {}], {
+    ftp: false,
+    watchPollMs: 20,
+    watchSettleMs: 150,
+    users: [{ name: 'cam1', galleryId: 'G1', token: 'TOK1', watchDir: drop }],
+  });
+  const f = path.join(drop, 'grow.jpg');
+  fs.writeFileSync(f, JPEG.subarray(0, 500));
+  await new Promise((r) => setTimeout(r, 100));
+  fs.appendFileSync(f, JPEG.subarray(500));
+  await new Promise((r) => setTimeout(r, 100));
+  assert.equal(t.ingest.stats.received, 0, 'not picked up mid-write');
+  assert.ok(await until(() => t.ingest.stats.uploaded === 1));
   await t.done();
 });

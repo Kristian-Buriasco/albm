@@ -34,6 +34,9 @@ const DEFAULTS = {
   keepUploaded: false,
   maxAuthFailuresPerIp: 10,
   retryBaseMs: 1000,
+  ftp: true, // set false to run watch-folder mode only (no FTP listener)
+  watchPollMs: 2000,
+  watchSettleMs: 3000, // a file must be unchanged this long before it is picked up
   tls: null, // { cert: 'tls/cert.pem', key: 'tls/key.pem', require: true }
 };
 
@@ -244,6 +247,73 @@ export function createIngest(userConfig, hooks = {}) {
     hooks.onReceived?.({ user: userName, name });
     enqueue({ user: userName, dir, name });
     return 'ok';
+  }
+
+  // ---------- watch-folder mode (SFTP / any drop folder) ----------
+  // users[].watchDir: files that appear there (e.g. via OpenSSH internal-sftp) are
+  // picked up once their size has stopped changing, then follow the normal pipeline.
+  const watchSeen = new Map(); // file -> { size, mtimeMs, since }
+  const watchBusy = new Set();
+  let watchTimer = null;
+
+  async function listFiles(dir, depth = 0) {
+    let out = [];
+    let ents;
+    try {
+      ents = await fsp.readdir(dir, { withFileTypes: true });
+    } catch {
+      return out;
+    }
+    for (const e of ents) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory() && depth < 3) out = out.concat(await listFiles(full, depth + 1));
+      else if (e.isFile() && !TEMP_NAME.test(e.name)) out.push(full);
+    }
+    return out;
+  }
+
+  async function moveFile(from, to) {
+    try {
+      await fsp.rename(from, to);
+    } catch (err) {
+      if (err.code !== 'EXDEV') throw err;
+      await fsp.copyFile(from, to);
+      await fsp.rm(from, { force: true });
+    }
+  }
+
+  async function watchPoll() {
+    for (const u of cfg.users) {
+      if (!u.watchDir) continue;
+      for (const file of await listFiles(path.resolve(u.watchDir))) {
+        if (watchBusy.has(file)) continue;
+        let st;
+        try {
+          st = await fsp.stat(file);
+        } catch {
+          continue;
+        }
+        const prev = watchSeen.get(file);
+        if (!prev || prev.size !== st.size || prev.mtimeMs !== st.mtimeMs) {
+          watchSeen.set(file, { size: st.size, mtimeMs: st.mtimeMs, since: Date.now() });
+          continue;
+        }
+        if (Date.now() - prev.since < cfg.watchSettleMs || st.size === 0) continue;
+        watchBusy.add(file);
+        try {
+          const partFile = path.join(spoolRoot, u.name, '.incoming', `${crypto.randomBytes(6).toString('hex')}.part`);
+          await fsp.mkdir(path.dirname(partFile), { recursive: true });
+          await moveFile(file, partFile);
+          watchSeen.delete(file);
+          await accept(u.name, partFile, path.basename(file));
+        } catch (err) {
+          log(`watch error ${path.basename(file)}: ${err.message}`);
+        } finally {
+          watchBusy.delete(file);
+        }
+      }
+    }
+    for (const f of watchSeen.keys()) if (!fs.existsSync(f)) watchSeen.delete(f);
   }
 
   // ---------- FTP control connections ----------
@@ -642,12 +712,18 @@ export function createIngest(userConfig, hooks = {}) {
     pending: () => queue.length + inflight + waiting,
     async start() {
       for (const u of cfg.users) {
-        if (!u.name || !u.password || !u.galleryId || !u.token) {
-          throw new Error(`user "${u.name ?? '?'}" needs name, password, galleryId and token`);
+        if (!u.name || !u.galleryId || !u.token || (cfg.ftp && !u.password && !u.watchDir)) {
+          throw new Error(`user "${u.name ?? '?'}" needs name, galleryId, token and (password or watchDir)`);
         }
         await fsp.mkdir(path.join(spoolRoot, u.name), { recursive: true });
       }
       await recoverSpool();
+      const watched = cfg.users.filter((u) => u.watchDir);
+      if (watched.length) {
+        watchTimer = setInterval(() => void watchPoll().catch((e) => log('watch error:', e.message)), cfg.watchPollMs);
+        log(`watching   ${watched.map((u) => `${u.watchDir} -> ${u.name}`).join(', ')}`);
+      }
+      if (!cfg.ftp) return 0;
       server = net.createServer(handleControl);
       await new Promise((resolve, reject) => {
         server.once('error', reject);
@@ -659,6 +735,7 @@ export function createIngest(userConfig, hooks = {}) {
     },
     async stop() {
       stopping = true;
+      if (watchTimer) clearInterval(watchTimer);
       for (const t of retryTimers) clearTimeout(t);
       for (const sck of sockets) sck.destroy();
       await new Promise((r) => (server ? server.close(r) : r()));
