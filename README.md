@@ -78,6 +78,12 @@ Full walkthrough: [**Wiki → Quick Start**](https://github.com/Kristian-Buriasc
 | [**Releases**](https://github.com/Kristian-Buriasco/albm/releases) | Changelog & version tags |
 | [**GHCR**](https://github.com/Kristian-Buriasco/albm/pkgs/container/albm) | Container images |
 
+## Ideas under consideration
+
+Not committed and not scheduled; listed so the direction is visible.
+
+- **Cold archive for delivered galleries.** Move the original files of finished galleries to cheap object storage (for example S3 Glacier or Backblaze B2). Thumbnails and web sizes would stay on the server, so the gallery still displays, and a client could request their originals back, to be ready within about a day. It only pays off once a server's disk becomes the limit, so it waits until a real installation needs it.
+
 ## License
 
 [AGPL-3.0-only](LICENSE) — Copyright (C) 2026 Kristian Buriasco.
