@@ -129,7 +129,7 @@ export default function WorkSection({
               key={y}
               type="button"
               onClick={() => setYear(year === y ? null : y)}
-              className={`rounded-full border px-2.5 py-0.5 text-xs ${
+              className={`rounded-full border px-2.5 py-0.5 text-xs max-sm:py-2 ${
                 year === y
                   ? 'border-ink dark:border-ink-dark'
                   : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'
@@ -143,7 +143,7 @@ export default function WorkSection({
               key={name}
               type="button"
               onClick={() => setTag(tag === name ? null : name)}
-              className={`rounded-full border px-2.5 py-0.5 text-xs ${
+              className={`rounded-full border px-2.5 py-0.5 text-xs max-sm:py-2 ${
                 tag === name
                   ? 'border-ink dark:border-ink-dark'
                   : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'

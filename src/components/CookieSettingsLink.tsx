@@ -8,7 +8,7 @@ export default function CookieSettingsLink({ lang }: { lang: Lang }) {
     <button
       type="button"
       onClick={() => openCookieSettings()}
-      className="text-left underline underline-offset-2 transition-colors hover:text-ink dark:hover:text-ink-dark"
+      className="-my-3 py-3 text-left underline underline-offset-2 transition-colors hover:text-ink dark:hover:text-ink-dark"
     >
       {t(lang, 'cookieSettings')}
     </button>

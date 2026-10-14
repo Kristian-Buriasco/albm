@@ -70,7 +70,7 @@ export default function SectionedGalleryGrid({
               <button
                 type="button"
                 onClick={() => setActiveSection(null)}
-                className={`rounded-full border px-3 py-1 text-xs ${
+                className={`rounded-full border px-3 py-1 text-xs max-sm:shrink-0 max-sm:py-2.5 ${
                   activeSection === null
                     ? 'border-ink dark:border-ink-dark'
                     : 'border-line dark:border-line-dark'
@@ -85,7 +85,7 @@ export default function SectionedGalleryGrid({
                     key={s.id}
                     type="button"
                     onClick={() => setActiveSection(s.id)}
-                    className={`rounded-full border px-3 py-1 text-xs ${
+                    className={`rounded-full border px-3 py-1 text-xs max-sm:shrink-0 max-sm:py-2.5 ${
                       activeSection === s.id
                         ? 'border-ink dark:border-ink-dark'
                         : 'border-line dark:border-line-dark'
@@ -102,7 +102,7 @@ export default function SectionedGalleryGrid({
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTag(activeTag === t.id ? null : t.id)}
-                className={`rounded-full border px-3 py-1 text-xs ${
+                className={`rounded-full border px-3 py-1 text-xs max-sm:shrink-0 max-sm:py-2.5 ${
                   activeTag === t.id
                     ? 'border-accent text-accent dark:border-accent-dark dark:text-accent-dark'
                     : 'border-line dark:border-line-dark'

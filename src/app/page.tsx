@@ -87,13 +87,13 @@ export default function HomePage() {
           <div className="mt-7 flex items-center gap-6 text-[13px] md:mt-9">
             <Link
               href="#work"
-              className="border-b border-ink pb-0.5 transition-colors hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
+              className="border-b border-ink pb-0.5 transition-colors max-sm:-my-3 max-sm:py-3 hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
             >
               View work
             </Link>
             <Link
               href="/contact"
-              className="text-muted transition-colors hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark"
+              className="text-muted transition-colors max-sm:-my-3 max-sm:py-3 hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark"
             >
               Get in touch
             </Link>

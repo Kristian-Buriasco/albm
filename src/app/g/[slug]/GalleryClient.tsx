@@ -465,7 +465,7 @@ export default function GalleryClient({
             <button
               type="button"
               onClick={() => setOnlyMine((v) => !v)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 max-sm:py-2.5 transition-colors ${
                 onlyMine
                   ? 'border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-black'
                   : 'border-neutral-300 text-neutral-600 hover:border-neutral-500 dark:border-neutral-700 dark:text-neutral-300'
@@ -482,7 +482,7 @@ export default function GalleryClient({
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-label="Options"
-                className="flex shrink-0 items-center rounded-full border border-line px-3 py-1.5 sm:hidden dark:border-line-dark"
+                className="flex shrink-0 items-center rounded-full border border-line px-3 py-1.5 max-sm:py-2.5 sm:hidden dark:border-line-dark"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
                   <circle cx="5" cy="12" r="1.7" />

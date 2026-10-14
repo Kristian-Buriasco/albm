@@ -47,7 +47,7 @@ export default function ContactPage() {
                       <dd>
                         <a
                           href={`mailto:${email}`}
-                          className="transition-colors hover:text-accent dark:hover:text-accent-dark"
+                          className="-my-3 py-3 transition-colors hover:text-accent dark:hover:text-accent-dark"
                         >
                           {email}
                         </a>
@@ -62,7 +62,7 @@ export default function ContactPage() {
                           href={`https://instagram.com/${instagram.replace(/^@/, '')}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="transition-colors hover:text-accent dark:hover:text-accent-dark"
+                          className="-my-3 py-3 transition-colors hover:text-accent dark:hover:text-accent-dark"
                         >
                           @{instagram.replace(/^@/, '')}
                         </a>
@@ -77,7 +77,7 @@ export default function ContactPage() {
                           href={whatsappHref(whatsapp)}
                           target="_blank"
                           rel="noreferrer"
-                          className="transition-colors hover:text-accent dark:hover:text-accent-dark"
+                          className="-my-3 py-3 transition-colors hover:text-accent dark:hover:text-accent-dark"
                         >
                           {whatsappLabel(whatsapp)}
                         </a>
