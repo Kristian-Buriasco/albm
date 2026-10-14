@@ -55,7 +55,7 @@ export default function CookieConsent({ lang }: { lang: Lang }) {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 p-3 shadow-lg sm:p-4 backdrop-blur dark:border-line-dark dark:bg-paper-dark/95"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg sm:p-4 backdrop-blur dark:border-line-dark dark:bg-paper-dark/95"
       role="dialog"
       aria-label={t(lang, 'cookieTitle')}
     >

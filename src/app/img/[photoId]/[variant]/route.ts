@@ -14,6 +14,10 @@ type Params = { params: Promise<{ photoId: string; variant: string }> };
 const VARIANTS = { thumb: thumbPath, md: mdPath, web: webPath } as const;
 type Variant = keyof typeof VARIANTS;
 
+// One render per file: a grid asks for many missing md variants at once, which
+// on a 2-core host starves the server and makes images time out.
+const mdInflight = new Map<string, Promise<void>>();
+
 export async function GET(req: Request, { params }: Params) {
   const { photoId, variant } = await params;
   if (!(variant in VARIANTS)) {
@@ -57,14 +61,19 @@ export async function GET(req: Request, { params }: Params) {
   // matches a freshly-queued md; on failure fall back to `web`.
   if (v === 'md' && !fs.existsSync(filePath)) {
     try {
-      await renderWebpVariant(
-        derivativeSource(photo),
-        1280,
-        82,
-        filePath,
-        photo.galleryId,
-        watermarkOptsFor(gallery),
-      );
+      let job = mdInflight.get(filePath);
+      if (!job) {
+        job = renderWebpVariant(
+          derivativeSource(photo),
+          1280,
+          82,
+          filePath,
+          photo.galleryId,
+          watermarkOptsFor(gallery),
+        ).finally(() => mdInflight.delete(filePath));
+        mdInflight.set(filePath, job);
+      }
+      await job;
     } catch (err) {
       console.error(`[img] md lazy-gen failed for ${photoId}:`, err);
       filePath = webPath(photo.galleryId, photo.filename);

@@ -89,6 +89,7 @@ export async function renderWebpVariant(
   wm: WatermarkOpts,
 ): Promise<void> {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  const tmp = `${outPath}.${process.pid}.${Date.now()}.tmp`;
   const resized = sharp(src)
     .rotate()
     .resize(maxEdge, maxEdge, { fit: 'inside', withoutEnlargement: true });
@@ -128,10 +129,12 @@ export async function renderWebpVariant(
     await sharp(resizedBuf)
       .composite([{ input: wmBuf, left, top }])
       .webp({ quality })
-      .toFile(outPath);
+      .toFile(tmp);
   } else {
-    await resized.webp({ quality }).toFile(outPath);
+    await resized.webp({ quality }).toFile(tmp);
   }
+  // Atomic: readers (the /img route) never see a half-written file.
+  fs.renameSync(tmp, outPath);
 }
 
 export function derivativeSource(photo: { galleryId: string; filename: string; isRaw: boolean }): string {

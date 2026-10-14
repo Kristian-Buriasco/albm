@@ -22,6 +22,12 @@ export default function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Visible by default (SSR / no JS / slow hydration). Only elements below
+    // the fold are armed for the fade-in, with a timeout so they can never
+    // stay hidden.
+    if (el.getBoundingClientRect().top < window.innerHeight) return;
+    el.classList.add('reveal');
+    const failsafe = window.setTimeout(() => el.classList.add('is-visible'), 4000);
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -34,13 +40,16 @@ export default function Reveal({
       { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      window.clearTimeout(failsafe);
+    };
   }, []);
 
   return (
     <Tag
       ref={ref}
-      className={`reveal ${className}`}
+      className={className}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}

@@ -9,15 +9,16 @@ const navLink =
 
 export default function SiteHeader() {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-7 sm:px-6">
+    <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-5 sm:px-6 sm:py-7">
       <Link
         href="/"
         className="-my-3 min-w-0 truncate py-3 text-[15px] leading-none font-semibold tracking-tight"
       >
         {SITE_NAME}
       </Link>
-      <nav className="flex shrink-0 items-center gap-3 text-[13px] tracking-wide sm:gap-7">
-        <Link href="/" className={navLink}>
+      <nav className="flex shrink-0 items-center gap-4 text-[13px] tracking-wide sm:gap-7">
+        {/* Work = home; the logo already links there, so skip it on phones. */}
+        <Link href="/" className={`${navLink} max-sm:hidden`}>
           Work
         </Link>
         <Link href="/about" className={navLink}>
@@ -26,7 +27,7 @@ export default function SiteHeader() {
         <Link href="/contact" className={navLink}>
           Contact
         </Link>
-        <span className="h-4 w-px bg-line dark:bg-line-dark" aria-hidden="true" />
+        <span className="h-4 w-px max-sm:hidden bg-line dark:bg-line-dark" aria-hidden="true" />
         <ThemeToggle />
         <AdminLoginButton />
       </nav>
