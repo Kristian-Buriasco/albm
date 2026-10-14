@@ -74,7 +74,7 @@ export default function HomePage() {
           heroItem?.cover ? 'md:grid-cols-2' : ''
         }`}
       >
-        <div className="flex flex-col justify-center px-6 py-16 md:py-24">
+        <div className="flex flex-col justify-center px-6 py-10 md:py-24">
           <p className="mb-5 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
             {eyebrow}
           </p>
@@ -84,7 +84,7 @@ export default function HomePage() {
           <p className="mt-6 max-w-[36ch] text-[15px] leading-relaxed text-muted dark:text-muted-dark">
             {intro}
           </p>
-          <div className="mt-9 flex items-center gap-6 text-[13px]">
+          <div className="mt-7 flex items-center gap-6 text-[13px] md:mt-9">
             <Link
               href="#work"
               className="border-b border-ink pb-0.5 transition-colors hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
@@ -100,7 +100,7 @@ export default function HomePage() {
           </div>
         </div>
         {heroItem?.cover && (
-          <div className="relative min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
+          <div className="relative min-h-[32vh] md:min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/img/${heroItem.cover}/web`}

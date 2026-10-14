@@ -15,7 +15,7 @@ export type WorkItem = {
 
 function WorkGrid({ items, startIndex = 0 }: { items: WorkItem[]; startIndex?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 sm:gap-y-12 lg:grid-cols-3">
       {items.map(({ gallery, cover }, i) => (
         <Reveal key={gallery.id} delay={((startIndex + i) % 3) * 80}>
           <Link
