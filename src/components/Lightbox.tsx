@@ -133,7 +133,8 @@ export default function Lightbox({
         const dx = e.changedTouches[0].clientX - touchStart.current.x;
         const dy = e.changedTouches[0].clientY - touchStart.current.y;
         touchStart.current = null;
-        if (dy > 64 && Math.abs(dy) > Math.abs(dx)) onClose();
+        // Only at the top: a downward drag while scrolled into the comments is scrolling, not "close".
+        if (dy > 64 && e.currentTarget.scrollTop === 0 && Math.abs(dy) > Math.abs(dx)) onClose();
         else if (dx > 48) prev();
         else if (dx < -48) next();
       }}
@@ -142,7 +143,8 @@ export default function Lightbox({
         <span className="text-neutral-400">
           {index + 1} / {photos.length}
         </span>
-        <div className="flex items-center gap-4">
+        {/* Phones: actions pinned to the bottom edge (thumb reach); sm+: inline in the top bar. */}
+        <div className="flex items-center gap-4 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:justify-center max-sm:gap-5 max-sm:border-t max-sm:border-white/10 max-sm:bg-black/85 max-sm:px-4 max-sm:pt-2 max-sm:pb-[max(0.5rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur">
           {photos.length > 1 && (
             <button
               type="button"
@@ -150,7 +152,7 @@ export default function Lightbox({
                 e.stopPropagation();
                 setPlaying((p) => !p);
               }}
-              className="p-2 text-neutral-300 hover:text-white sm:p-1"
+              className="p-3 text-neutral-300 hover:text-white sm:p-1"
               aria-label={playing ? slideshowLabel?.pause : slideshowLabel?.play}
             >
               {playing ? '⏸' : '▶'}
@@ -161,7 +163,7 @@ export default function Lightbox({
               type="button"
               onClick={() => onToggleSelect(photo.id)}
               aria-label={selected ? 'Remove from selection' : 'Add to selection'}
-              className="flex items-center gap-1 p-2 sm:p-1"
+              className="flex items-center gap-1 p-3 sm:p-1"
             >
               <HeartIcon filled={selected} className="h-5 w-5" />
               {showLikeCounts && (
@@ -175,7 +177,7 @@ export default function Lightbox({
             <a
               href={`/dl/${photo.id}?size=${downloadSizes[0]}`}
               aria-label={downloadSizeLabels?.label ?? 'Download photo'}
-              className="p-2 text-neutral-300 hover:text-white sm:p-1"
+              className="p-3 text-neutral-300 hover:text-white sm:p-1"
               onClick={() => onDownload?.(photo.id, downloadSizes[0])}
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -197,15 +199,15 @@ export default function Lightbox({
               ))}
             </div>
           )}
-          <button type="button" onClick={onClose} aria-label="Close" className="p-2 text-neutral-300 hover:text-white sm:p-1">
+        </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="-m-1 p-3 text-neutral-300 hover:text-white sm:m-0 sm:p-1">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
-        </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-2">
+      <div className="relative flex min-h-[calc(100dvh-8.5rem)] flex-1 items-center justify-center px-2 pb-2 sm:min-h-0">
         {photos.length > 1 && (
           <>
             <button
@@ -243,13 +245,13 @@ export default function Lightbox({
           srcSet={`/img/${photo.id}/md${photo.updatedAt ? `?v=${photo.updatedAt}` : ''} 1280w, /img/${photo.id}/web${photo.updatedAt ? `?v=${photo.updatedAt}` : ''} 2048w`}
           sizes="100vw"
           alt={alt}
-          className={`max-h-[70vh] max-w-full object-contain select-none ${reducedMotion ? '' : 'transition-opacity duration-200'}`}
+          className={`max-h-[calc(100dvh-8.5rem)] max-w-full sm:max-h-[70vh] object-contain select-none ${reducedMotion ? '' : 'transition-opacity duration-200'}`}
           draggable={false}
         />
       </div>
 
       {(showFilename || photo.exifLine || photo.credit || copyrightLine) && (
-        <div className="space-y-1 pb-2 text-center text-[11px] tracking-wide text-neutral-500">
+        <div className="space-y-1 pb-2 max-sm:pb-16 text-center text-[11px] tracking-wide text-neutral-500">
           {showFilename && <div>{photo.filename}</div>}
           {photo.exifLine && <div>{photo.exifLine}</div>}
           {(photo.credit || copyrightLine) && (

@@ -795,7 +795,7 @@ function MagicLinkModal({
               placeholder={t(lang, 'email')}
               className="w-full border-b border-line bg-transparent py-2 text-base dark:border-line-dark"
             />
-            <button type="submit" disabled={busy} className="w-full border py-2 text-xs uppercase">
+            <button type="submit" disabled={busy} className="w-full border py-3 text-xs uppercase">
               {t(lang, 'continue')}
             </button>
           </form>
@@ -879,11 +879,11 @@ function InfoGateModal({
             className="w-full border-b border-neutral-300 bg-transparent py-2 text-base outline-none dark:border-neutral-700"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
-          <button type="submit" disabled={busy} className="w-full border py-2 text-xs uppercase">
+          <button type="submit" disabled={busy} className="w-full border py-3 text-xs uppercase">
             {t(lang, 'continue')}
           </button>
           {!required && (
-            <button type="button" onClick={() => createVisitor({})} className="w-full text-xs underline">
+            <button type="button" onClick={() => createVisitor({})} className="w-full py-3 text-xs underline">
               {t(lang, 'skip')}
             </button>
           )}
