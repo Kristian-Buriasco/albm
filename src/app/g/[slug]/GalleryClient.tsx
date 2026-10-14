@@ -396,7 +396,7 @@ export default function GalleryClient({
           </div>
         </div>
       )}
-      <header className="sticky top-0 z-20 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
+      <header className="z-20 sm:sticky sm:top-0 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight">
@@ -578,7 +578,7 @@ export default function GalleryClient({
       </header>
 
       {!gateContent && (
-        <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-2 py-4 sm:px-4">
+        <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-0.5 py-4 sm:px-4">
           <SectionedGalleryGrid
             sections={filteredSections}
             commentsEnabled={commentsEnabled}

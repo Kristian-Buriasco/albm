@@ -64,7 +64,7 @@ export default function SectionedGalleryGrid({
   return (
     <div>
       {(hasNamedSections || showTagFilters) && (
-        <div className="sticky top-14 z-10 mb-4 flex flex-wrap gap-2 bg-paper/90 py-2 backdrop-blur dark:bg-paper-dark/90">
+        <div className="sticky top-0 z-20 mb-4 flex gap-2 overflow-x-auto bg-paper/90 px-2 py-2 sm:top-14 sm:flex-wrap sm:px-0 backdrop-blur dark:bg-paper-dark/90">
           {hasNamedSections && (
             <>
               <button
@@ -122,12 +122,12 @@ export default function SectionedGalleryGrid({
         const block = (
           <div key={section.id ?? 'ungrouped'} className="mb-8">
             {section.id !== null && (
-              <h2 className="mb-3 text-xs tracking-widest text-muted uppercase dark:text-muted-dark">
+              <h2 className="mb-3 px-2 text-xs tracking-widest sm:px-0 text-muted uppercase dark:text-muted-dark">
                 {section.title}
               </h2>
             )}
             <div
-              className="columns-2 gap-2 md:columns-3 xl:columns-4 [&>div]:mb-2"
+              className="columns-2 gap-0.5 sm:gap-2 md:columns-3 xl:columns-4 [&>div]:mb-0.5 sm:[&>div]:mb-2"
               style={
                 themed
                   ? { columnCount: 'var(--gallery-columns, 4)', columnGap: 'var(--gallery-gap, 8px)' }
