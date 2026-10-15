@@ -409,7 +409,7 @@ export default function GalleryClient({
           </div>
         </div>
       )}
-      <header data-gallery-header className="z-20 sm:sticky sm:top-0 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
+      <header data-gallery-header className="relative z-30 sm:sticky sm:top-0 border-b border-line/70 bg-paper/90 backdrop-blur dark:border-line-dark/70 dark:bg-paper-dark/90">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight">
@@ -488,7 +488,7 @@ export default function GalleryClient({
               {t(lang, 'mySelections')}
             </button>
 
-            <div className="relative">
+            <div className="relative max-sm:static">
               {/* Mobile menu trigger; the controls render inline on sm+. */}
               <button
                 type="button"
@@ -511,7 +511,7 @@ export default function GalleryClient({
                 />
               )}
               <div
-                className={`${menuOpen ? 'flex' : 'hidden'} absolute top-full right-0 z-20 mt-2 w-64 flex-col items-stretch gap-4 rounded-xl border border-line bg-paper p-4 shadow-2xl dark:border-line-dark dark:bg-paper-dark sm:static sm:z-auto sm:mt-0 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}
+                className={`${menuOpen ? 'flex' : 'hidden'} absolute top-full right-0 z-20 mt-2 w-64 flex-col max-sm:right-4 max-sm:left-4 max-sm:w-auto items-stretch gap-4 rounded-xl border border-line bg-paper p-4 shadow-2xl dark:border-line-dark dark:bg-paper-dark sm:static sm:z-auto sm:mt-0 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}
               >
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="text-muted dark:text-muted-dark">{t(lang, 'selectionLists')}:</span>
@@ -613,13 +613,13 @@ export default function GalleryClient({
                 aria-label={
                   selected.has(p.id) ? t(lang, 'removeFromSelection') : t(lang, 'addToSelection')
                 }
-                className={`absolute right-2 bottom-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full transition-all ${
+                className={`absolute right-1.5 bottom-1.5 z-10 flex min-h-9 min-w-9 items-center justify-center rounded-full transition-all sm:right-2 sm:bottom-2 sm:min-h-11 sm:min-w-11 ${
                   selected.has(p.id)
                     ? 'bg-accent text-white shadow-lg dark:bg-accent-dark'
                     : 'bg-black/40 text-white/90 backdrop-blur-sm hover:bg-black/60 max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
                 } disabled:opacity-30`}
               >
-                <HeartIcon filled={selected.has(p.id)} className="h-6 w-6" />
+                <HeartIcon filled={selected.has(p.id)} className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             )}
           />

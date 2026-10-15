@@ -102,7 +102,7 @@ export default function PortfolioGrid({
               liked.has(p.id) ? 'opacity-100' : 'opacity-70 sm:opacity-0 sm:group-hover:opacity-70'
             }`}
           >
-            <HeartIcon filled={liked.has(p.id)} className="h-5 w-5" />
+            <HeartIcon filled={liked.has(p.id)} className="h-4 w-4 sm:h-5 sm:w-5" />
             {showLikeCounts && <span className="tabular-nums">{counts[p.id] ?? 0}</span>}
           </button>
         )}

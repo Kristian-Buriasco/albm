@@ -127,7 +127,7 @@ export default function SectionedGalleryGrid({
               </h2>
             )}
             <div
-              className="columns-2 gap-0.5 sm:gap-2 md:columns-3 xl:columns-4 [&>div]:mb-0.5 sm:[&>div]:mb-2"
+              className="columns-2 max-sm:columns-2! gap-0.5 sm:gap-2 md:columns-3 xl:columns-4 [&>div]:mb-0.5 sm:[&>div]:mb-2"
               style={
                 themed
                   ? { columnCount: 'var(--gallery-columns, 4)', columnGap: 'var(--gallery-gap, 8px)' }
