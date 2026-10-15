@@ -79,7 +79,7 @@ export default function PhotoComments({
   }
 
   return (
-    <div className="mx-auto mt-4 max-w-lg px-4 pb-6 text-xs">
+    <div className="mx-auto mt-4 max-w-lg px-4 pb-20 text-xs sm:pb-6">
       {comments.length > 0 && (
         <ul className="mb-4 space-y-3">
           {comments.map((c) => (
@@ -121,7 +121,7 @@ export default function PhotoComments({
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
           maxLength={80}
-          className="w-full border-b border-neutral-700 bg-transparent py-1 text-neutral-300 outline-none"
+          className="w-full border-b border-neutral-700 bg-transparent py-1.5 text-base text-neutral-300 outline-none sm:text-xs"
         />
         <textarea
           value={body}
@@ -129,13 +129,13 @@ export default function PhotoComments({
           placeholder="Add a comment…"
           maxLength={2000}
           rows={2}
-          className="w-full resize-none border border-neutral-800 bg-neutral-950/40 px-2 py-1.5 text-neutral-300 outline-none"
+          className="w-full resize-none border border-neutral-800 bg-neutral-950/40 px-2 py-1.5 text-base text-neutral-300 outline-none sm:text-xs"
         />
         {error && <p className="text-[10px] text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={busy || !body.trim()}
-          className="text-[10px] tracking-widest uppercase text-neutral-400 hover:text-white disabled:opacity-40"
+          className="py-2 text-[11px] tracking-widest uppercase text-neutral-300 hover:text-white disabled:opacity-40"
         >
           {busy ? 'Posting…' : 'Post comment'}
         </button>

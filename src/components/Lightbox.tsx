@@ -66,6 +66,7 @@ export default function Lightbox({
 }: Props) {
   const photo = photos[index];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const commentsRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const reducedMotion =
     typeof window !== 'undefined' &&
@@ -123,6 +124,7 @@ export default function Lightbox({
       aria-modal="true"
       onClick={() => setPlaying(false)}
       onTouchStart={(e) => {
+        if ((e.target as HTMLElement).closest('input, textarea')) return;
         touchStart.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
@@ -171,6 +173,21 @@ export default function Lightbox({
                   {likeCounts?.[photo.id] ?? 0}
                 </span>
               )}
+            </button>
+          )}
+          {commentsEnabled && commentsApiBase && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              aria-label="Comments"
+              className="p-3 text-neutral-300 hover:text-white sm:hidden"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M4 5h16v11H9l-5 4V5z" />
+              </svg>
             </button>
           )}
           {downloadEnabled && downloadSizes.length === 1 && (
@@ -265,7 +282,9 @@ export default function Lightbox({
       )}
 
       {commentsEnabled && commentsApiBase && (
-        <PhotoComments apiBase={commentsApiBase} photoId={photo.id} enabled />
+        <div ref={commentsRef}>
+          <PhotoComments apiBase={commentsApiBase} photoId={photo.id} enabled />
+        </div>
       )}
     </div>
   );
