@@ -207,7 +207,7 @@ export default function Lightbox({
           </button>
       </div>
 
-      <div className="relative flex min-h-[calc(100dvh-8.5rem)] flex-1 items-center justify-center px-2 pb-2 sm:min-h-0">
+      <div className="relative flex min-h-[calc(100dvh-13rem)] flex-1 items-center justify-center px-2 pb-2 sm:min-h-0">
         {photos.length > 1 && (
           <>
             <button
@@ -245,7 +245,7 @@ export default function Lightbox({
           srcSet={`/img/${photo.id}/md${photo.updatedAt ? `?v=${photo.updatedAt}` : ''} 1280w, /img/${photo.id}/web${photo.updatedAt ? `?v=${photo.updatedAt}` : ''} 2048w`}
           sizes="100vw"
           alt={alt}
-          className={`max-h-[calc(100dvh-8.5rem)] max-w-full sm:max-h-[70vh] object-contain select-none ${reducedMotion ? '' : 'transition-opacity duration-200'}`}
+          className={`max-h-[calc(100dvh-13rem)] max-w-full sm:max-h-[70vh] object-contain select-none ${reducedMotion ? '' : 'transition-opacity duration-200'}`}
           draggable={false}
         />
       </div>
