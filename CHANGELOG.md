@@ -4,6 +4,30 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.23.1] — 2026-10-15
+
+### Fixed
+- **Gallery images sometimes stayed blank.** The tile image stayed invisible until its load event
+  fired, so an image that finished (or failed) before the page became interactive was never shown.
+  Tiles now check on load, and retry twice on a failed request.
+- **Half-written image files.** Resized copies are written to a temp file and renamed, so a
+  browser can no longer be served a partial image while a photo is still processing.
+- **Render pile-up.** A burst of requests for a missing 1280px copy now shares one render
+  instead of starting one each (this starved the 2-core host).
+- **Scroll-reveal hid content until JavaScript ran.** Content is visible by default; only
+  below-the-fold items fade in, with a fallback timer.
+- **Desktop:** the sticky filter chips covered the gallery toolbar (My selections, Download all,
+  Language); they now sit directly under the header.
+
+### Changed (phones)
+- Lightbox: close top-right, actions in a bottom bar (with a comments button), photo fills the
+  screen (portrait photos were shown at ~40% size), swipe-down only closes at the top.
+- Photo grid is edge-to-edge and capped at 2 columns on phones, smaller heart buttons.
+- Gallery header scrolls away on phones; filter chips stick and scroll sideways.
+- The "..." options menu no longer runs off the left edge of the screen.
+- Finger-sized tap targets, 16px comment inputs (no iOS zoom), tighter homepage hero, site name
+  no longer truncated.
+
 ## [1.23.0] — 2026-10-09
 
 ### Added
