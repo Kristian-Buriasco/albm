@@ -64,7 +64,7 @@ export default function SectionedGalleryGrid({
   return (
     <div>
       {(hasNamedSections || showTagFilters) && (
-        <div className="sticky top-0 z-20 mb-4 flex gap-2 overflow-x-auto bg-paper/90 px-2 py-2 sm:top-14 sm:flex-wrap sm:px-0 backdrop-blur dark:bg-paper-dark/90">
+        <div className="sticky top-0 z-20 sm:z-10 mb-4 flex gap-2 overflow-x-auto bg-paper/90 px-2 py-2 sm:top-[var(--gallery-header-h,3.5rem)] sm:flex-wrap sm:px-0 backdrop-blur dark:bg-paper-dark/90">
           {hasNamedSections && (
             <>
               <button
