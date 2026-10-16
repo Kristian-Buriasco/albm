@@ -105,21 +105,15 @@ Downloads go to a temp file that is then renamed, so a partial download never lo
       "enabled": true,
       "conditions": { "prefix": "trash/" },
       "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2592000 } }
-    },
-    {
-      "id": "to-infrequent-access",
-      "enabled": true,
-      "conditions": { "prefix": "" },
-      "storageClassTransitions": [
-        { "condition": { "type": "Age", "maxAge": 5184000 }, "storageClass": "InfrequentAccess" }
-      ]
+    }
+  ]
     }
   ]
   ```
 
-  The last rule (optional) moves objects to R2's cheaper Infrequent Access class after 60 days. IA has no
-  free tier and charges about $0.01 per GB to read an object, so it only pays off once you store well
-  over 10 GB; drop that rule if you prefer predictable costs.
+  Optional, not enabled by default: a fourth rule with `storageClassTransitions` to `InfrequentAccess` after
+  60 days (about $0.005/GB cheaper to store, but it has no free tier and reads cost about $0.01/GB), which
+  only pays off past roughly 200 GB stored.
 
   (The `incoming/` rule only matches while `S3_KEY_PREFIX` is empty; `trash/` always matches because
   the trash key is `trash/` plus the full original key.)
