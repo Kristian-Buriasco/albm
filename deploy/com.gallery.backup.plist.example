@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LaunchDaemon template for the nightly encrypted database backup (scripts/backup-db-to-r2.mjs).
+  Full procedure, key handling and restore steps: docs/DB-BACKUP.md
+
+  Install (replace every YOUR_... value first, then keep the file private):
+    sudo cp deploy/com.gallery.backup.plist.example /Library/LaunchDaemons/com.gallery.backup.plist
+    sudo chown root:wheel /Library/LaunchDaemons/com.gallery.backup.plist
+    sudo chmod 600 /Library/LaunchDaemons/com.gallery.backup.plist     # it holds the bucket secret and the encryption key
+    sudo launchctl bootstrap system /Library/LaunchDaemons/com.gallery.backup.plist
+    sudo launchctl print system/com.gallery.backup                      # check the schedule and last exit code
+
+  Test one run by hand before you rely on it:
+    sudo launchctl kickstart -k system/com.gallery.backup
+    tail -n 20 /var/log/gallery-backup.log
+
+  Reload after editing: sudo launchctl bootout system/com.gallery.backup, then bootstrap again.
+  A plain kickstart does not re-read EnvironmentVariables.
+
+  Never put real secrets in this file in the repository. Only placeholders belong here.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.gallery.backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/local/bin/node</string>
+    <string>/opt/sites/gallery/scripts/backup-db-to-r2.mjs</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/opt/sites/gallery</string>
+
+  <!-- Runs daily at 03:30 local time. launchd runs one missed slot after the Mac wakes up. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>UserName</key>
+  <string>admin</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- Absolute path to the app's data directory (the DB is DATA_DIR/gallery.db). -->
+    <key>DATA_DIR</key>
+    <string>YOUR_DATA_DIR</string>
+
+    <!-- 64 hex characters (openssl rand -hex 32). Keep a copy in a password manager, never in the bucket. -->
+    <key>BACKUP_ENCRYPTION_KEY</key>
+    <string>YOUR_64_HEX_ENCRYPTION_KEY</string>
+
+    <!-- Same values as the app's S3 settings in docs/OBJECT-STORAGE.md. -->
+    <key>S3_ENDPOINT</key>
+    <string>YOUR_S3_ENDPOINT</string>
+    <key>S3_BUCKET</key>
+    <string>YOUR_S3_BUCKET</string>
+    <key>S3_REGION</key>
+    <string>auto</string>
+    <key>S3_ACCESS_KEY_ID</key>
+    <string>YOUR_S3_ACCESS_KEY_ID</string>
+    <key>S3_SECRET_ACCESS_KEY</key>
+    <string>YOUR_S3_SECRET_ACCESS_KEY</string>
+
+    <!-- Optional. Defaults to db-backups/ -->
+    <key>BACKUP_PREFIX</key>
+    <string>db-backups/</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/var/log/gallery-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/gallery-backup.log</string>
+</dict>
+</plist>

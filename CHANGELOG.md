@@ -23,6 +23,10 @@ All notable changes to Albm are documented here. Format follows
   copied there, local copies are kept, missing local originals are restored from the bucket on
   read, and deletes move them to `trash/` for 30 days. `scripts/migrate-derivatives.mjs --originals`
   and `--restore-originals` move existing ones. See `docs/OBJECT-STORAGE.md`.
+- **Encrypted nightly database backup to the bucket.** `scripts/backup-db-to-r2.mjs` takes an online
+  SQLite snapshot, checks it, gzips and encrypts it (AES-256-GCM, key from `BACKUP_ENCRYPTION_KEY`)
+  and uploads it with a size check. `scripts/restore-db-from-r2.mjs` lists, restores and verifies
+  backups and never overwrites the live database. See `docs/DB-BACKUP.md`.
 
 ### Changed
 - **Deleting a photo or gallery moves its bucket derivatives to `trash/` for 30 days** instead of
