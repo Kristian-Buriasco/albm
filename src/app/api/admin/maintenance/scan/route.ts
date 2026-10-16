@@ -9,7 +9,7 @@ export async function GET() {
   const denied = await requireAdmin();
   if (denied) return denied;
 
-  const integrity = scanIntegrity();
+  const integrity = await scanIntegrity();
   const storage = allGalleriesStorageUsage();
   return json({ integrity, storage });
 }

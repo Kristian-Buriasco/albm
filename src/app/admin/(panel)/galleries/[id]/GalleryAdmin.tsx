@@ -26,6 +26,13 @@ import StorageBar from './StorageBar';
 import SettingsCard from '@/components/SettingsCard';
 import type { GalleryInsights } from '@/lib/analytics';
 import type { DeliveryState, TimelineItem } from '@/lib/lifecycle';
+import {
+  abortDirectUpload,
+  PROXY_MAX_BYTES,
+  requestDirectUpload,
+  uploadDirect,
+  type DirectResult,
+} from '@/lib/direct-upload-client';
 
 interface VisitorInfo {
   id: string;
@@ -64,6 +71,19 @@ function formatBytes(n: number): string {
     i++;
   }
   return `${v.toFixed(1)} ${units[i]}`;
+}
+
+/** Server error text for a failed proxy upload: JSON `error` field, else tags stripped. */
+function serverDetail(text: string): string {
+  const t = text.trim();
+  if (!t) return '';
+  try {
+    const j = JSON.parse(t) as { error?: unknown };
+    if (typeof j.error === 'string') return `: ${j.error}`;
+  } catch {
+    /* not JSON */
+  }
+  return `: ${t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)}`;
 }
 
 function visitorLabel(v: VisitorInfo, anonIndex: number): string {
@@ -214,7 +234,31 @@ export default function GalleryAdmin({
   const [dragOver, setDragOver] = useState(false);
   const [folderSectionsEnabled, setFolderSectionsEnabled] = useState(true);
 
-  function uploadOne(file: File, sectionId?: string | null): Promise<Photo> {
+  async function uploadOne(file: File, sectionId?: string | null): Promise<Photo> {
+    const onProgress = (fraction: number) =>
+      setUploadState((s) => ({ ...s, currentPct: Math.round(fraction * 100) }));
+    // Direct-to-bucket first. A null plan (store off, init failed) goes straight to the proxy.
+    const plan = await requestDirectUpload(gallery.id, file);
+    if (plan) {
+      let direct: DirectResult | null = null;
+      try {
+        direct = await uploadDirect(gallery.id, file, plan, sectionId ?? null, onProgress);
+      } catch {
+        // CORS block, retries exhausted, or a failed complete: release the upload, then fall back.
+        await abortDirectUpload(gallery.id, plan);
+        if (file.size > PROXY_MAX_BYTES) {
+          throw new Error('Direct upload failed: check the bucket CORS settings');
+        }
+      }
+      if (direct) {
+        if (direct.duplicate) throw new Error(`duplicate:${direct.existingFilename}`);
+        return direct.photo;
+      }
+    }
+    return uploadViaProxy(file, sectionId);
+  }
+
+  function uploadViaProxy(file: File, sectionId?: string | null): Promise<Photo> {
     // XHR gives per-file upload progress; fetch does not.
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -238,7 +282,7 @@ export default function GalleryAdmin({
             reject(new Error(`HTTP ${xhr.status}`));
           }
         } else {
-          reject(new Error(`HTTP ${xhr.status}`));
+          reject(new Error(`HTTP ${xhr.status}${serverDetail(xhr.responseText)}`));
         }
       };
       xhr.onerror = () => reject(new Error('network error'));
@@ -290,6 +334,7 @@ export default function GalleryAdmin({
           const file = accepted[next++];
           setUploadState((s) => ({ ...s, currentName: file.name, currentPct: 0 }));
           let ok = false;
+          let lastError = '';
           // 1 initial attempt + up to 3 retries with exponential backoff.
           for (let attempt = 0; attempt < 4 && !ok; attempt++) {
             if (attempt > 0) {
@@ -310,6 +355,8 @@ export default function GalleryAdmin({
                   ],
                 }));
                 ok = true;
+              } else {
+                lastError = msg;
               }
             }
           }
@@ -318,7 +365,7 @@ export default function GalleryAdmin({
             done: s.done + 1,
             failures: ok
               ? s.failures
-              : [...s.failures, { file, reason: 'upload failed' }],
+              : [...s.failures, { file, reason: lastError || 'upload failed' }],
           }));
         }
       };

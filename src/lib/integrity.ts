@@ -13,6 +13,7 @@ import {
 } from '@/lib/paths';
 import { decodeRawToJpeg } from '@/lib/raw';
 import { reprocessPhoto } from '@/lib/queue';
+import { galleryObjectKeys, hasObject } from '@/lib/object-store';
 
 export const PRINT_LONG_EDGE = 3000;
 
@@ -65,7 +66,7 @@ function derivativePath(
 }
 
 /** Scan every `status='ready'` photo in every gallery for missing derivative files. */
-export function scanIntegrity(): IntegritySummary {
+export async function scanIntegrity(): Promise<IntegritySummary> {
   const db = getDb();
   const galleries = db
     .select({ id: schema.galleries.id, title: schema.galleries.title })
@@ -77,6 +78,7 @@ export function scanIntegrity(): IntegritySummary {
   let totalMissing = 0;
 
   for (const gallery of galleries) {
+    const keys = await galleryObjectKeys(gallery.id);
     const photos = db
       .select({
         id: schema.photos.id,
@@ -94,7 +96,16 @@ export function scanIntegrity(): IntegritySummary {
       const missingKinds: DerivativeKind[] = [];
       for (const kind of expectedKinds(photo.isRaw)) {
         const p = derivativePath(kind, gallery.id, photo.filename);
-        if (!fs.existsSync(p)) missingKinds.push(kind);
+        if (fs.existsSync(p)) continue;
+        // Derivatives may live only in the bucket; workingJpeg and print are local-only.
+        if (
+          kind !== 'workingJpeg' &&
+          kind !== 'print' &&
+          hasObject(keys, gallery.id, kind, photo.filename)
+        ) {
+          continue;
+        }
+        missingKinds.push(kind);
       }
       if (missingKinds.length > 0) {
         missing.push({ photoId: photo.id, filename: photo.filename, missingKinds });

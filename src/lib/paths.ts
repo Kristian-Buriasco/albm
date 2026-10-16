@@ -30,6 +30,9 @@ function webpBasename(filename: string): string {
   return `${stemOf(filename)}.webp`;
 }
 
+/** Derivative file name (shared with the object-store key). */
+export const webpName = webpBasename;
+
 /** Working JPEG for RAW archives (derivatives + default client original download). */
 export function workingJpegPath(galleryId: string, filename: string): string {
   return assertInsideDataDir(

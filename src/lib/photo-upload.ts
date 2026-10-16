@@ -28,6 +28,8 @@ export type IngestOptions = {
   fromPublishApi?: boolean;
   /** Principal who uploaded: null/omitted = owner, else a collaborators.id. */
   uploadedBy?: string | null;
+  /** Overrides the per-format size limit (direct uploads allow up to MAX_DIRECT_UPLOAD_BYTES). */
+  maxBytes?: number;
 };
 
 /** Shared ingest pipeline for admin + external publish API. */
@@ -49,14 +51,16 @@ export async function ingestGalleryPhoto(
   if (!sanitized) return { ok: false, status: 400, error: 'Invalid filename' };
 
   const isRaw = isRawFilename(sanitized);
-  const maxBytes = isRaw ? MAX_RAW_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+  const maxBytes = opts.maxBytes ?? (isRaw ? MAX_RAW_UPLOAD_BYTES : MAX_UPLOAD_BYTES);
   if (file.size > maxBytes) {
     return {
       ok: false,
       status: 413,
-      error: isRaw
-        ? 'File too large (max 100 MB for RAW)'
-        : 'File too large (max 50 MB)',
+      error: opts.maxBytes
+        ? `File too large (max ${Math.floor(maxBytes / 1024 / 1024)} MB)`
+        : isRaw
+          ? 'File too large (max 100 MB for RAW)'
+          : 'File too large (max 50 MB)',
     };
   }
 

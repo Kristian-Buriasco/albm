@@ -7,6 +7,7 @@ import { galleryRequiresAccess } from '@/lib/pin';
 import { thumbPath, mdPath, webPath } from '@/lib/paths';
 import { streamFileResponse } from '@/lib/stream';
 import { isGalleryExpired } from '@/lib/downloads';
+import { fetchDerivative, objectStoreEnabled, uploadDerivative } from '@/lib/object-store';
 import { derivativeSource, renderWebpVariant, watermarkOptsFor } from '@/lib/queue';
 
 type Params = { params: Promise<{ photoId: string; variant: string }> };
@@ -56,6 +57,45 @@ export async function GET(req: Request, { params }: Params) {
 
   let filePath = VARIANTS[v](photo.galleryId, photo.filename);
 
+  // A `?v=` version stamp (updatedAt) makes the bytes content-addressed, so the
+  // response is safely immutable; without it, keep conservative revalidation.
+  const versioned = new URL(req.url).searchParams.has('v');
+  const scope = gallery.type === 'portfolio' ? 'public' : 'private';
+  const cacheControl = versioned
+    ? `${scope}, max-age=31536000, immutable`
+    : gallery.type === 'portfolio'
+      ? 'public, max-age=86400'
+      : 'private, max-age=3600';
+
+  // Not on local disk but object storage is on: proxy it from the bucket (304 passes through).
+  if (!fs.existsSync(filePath) && objectStoreEnabled()) {
+    const ifNoneMatch = req.headers.get('if-none-match');
+    try {
+      const res = await fetchDerivative(
+        photo.galleryId,
+        v,
+        photo.filename,
+        ifNoneMatch ? { 'If-None-Match': ifNoneMatch } : undefined,
+      );
+      if (res) {
+        const etag = res.headers.get('etag');
+        const length = res.headers.get('content-length');
+        return new Response(res.status === 304 ? null : res.body, {
+          status: res.status,
+          headers: {
+            'Content-Type': 'image/webp',
+            'Cache-Control': cacheControl,
+            ...(etag ? { ETag: etag } : {}),
+            ...(length && res.status === 200 ? { 'Content-Length': length } : {}),
+          },
+        });
+      }
+    } catch (err) {
+      console.error(`[img] bucket fetch failed for ${photoId}:`, err);
+      return new Response('Bad gateway', { status: 502 });
+    }
+  }
+
   // Lazy-generate the `md` (1280) variant for photos processed before it
   // existed. Built from the original with the gallery's watermark opts so it
   // matches a freshly-queued md; on failure fall back to `web`.
@@ -74,21 +114,12 @@ export async function GET(req: Request, { params }: Params) {
         mdInflight.set(filePath, job);
       }
       await job;
+      void uploadDerivative(photo.galleryId, 'md', photo.filename).catch(() => {});
     } catch (err) {
       console.error(`[img] md lazy-gen failed for ${photoId}:`, err);
       filePath = webPath(photo.galleryId, photo.filename);
     }
   }
-
-  // A `?v=` version stamp (updatedAt) makes the bytes content-addressed, so the
-  // response is safely immutable; without it, keep conservative revalidation.
-  const versioned = new URL(req.url).searchParams.has('v');
-  const scope = gallery.type === 'portfolio' ? 'public' : 'private';
-  const cacheControl = versioned
-    ? `${scope}, max-age=31536000, immutable`
-    : gallery.type === 'portfolio'
-      ? 'public, max-age=86400'
-      : 'private, max-age=3600';
 
   return streamFileResponse(req, filePath, {
     contentType: 'image/webp',

@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { getDb, schema } from '@/db';
 import { thumbPath, mdPath, resolveWatermarkPath, webPath, originalPath, workingJpegPath } from './paths';
 import { generatePlaceholder } from './photo-media';
+import { offloadDerivatives } from './object-store';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -185,6 +186,9 @@ async function generateDerivatives(photoId: string): Promise<void> {
         console.error(`[bib-ocr] soft-fail photo ${photoId}:`, err);
       }
     }
+
+    // Optional object storage: upload the derivatives (never throws; local files keep serving on failure).
+    await offloadDerivatives(photo.galleryId, photo.filename);
 
     getDb()
       .update(schema.photos)

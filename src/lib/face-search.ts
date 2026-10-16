@@ -6,6 +6,7 @@ import PQueue from 'p-queue';
 import sharp from 'sharp';
 import { getDb, schema } from '@/db';
 import { originalPath, thumbPath, webPath, workingJpegPath } from '@/lib/paths';
+import { ensureLocalDerivative } from '@/lib/object-store';
 import { logAdmin } from '@/lib/audit-log';
 
 /**
@@ -229,6 +230,8 @@ async function embedPhoto(photo: {
   filename: string;
   isRaw: boolean;
 }): Promise<number> {
+  await ensureLocalDerivative(photo.galleryId, 'web', photo.filename);
+  await ensureLocalDerivative(photo.galleryId, 'thumb', photo.filename);
   const src = photoSource(photo);
   if (!fs.existsSync(src)) return 0;
   const buf = await fs.promises.readFile(src);

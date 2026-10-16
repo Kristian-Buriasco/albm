@@ -5,6 +5,7 @@ import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin } from '@/lib/api';
 import { parseGalleryUpdates } from '@/lib/gallery-fields';
 import { galleryDir } from '@/lib/paths';
+import { removeGalleryDerivatives } from '@/lib/object-store';
 import { hashPin, isValidPinFormat } from '@/lib/pin';
 import { reprocessPhoto, shouldReprocessWatermark } from '@/lib/queue';
 import { normalizeSlug } from '@/lib/slug';
@@ -218,6 +219,7 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   db.delete(schema.galleries).where(eq(schema.galleries.id, id)).run();
   fs.rmSync(galleryDir(id), { recursive: true, force: true });
+  void removeGalleryDerivatives(id);
 
   logAdmin('gallery.delete', {
     targetType: 'gallery',
