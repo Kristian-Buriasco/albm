@@ -4,6 +4,31 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [1.23.2] — 2026-10-16
+
+### Added
+- **Optional S3-compatible object storage** (`STORAGE_BACKEND=s3`): thumb, md and web images can
+  live in Cloudflare R2, B2, MinIO, IONOS or AWS. Off by default (local disk, exactly as before);
+  rollback is `STORAGE_BACKEND=local`. Reads are local-first with a bucket fallback, the bucket
+  stays private and the app proxies it, so the existing access checks remain the only gate.
+  `S3_GALLERIES=id1,id2` limits it to chosen galleries. `scripts/migrate-derivatives.mjs` moves
+  existing derivatives (resumable, `--dry-run`, `--prune`). See `docs/OBJECT-STORAGE.md`.
+- **Direct browser-to-bucket uploads** when object storage is on: files go straight to the bucket
+  with presigned single or multipart uploads (per-part retry), so the 50 MB app limit, nginx's
+  60 MB and Cloudflare's 100 MB request cap no longer apply (default max 500 MB,
+  `MAX_DIRECT_UPLOAD_MB`). The server checks the declared size, ingests the file and deletes the
+  staging object. Falls back to the normal upload path when the bucket is off or blocked.
+- Maintenance integrity scan counts derivatives that live only in the bucket.
+
+### Changed
+- **Zip downloads start streaming immediately.** Entries are prepared one at a time with
+  backpressure instead of preparing every photo before the first byte, so big galleries no longer
+  hit Cloudflare's 100 s idle timeout.
+
+### Fixed
+- Larger derivatives failed to upload to R2 with `411 Length Required` inside the Next.js server;
+  uploads are now signed and sent with an explicit no-store fetch, with retries.
+
 ## [1.23.1] — 2026-10-15
 
 ### Fixed
