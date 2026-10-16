@@ -5,7 +5,7 @@ import { errorJson, json, requireAdmin } from '@/lib/api';
 import { isGalleryExpired } from '@/lib/downloads';
 import { galleryDir, originalPath, thumbPath, webPath } from '@/lib/paths';
 import { logAdmin } from '@/lib/audit-log';
-import { removeDerivatives, removeGalleryDerivatives } from '@/lib/object-store';
+import { trashDerivatives, trashGalleryDerivatives } from '@/lib/object-store';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -60,7 +60,7 @@ export async function POST(req: Request, { params }: Params) {
       ]) {
         fs.rmSync(path, { force: true });
       }
-      void removeDerivatives(id, p.filename);
+      void trashDerivatives(id, p.filename);
     }
     logAdmin('gallery.cleanup.delete-photos', {
       targetType: 'gallery',
@@ -73,7 +73,7 @@ export async function POST(req: Request, { params }: Params) {
   if (action === 'delete') {
     db.delete(schema.galleries).where(eq(schema.galleries.id, id)).run();
     fs.rmSync(galleryDir(id), { recursive: true, force: true });
-    void removeGalleryDerivatives(id);
+    void trashGalleryDerivatives(id);
     logAdmin('gallery.cleanup.delete', {
       targetType: 'gallery',
       targetId: id,

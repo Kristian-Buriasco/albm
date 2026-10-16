@@ -76,6 +76,58 @@ node --env-file=.env scripts/migrate-derivatives.mjs --to local [--gallery <id>]
 
 Downloads go to a temp file that is then renamed, so a partial download never looks complete.
 
+## Deleting and recovery
+
+- Deleting a photo or a gallery does not delete its derivatives from the bucket. They are moved
+  to `trash/<original key>` (a server-side copy, then a delete of the original) and kept there for
+  30 days. A lifecycle rule then removes them.
+- Originals are local and are never in the bucket, so deleting a photo never touches them.
+- The lifecycle rule must exist on the bucket. Save this as `lifecycle.json`:
+
+  ```json
+  [
+    {
+      "id": "abort-incomplete-multipart",
+      "enabled": true,
+      "conditions": { "prefix": "" },
+      "abortMultipartUploadsTransition": { "condition": { "type": "Age", "maxAge": 86400 } }
+    },
+    {
+      "id": "expire-staging-uploads",
+      "enabled": true,
+      "conditions": { "prefix": "incoming/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 86400 } }
+    },
+    {
+      "id": "expire-trash",
+      "enabled": true,
+      "conditions": { "prefix": "trash/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2592000 } }
+    }
+  ]
+  ```
+
+  (The `incoming/` rule only matches while `S3_KEY_PREFIX` is empty; `trash/` always matches because
+  the trash key is `trash/` plus the full original key.)
+
+  Apply it with `cf r2 buckets lifecycle update <bucket> --rules @lifecycle.json --force`. The
+  update replaces the whole rule set, so keep all three rules in the file.
+
+- To restore a deleted gallery's derivatives (within the 30 days):
+
+  ```sh
+  node --env-file=.env scripts/migrate-derivatives.mjs --restore-trash <galleryId> --dry-run
+  node --env-file=.env scripts/migrate-derivatives.mjs --restore-trash <galleryId>
+  ```
+
+  Each object is copied back to its original key and its trash copy is deleted only after the copy
+  succeeds. Keys already in place are skipped. Re-running is safe. The script exits non-zero if any
+  object failed.
+
+> **Warning:** a restore only brings back the derivative images. The database rows and the
+> originals are not recoverable from the bucket. They come from your database backups. A restored
+> gallery without its rows will not show up in the app.
+
 ## Rollback
 
 Set `STORAGE_BACKEND=local` and restart. The app serves from local disk again. Anything still

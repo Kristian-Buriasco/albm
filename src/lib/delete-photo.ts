@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { mdPath, originalPath, printPath, thumbPath, webPath, workingJpegPath } from './paths';
-import { removeDerivatives } from './object-store';
+import { trashDerivatives } from './object-store';
 
 export function deletePhotoById(id: string): boolean {
   const db = getDb();
@@ -32,6 +32,6 @@ export function deletePhotoById(id: string): boolean {
   ]) {
     fs.rmSync(p, { force: true });
   }
-  void removeDerivatives(photo.galleryId, photo.filename);
+  void trashDerivatives(photo.galleryId, photo.filename);
   return true;
 }

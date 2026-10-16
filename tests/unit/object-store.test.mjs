@@ -31,8 +31,8 @@ export async function resolve(specifier, context, nextResolve) {
 );
 
 const store = await import('../../src/lib/object-store.ts');
-const { objectStoreConfig, derivativeKey, offloadDerivatives, fetchDerivative, removeDerivatives,
-  removeGalleryDerivatives, galleryObjectKeys, hasObject, uploadDerivative } = store;
+const { objectStoreConfig, derivativeKey, offloadDerivatives, fetchDerivative, trashDerivatives,
+  trashGalleryDerivatives, galleryObjectKeys, hasObject, uploadDerivative } = store;
 
 const BUCKET = 'test-bucket';
 const PAGE_SIZE = 2; // small page so listing pagination is exercised
@@ -81,6 +81,13 @@ function startFakeS3() {
 
       if (req.method === 'PUT') {
         if (failPut.has(key)) return void res.writeHead(500).end();
+        const copySource = req.headers['x-amz-copy-source'];
+        if (copySource) {
+          const from = objects.get(decodeURIComponent(String(copySource)).replace(`/${BUCKET}/`, ''));
+          if (!from) return void res.writeHead(404).end();
+          objects.set(key, { ...from });
+          return void res.writeHead(200).end('<CopyObjectResult/>');
+        }
         objects.set(key, {
           body: Buffer.concat(chunks),
           contentType: req.headers['content-type'],
@@ -271,22 +278,36 @@ test('fetchDerivative returns a Response with the stored bytes, null for a missi
 
 // ---- (e) removal ----------------------------------------------------------
 
-test('removeDerivatives deletes the three variants of one photo and leaves others', async () => {
+test('trashDerivatives moves the three variants of one photo to trash/ and leaves others', async () => {
   put('g5/thumb/IMG_5.webp', 't');
   put('g5/md/IMG_5.webp', 'm');
   put('g5/web/IMG_5.webp', 'w');
   put('g5/web/IMG_6.webp', 'other');
 
-  await removeDerivatives('g5', 'IMG_5.jpg');
+  await trashDerivatives('g5', 'IMG_5.jpg');
 
-  assert.deepEqual([...objects.keys()], ['g5/web/IMG_6.webp']);
+  assert.deepEqual([...objects.keys()].sort(), [
+    'g5/web/IMG_6.webp',
+    'trash/g5/md/IMG_5.webp',
+    'trash/g5/thumb/IMG_5.webp',
+    'trash/g5/web/IMG_5.webp',
+  ]);
+  assert.equal(objects.get('trash/g5/md/IMG_5.webp').body.toString(), 'm', 'trash copy keeps the bytes');
 });
 
-test('removeDerivatives tolerates objects that are already gone', async () => {
-  await assert.doesNotReject(removeDerivatives('g5', 'MISSING.jpg'));
+test('a failed copy to trash keeps the original in place', async () => {
+  put('g5/web/IMG_7.webp', 'w');
+  failPut.add('trash/g5/web/IMG_7.webp');
+  await trashDerivatives('g5', 'IMG_7.jpg');
+  assert.ok(objects.has('g5/web/IMG_7.webp'), 'original must survive a failed copy');
+  assert.ok(!objects.has('trash/g5/web/IMG_7.webp'));
 });
 
-test('removeGalleryDerivatives paginates through every key of the gallery and spares other galleries', async () => {
+test('trashDerivatives tolerates objects that are already gone', async () => {
+  await assert.doesNotReject(trashDerivatives('g5', 'MISSING.jpg'));
+});
+
+test('trashGalleryDerivatives paginates through every key of the gallery and spares other galleries', async () => {
   for (const k of ['g6/thumb/a.webp', 'g6/thumb/b.webp', 'g6/md/a.webp', 'g6/web/a.webp', 'g6/web/c.webp']) {
     put(k, k);
   }
@@ -294,10 +315,13 @@ test('removeGalleryDerivatives paginates through every key of the gallery and sp
   put('g6x.webp', 'keep');
 
   listCalls = 0;
-  await removeGalleryDerivatives('g6');
+  await trashGalleryDerivatives('g6');
 
   assert.ok(listCalls >= 3, `expected >=3 list pages for 5 keys at page size ${PAGE_SIZE}, got ${listCalls}`);
-  assert.deepEqual([...objects.keys()].sort(), ['g60/thumb/x.webp', 'g6x.webp']);
+  assert.deepEqual(
+    [...objects.keys()].sort(),
+    ['g60/thumb/x.webp', 'g6x.webp', ...['g6/md/a.webp', 'g6/thumb/a.webp', 'g6/thumb/b.webp', 'g6/web/a.webp', 'g6/web/c.webp'].map((k) => 'trash/' + k)].sort(),
+  );
 });
 
 // ---- (f) listing ----------------------------------------------------------
@@ -334,8 +358,8 @@ test('with STORAGE_BACKEND unset every function is a no-op and makes no network 
 
   assert.equal(await offloadDerivatives('g9', 'IMG_9.jpg'), undefined);
   assert.equal(await fetchDerivative('g9', 'thumb', 'IMG_9.jpg'), null);
-  assert.equal(await removeDerivatives('g9', 'IMG_9.jpg'), undefined);
-  assert.equal(await removeGalleryDerivatives('g9'), undefined);
+  assert.equal(await trashDerivatives('g9', 'IMG_9.jpg'), undefined);
+  assert.equal(await trashGalleryDerivatives('g9'), undefined);
   assert.equal(await galleryObjectKeys('g9'), null);
   assert.equal(hasObject(null, 'g9', 'thumb', 'IMG_9.jpg'), false);
   assert.equal(await uploadDerivative('g9', 'thumb', 'IMG_9.jpg'), false);

@@ -6,8 +6,11 @@
 // Usage (env from .env, e.g. node --env-file=.env ...):
 //   node scripts/migrate-derivatives.mjs --to s3    [--gallery <id>] [--dry-run] [--prune]
 //   node scripts/migrate-derivatives.mjs --to local [--gallery <id>] [--dry-run]
+//   node scripts/migrate-derivatives.mjs --restore-trash <id> [--dry-run]
 //
 // --prune (s3 only) deletes a local file once its upload is verified by HEAD size.
+// --restore-trash copies a gallery's derivatives back from trash/ (written when a photo or
+// gallery is deleted) to their original keys, then deletes the trash copy.
 // Exits 1 if any file failed.
 
 import fs from 'node:fs';
@@ -24,17 +27,24 @@ const TO = value('--to');
 const ONLY = value('--gallery');
 const DRY = flag('--dry-run');
 const PRUNE = flag('--prune');
+const RESTORE = value('--restore-trash');
 const VARIANTS = ['thumb', 'md', 'web'];
 
 function die(msg) {
   console.error(msg);
   console.error('Usage: node scripts/migrate-derivatives.mjs --to s3|local [--gallery <id>] [--dry-run] [--prune]');
+  console.error('       node scripts/migrate-derivatives.mjs --restore-trash <galleryId> [--dry-run]');
   process.exit(2);
 }
 
-if (TO !== 's3' && TO !== 'local') die('--to must be "s3" or "local"');
-if (PRUNE && TO !== 's3') die('--prune only applies to --to s3');
-if (ONLY !== undefined && !/^[\w-]+$/.test(ONLY)) die(`invalid --gallery id: ${ONLY}`);
+if (flag('--restore-trash')) {
+  if (RESTORE === undefined || !/^[\w-]+$/.test(RESTORE)) die(`invalid --restore-trash gallery id: ${RESTORE ?? '(missing)'}`);
+  if (TO !== undefined || ONLY !== undefined || PRUNE) die('--restore-trash cannot be combined with --to, --gallery or --prune');
+} else {
+  if (TO !== 's3' && TO !== 'local') die('--to must be "s3" or "local"');
+  if (PRUNE && TO !== 's3') die('--prune only applies to --to s3');
+  if (ONLY !== undefined && !/^[\w-]+$/.test(ONLY)) die(`invalid --gallery id: ${ONLY}`);
+}
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(process.cwd(), 'data'));
 const PHOTOS = path.join(DATA_DIR, 'photos');
@@ -57,7 +67,8 @@ const s3 = new AwsClient({
 });
 
 // Path-style addressing works for R2, B2, MinIO and AWS (same as src/lib/object-store.ts).
-const objectUrl = (key) => `${endpoint}/${bucket}/${key.split('/').map(encodeURIComponent).join('/')}`;
+const encodeKey = (key) => key.split('/').map(encodeURIComponent).join('/');
+const objectUrl = (key) => `${endpoint}/${bucket}/${encodeKey(key)}`;
 
 const totals = { done: 0, skipped: 0, failed: 0 };
 const verb = TO === 's3' ? 'uploaded' : 'downloaded';
@@ -176,7 +187,68 @@ async function runGallery(galleryId, items, step) {
   console.log(`${galleryId}: ${DRY ? 'would ' : ''}${c.done} ${verb}, ${c.skipped} already present, ${c.failed} failed`);
 }
 
+/** Copy one trash/ object back to its original key, then delete the trash copy. */
+async function restoreOne(trashKey) {
+  const original = trashKey.slice('trash/'.length);
+  if ((await headSize(objectUrl(original))) !== null) return 'skipped';
+  if (DRY) return 'restored';
+  const res = await s3.fetch(objectUrl(original), {
+    method: 'PUT',
+    headers: { 'x-amz-copy-source': `/${bucket}/${encodeKey(trashKey)}` },
+  });
+  // CopyObject can answer 200 with an <Error> body, so the body is checked as well.
+  const body = await res.text();
+  if (!res.ok || body.includes('<Error>')) throw new Error(`copy -> ${res.status}`);
+  const del = await s3.fetch(objectUrl(trashKey), { method: 'DELETE' });
+  if (!del.ok && del.status !== 404) throw new Error(`delete trash copy -> ${del.status}`);
+  return 'restored';
+}
+
+/** List trash/<prefix><galleryId>/ and restore each derivative, one at a time. */
+async function restoreTrash(galleryId) {
+  const trashPrefix = `trash/${prefix}${galleryId}/`;
+  const trashKeys = [];
+  let token = '';
+  do {
+    const query =
+      `list-type=2&prefix=${encodeURIComponent(trashPrefix)}` +
+      (token ? `&continuation-token=${encodeURIComponent(token)}` : '');
+    const res = await s3.fetch(`${endpoint}/${bucket}?${query}`, { method: 'GET' });
+    if (!res.ok) throw new Error(`LIST -> ${res.status}`);
+    const xml = await res.text();
+    for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+      const key = /<Key>([^<]*)<\/Key>/.exec(m[1])?.[1] ?? '';
+      if (/^(thumb|md|web)\/[\w.-]+\.webp$/.test(key.slice(trashPrefix.length))) trashKeys.push(key);
+    }
+    const next = /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml);
+    token = /<IsTruncated>true<\/IsTruncated>/.test(xml) && next ? next[1] : '';
+  } while (token);
+
+  const c = { restored: 0, skipped: 0, failed: 0 };
+  for (const trashKey of trashKeys) {
+    try {
+      c[await restoreOne(trashKey)]++;
+    } catch (err) {
+      c.failed++;
+      console.error(`  FAILED ${trashKey}: ${err.message}`);
+    }
+  }
+  console.log(
+    `${galleryId}: ${DRY ? 'would ' : ''}restore ${c.restored}, ${c.skipped} already in place, ${c.failed} failed`,
+  );
+  process.exitCode = c.failed ? 1 : 0;
+}
+
 async function main() {
+  if (RESTORE !== undefined) {
+    try {
+      await restoreTrash(RESTORE);
+    } catch (err) {
+      console.error(`restore failed: ${err.message}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
   let galleries = 0;
   if (TO === 's3') {
     for (const galleryId of localGalleryIds()) {

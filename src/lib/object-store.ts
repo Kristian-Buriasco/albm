@@ -201,19 +201,35 @@ export async function fetchDerivative(
   return res;
 }
 
-/** Best-effort removal of one photo's derivatives from the bucket. */
-export async function removeDerivatives(galleryId: string, filename: string): Promise<void> {
+/** Prefix deleted objects are moved under; a bucket lifecycle rule expires it (30 days, see docs). */
+export const TRASH_PREFIX = 'trash/';
+
+/**
+ * "Delete" = move to `trash/<key>` (server-side copy, then remove the original), so an accidental
+ * delete of a photo or gallery can be undone for as long as the lifecycle rule keeps the copy.
+ * A missing source is fine. Throws on a failed copy and leaves the original in place.
+ */
+async function moveToTrash(s: { c: AwsClient; cfg: ObjectStoreConfig }, key: string): Promise<void> {
+  const source = `/${s.cfg.bucket}/${key.split('/').map(encodeURIComponent).join('/')}`;
+  const copy = await s.c.fetch(objectUrl(s.cfg, TRASH_PREFIX + key), {
+    method: 'PUT',
+    headers: { 'x-amz-copy-source': source },
+  });
+  if (copy.status === 404) return;
+  if (!copy.ok) throw new Error(`S3 COPY ${key} -> ${copy.status}`);
+  const del = await s.c.fetch(objectUrl(s.cfg, key), { method: 'DELETE' });
+  if (!del.ok && del.status !== 404) throw new Error(`S3 DELETE ${key} -> ${del.status}`);
+}
+
+/** Best-effort: move one photo's derivatives to the bucket trash. */
+export async function trashDerivatives(galleryId: string, filename: string): Promise<void> {
   const s = client();
   if (!s) return;
   for (const variant of DERIV_VARIANTS) {
     try {
-      const res = await s.c.fetch(
-        objectUrl(s.cfg, derivativeKey(s.cfg, galleryId, variant, filename)),
-        { method: 'DELETE' },
-      );
-      if (!res.ok && res.status !== 404) throw new Error(`status ${res.status}`);
+      await moveToTrash(s, derivativeKey(s.cfg, galleryId, variant, filename));
     } catch (err) {
-      console.error(`[object-store] delete failed ${galleryId}/${variant}/${filename}:`, err);
+      console.error(`[object-store] trash failed ${galleryId}/${variant}/${filename}:`, err);
     }
   }
 }
@@ -245,17 +261,20 @@ function decodeXml(s: string): string {
     .replaceAll('&amp;', '&');
 }
 
-/** Best-effort removal of everything a gallery has in the bucket. */
-export async function removeGalleryDerivatives(galleryId: string): Promise<void> {
+/** Best-effort: move everything a gallery has in the bucket to the trash. */
+export async function trashGalleryDerivatives(galleryId: string): Promise<void> {
   const s = client();
   if (!s) return;
   try {
     for (const key of await listKeys(s, `${s.cfg.prefix}${galleryId}/`)) {
-      const res = await s.c.fetch(objectUrl(s.cfg, key), { method: 'DELETE' });
-      if (!res.ok && res.status !== 404) console.error(`[object-store] delete ${key} -> ${res.status}`);
+      try {
+        await moveToTrash(s, key);
+      } catch (err) {
+        console.error(`[object-store] trash ${key} failed:`, err);
+      }
     }
   } catch (err) {
-    console.error(`[object-store] gallery cleanup failed ${galleryId}:`, err);
+    console.error(`[object-store] gallery trash failed ${galleryId}:`, err);
   }
 }
 

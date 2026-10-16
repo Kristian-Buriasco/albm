@@ -21,6 +21,9 @@ All notable changes to Albm are documented here. Format follows
 - Maintenance integrity scan counts derivatives that live only in the bucket.
 
 ### Changed
+- **Deleting a photo or gallery moves its bucket derivatives to `trash/` for 30 days** instead of
+  deleting them. A lifecycle rule removes them afterwards; `scripts/migrate-derivatives.mjs
+  --restore-trash <galleryId>` brings a gallery back. See `docs/OBJECT-STORAGE.md`.
 - **Zip downloads start streaming immediately.** Entries are prepared one at a time with
   backpressure instead of preparing every photo before the first byte, so big galleries no longer
   hit Cloudflare's 100 s idle timeout.
