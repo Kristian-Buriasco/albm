@@ -1,6 +1,4 @@
 import fs from 'node:fs';
-import { PassThrough, Readable } from 'node:stream';
-import archiver from 'archiver';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import {
@@ -14,6 +12,7 @@ import { logDownloadEvent } from '@/lib/downloads';
 import { canViewGallery } from '@/lib/gallery-auth';
 import { sanitizeSectionFolder } from '@/lib/sections';
 import { getVisitorSession } from '@/lib/session';
+import { streamZip } from '@/lib/zip-stream';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,46 +96,35 @@ export async function GET(req: Request, { params }: Params) {
   const sectionMap = new Map(sections.map((s) => [s.id, s.title]));
   const hasSections = sections.length > 0;
 
-  const archive = archiver('zip', { store: true });
-  const out = new PassThrough();
-  archive.pipe(out);
-
-  const abort = (err: Error) => {
-    console.error('[favorites-zip] stream error:', err.message);
-    archive.destroy();
-    out.destroy(err);
-  };
-  archive.on('error', abort);
-  out.on('error', () => {});
-
-  for (const photo of selected) {
-    try {
-      const prepared = await preparePhotoDownload({
-        gallery,
-        photo,
-        size,
-        visitorId: visitor.id,
-        accountId: visitor.accountId ?? null,
-      });
-      let zipName = prepared.downloadName;
-      if (hasSections && photo.sectionId) {
-        const folder = sanitizeSectionFolder(sectionMap.get(photo.sectionId) ?? 'section');
-        zipName = `${folder}/${prepared.downloadName}`;
+  const entries = async function* () {
+    for (const photo of selected) {
+      try {
+        const prepared = await preparePhotoDownload({
+          gallery,
+          photo,
+          size,
+          visitorId: visitor.id,
+          accountId: visitor.accountId ?? null,
+        });
+        let zipName = prepared.downloadName;
+        if (hasSections && photo.sectionId) {
+          const folder = sanitizeSectionFolder(sectionMap.get(photo.sectionId) ?? 'section');
+          zipName = `${folder}/${prepared.downloadName}`;
+        }
+        if (prepared.streamFile && prepared.filePath && fs.existsSync(prepared.filePath)) {
+          yield { name: zipName, file: prepared.filePath };
+        } else if (prepared.body) {
+          yield { name: zipName, body: prepared.body };
+        }
+      } catch (err) {
+        console.warn('[favorites-zip] skip photo', photo.id, err);
       }
-      if (prepared.streamFile && prepared.filePath && fs.existsSync(prepared.filePath)) {
-        archive.file(prepared.filePath, { name: zipName });
-      } else if (prepared.body) {
-        archive.append(prepared.body, { name: zipName });
-      }
-    } catch (err) {
-      console.warn('[favorites-zip] skip photo', photo.id, err);
     }
-  }
-  archive.finalize().catch(abort);
+  };
 
   logDownloadEvent(gallery, 'favorites_zip', null, visitor.id);
 
-  return new Response(Readable.toWeb(out) as ReadableStream, {
+  return new Response(streamZip(entries()), {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
