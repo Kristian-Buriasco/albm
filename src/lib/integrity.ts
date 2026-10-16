@@ -13,7 +13,7 @@ import {
 } from '@/lib/paths';
 import { decodeRawToJpeg } from '@/lib/raw';
 import { reprocessPhoto } from '@/lib/queue';
-import { galleryObjectKeys, hasObject } from '@/lib/object-store';
+import { ensureLocalOriginal, galleryObjectKeys, hasObject } from '@/lib/object-store';
 
 export const PRINT_LONG_EDGE = 3000;
 
@@ -131,6 +131,7 @@ async function regenerateWorkingJpeg(
   galleryId: string,
   filename: string,
 ): Promise<boolean> {
+  await ensureLocalOriginal(galleryId, filename);
   const src = originalPath(galleryId, filename);
   if (!fs.existsSync(src)) return false;
   const buf = fs.readFileSync(src);
@@ -152,6 +153,7 @@ async function regeneratePrint(
   filename: string,
   isRaw: boolean,
 ): Promise<boolean> {
+  if (!isRaw) await ensureLocalOriginal(galleryId, filename);
   const src = isRaw ? workingJpegPath(galleryId, filename) : originalPath(galleryId, filename);
   if (!fs.existsSync(src)) return false;
   const out = printPath(galleryId, filename);

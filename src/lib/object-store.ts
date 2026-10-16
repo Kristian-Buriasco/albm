@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { AwsClient } from 'aws4fetch';
-import { thumbPath, mdPath, webPath, webpName } from './paths';
+import { thumbPath, mdPath, webPath, webpName, originalPath } from './paths';
 
 /**
  * Optional S3-compatible object storage (Cloudflare R2, B2, MinIO, IONOS, AWS) for the
@@ -333,3 +336,191 @@ export function getS3(): { c: AwsClient; cfg: ObjectStoreConfig } | null {
 }
 
 export { objectUrl };
+
+// ---- originals (S3_ORIGINALS=1): full-size files mirrored to the bucket ----------------------
+
+/** Originals are mirrored only when object storage is on and S3_ORIGINALS is 1/true/yes. */
+export function originalsEnabled(): boolean {
+  return objectStoreEnabled() && ['1', 'true', 'yes'].includes((process.env.S3_ORIGINALS ?? '').toLowerCase());
+}
+
+export function originalKey(cfg: Pick<ObjectStoreConfig, 'prefix'>, galleryId: string, filename: string): string {
+  return `${cfg.prefix}${galleryId}/originals/${filename}`;
+}
+
+const MIRROR_PART_BYTES = 16 * 1024 * 1024;
+
+/** Signed PUT with the putFile retry policy (3 attempts, 5xx and network errors retried). */
+async function putSigned(c: AwsClient, url: string, body: Buffer<ArrayBuffer>, headers: Record<string, string>): Promise<Response> {
+  let last = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const signed = await c.sign(url, { method: 'PUT', body, headers });
+    try {
+      const res = await fetch(signed.url, { method: 'PUT', headers: signed.headers, body, cache: 'no-store' });
+      if (res.ok) return res;
+      last = res.status;
+      if (res.status < 500) break;
+    } catch {
+      last = 0;
+    }
+    await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+  }
+  throw new Error(`S3 PUT ${url} -> ${last || 'network error'}`);
+}
+
+/** Size of a bucket object, or null when it does not exist. */
+async function objectSize(s: { c: AwsClient; cfg: ObjectStoreConfig }, key: string): Promise<number | null> {
+  const res = await s.c.fetch(objectUrl(s.cfg, key), { method: 'HEAD' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`S3 HEAD ${key} -> ${res.status}`);
+  return Number(res.headers.get('content-length') ?? -1);
+}
+
+function contentTypeOf(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.png') return 'image/png';
+  return 'application/octet-stream';
+}
+
+/** Multipart upload of a local file in MIRROR_PART_BYTES slices; aborts the upload on any failure. */
+async function uploadMultipart(
+  s: { c: AwsClient; cfg: ObjectStoreConfig },
+  key: string,
+  file: string,
+  size: number,
+  contentType: string,
+): Promise<void> {
+  const base = objectUrl(s.cfg, key);
+  const created = await s.c.fetch(`${base}?uploads`, { method: 'POST', headers: { 'Content-Type': contentType } });
+  const uploadId = /<UploadId>([^<]+)<\/UploadId>/.exec(await created.text())?.[1];
+  if (!created.ok || !uploadId) throw new Error(`S3 CreateMultipartUpload ${key} -> ${created.status}`);
+  const abort = () => s.c.fetch(`${base}?uploadId=${encodeURIComponent(uploadId)}`, { method: 'DELETE' });
+  try {
+    const parts: { partNumber: number; etag: string }[] = [];
+    const fd = fs.openSync(file, 'r');
+    try {
+      for (let n = 1, offset = 0; offset < size; n++, offset += MIRROR_PART_BYTES) {
+        const len = Math.min(MIRROR_PART_BYTES, size - offset);
+        const buf = Buffer.alloc(len);
+        if (fs.readSync(fd, buf, 0, len, offset) !== len) throw new Error(`short read ${file} at ${offset}`);
+        const res = await putSigned(s.c, `${base}?partNumber=${n}&uploadId=${encodeURIComponent(uploadId)}`, buf, {});
+        const etag = res.headers.get('etag');
+        if (!etag) throw new Error(`S3 UploadPart ${key} #${n}: no ETag`);
+        parts.push({ partNumber: n, etag });
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+    const xml = parts.map((p) => `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`).join('');
+    const done = await s.c.fetch(`${base}?uploadId=${encodeURIComponent(uploadId)}`, {
+      method: 'POST',
+      body: `<CompleteMultipartUpload>${xml}</CompleteMultipartUpload>`,
+      headers: { 'Content-Type': 'application/xml' },
+    });
+    const text = await done.text();
+    if (!done.ok || text.includes('<Error>')) throw new Error(`S3 CompleteMultipartUpload ${key} -> ${done.status}`);
+  } catch (err) {
+    await abort().catch(() => {});
+    throw err;
+  }
+}
+
+/**
+ * Copy one local original into the bucket (single PUT up to 16 MiB, multipart above). Skipped when
+ * the same-size object is already there. Verifies the size afterwards. Never throws.
+ */
+export async function mirrorOriginal(galleryId: string, filename: string): Promise<boolean> {
+  try {
+    if (!originalsEnabled() || !galleryUsesObjectStore(galleryId)) return false;
+    const s = client();
+    if (!s) return false;
+    const file = originalPath(galleryId, filename);
+    if (!fs.existsSync(file)) return false;
+    const size = fs.statSync(file).size;
+    const key = originalKey(s.cfg, galleryId, filename);
+    if ((await objectSize(s, key)) === size) return true;
+    const contentType = contentTypeOf(filename);
+    if (size <= MIRROR_PART_BYTES) {
+      await putSigned(s.c, objectUrl(s.cfg, key), fs.readFileSync(file) as Buffer<ArrayBuffer>,{ 'Content-Type': contentType });
+    } else {
+      await uploadMultipart(s, key, file, size, contentType);
+    }
+    if ((await objectSize(s, key)) !== size) throw new Error(`size mismatch after upload ${key}`);
+    return true;
+  } catch (err) {
+    console.error(`[object-store] mirror original failed ${galleryId}/${filename}:`, err);
+    return false;
+  }
+}
+
+/** Downloads share one in-flight promise per local path. */
+const inflightOriginals = new Map<string, Promise<void>>();
+
+async function downloadOriginal(galleryId: string, filename: string, local: string): Promise<void> {
+  const s = client();
+  if (!s) return;
+  const key = originalKey(s.cfg, galleryId, filename);
+  const res = await s.c.fetch(objectUrl(s.cfg, key), { method: 'GET' });
+  if (!res.ok || !res.body) throw new Error(`S3 GET ${key} -> ${res.status}`);
+  fs.mkdirSync(path.dirname(local), { recursive: true });
+  const tmp = `${local}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await pipeline(Readable.fromWeb(res.body as unknown as WebReadableStream), fs.createWriteStream(tmp));
+    const expected = res.headers.get('content-length');
+    const written = fs.statSync(tmp).size;
+    if (expected !== null && written !== Number(expected)) {
+      throw new Error(`short download ${key}: ${written} of ${expected} bytes`);
+    }
+    fs.renameSync(tmp, local);
+  } catch (err) {
+    fs.rmSync(tmp, { force: true });
+    throw err;
+  }
+}
+
+/** Make sure the original exists locally (streamed from the bucket when missing). Never throws. */
+export async function ensureLocalOriginal(galleryId: string, filename: string): Promise<void> {
+  try {
+    const local = originalPath(galleryId, filename);
+    if (fs.existsSync(local) || !originalsEnabled() || !galleryUsesObjectStore(galleryId)) return;
+    let job = inflightOriginals.get(local);
+    if (!job) {
+      job = downloadOriginal(galleryId, filename, local).finally(() => inflightOriginals.delete(local));
+      inflightOriginals.set(local, job);
+    }
+    await job;
+  } catch (err) {
+    console.error(`[object-store] restore original failed ${galleryId}/${filename}:`, err);
+  }
+}
+
+/** Server-side copy of a staged upload to the original key. True on 200, false otherwise. Never throws. */
+export async function copyStagingToOriginal(stagingKey: string, galleryId: string, filename: string): Promise<boolean> {
+  try {
+    const s = client();
+    if (!s) return false;
+    const source = `/${s.cfg.bucket}/${stagingKey.split('/').map(encodeURIComponent).join('/')}`;
+    const res = await s.c.fetch(objectUrl(s.cfg, originalKey(s.cfg, galleryId, filename)), {
+      method: 'PUT',
+      headers: { 'x-amz-copy-source': source },
+    });
+    if (res.status !== 200) console.error(`[object-store] copy staging -> original ${res.status}: ${stagingKey}`);
+    return res.status === 200;
+  } catch (err) {
+    console.error(`[object-store] copy staging -> original failed: ${stagingKey}`, err);
+    return false;
+  }
+}
+
+/** Best-effort: move one original to the bucket trash. */
+export async function trashOriginal(galleryId: string, filename: string): Promise<void> {
+  if (!originalsEnabled()) return;
+  const s = client();
+  if (!s) return;
+  try {
+    await moveToTrash(s, originalKey(s.cfg, galleryId, filename));
+  } catch (err) {
+    console.error(`[object-store] trash original failed ${galleryId}/${filename}:`, err);
+  }
+}

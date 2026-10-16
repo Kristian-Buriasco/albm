@@ -2,6 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import type { Photo, Section } from '@/db/schema';
 import { originalPath } from './paths';
+import { ensureLocalOriginal } from './object-store';
 
 export type SectionGroup = {
   id: string | null;
@@ -61,23 +62,23 @@ export function sanitizeSectionFolder(title: string): string {
 
 export type ZipEntry = { path: string; filePath: string };
 
-export function zipEntriesForGallery(
+export async function zipEntriesForGallery(
   galleryId: string,
   photos: { galleryId: string; filename: string; sectionId: string | null }[],
   sections: Section[],
-): ZipEntry[] {
+): Promise<ZipEntry[]> {
   const sectionMap = new Map(sections.map((s) => [s.id, s.title]));
   const hasSections = sections.length > 0;
 
-  return photos.map((photo) => {
+  const entries: ZipEntry[] = [];
+  for (const photo of photos) {
     let name = photo.filename;
     if (hasSections && photo.sectionId) {
       const folder = sanitizeSectionFolder(sectionMap.get(photo.sectionId) ?? 'section');
       name = `${folder}/${photo.filename}`;
     }
-    return {
-      path: name,
-      filePath: originalPath(photo.galleryId, photo.filename),
-    };
-  });
+    await ensureLocalOriginal(photo.galleryId, photo.filename);
+    entries.push({ path: name, filePath: originalPath(photo.galleryId, photo.filename) });
+  }
+  return entries;
 }

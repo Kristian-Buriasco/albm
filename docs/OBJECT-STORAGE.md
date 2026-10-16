@@ -8,7 +8,8 @@ IONOS and AWS use the same settings.
 
 - **Does:** after a photo is processed, uploads its three derivatives to the bucket. Reads go
   through the app, which tries local disk first and falls back to the bucket.
-- **Does not:** move originals. Originals stay on local disk and are never uploaded.
+- **Does not:** move originals by default. With `S3_ORIGINALS=1` they are also copied to the bucket
+  (see Originals below). Local copies are kept either way.
 - **Does not:** expose the bucket. It stays private; the app proxies every image, so the existing
   `/img` access checks still decide who sees what.
 - **Off by default.** Without `STORAGE_BACKEND=s3` the app behaves as before.
@@ -28,6 +29,7 @@ Bucket key layout: `<S3_KEY_PREFIX><galleryId>/<variant>/<stem>.webp`.
 | `S3_KEY_PREFIX` | empty | Optional folder inside the bucket, e.g. `albm/` |
 | `S3_KEEP_LOCAL` | `1` | `0` deletes local derivatives after a successful upload |
 | `S3_GALLERIES` | (all) | Comma-separated gallery ids. When set, only these galleries are uploaded to the bucket (derivatives and direct uploads); everything else stays local. Reads stay global, so anything already in the bucket is still served. |
+| `S3_ORIGINALS` | `0` | `1` also copies every original into the bucket. Needs `STORAGE_BACKEND=s3`. See Originals. |
 
 If `STORAGE_BACKEND=s3` but any of the endpoint, bucket or key variables is missing, the app logs
 a warning once and uses local disk.
@@ -81,7 +83,7 @@ Downloads go to a temp file that is then renamed, so a partial download never lo
 - Deleting a photo or a gallery does not delete its derivatives from the bucket. They are moved
   to `trash/<original key>` (a server-side copy, then a delete of the original) and kept there for
   30 days. A lifecycle rule then removes them.
-- Originals are local and are never in the bucket, so deleting a photo never touches them.
+- With `S3_ORIGINALS=1`, deleting a photo or gallery moves its originals to `trash/` the same way.
 - The lifecycle rule must exist on the bucket. Save this as `lifecycle.json`:
 
   ```json
@@ -103,9 +105,21 @@ Downloads go to a temp file that is then renamed, so a partial download never lo
       "enabled": true,
       "conditions": { "prefix": "trash/" },
       "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2592000 } }
+    },
+    {
+      "id": "to-infrequent-access",
+      "enabled": true,
+      "conditions": { "prefix": "" },
+      "storageClassTransitions": [
+        { "condition": { "type": "Age", "maxAge": 5184000 }, "storageClass": "InfrequentAccess" }
+      ]
     }
   ]
   ```
+
+  The last rule (optional) moves objects to R2's cheaper Infrequent Access class after 60 days. IA has no
+  free tier and charges about $0.01 per GB to read an object, so it only pays off once you store well
+  over 10 GB; drop that rule if you prefer predictable costs.
 
   (The `incoming/` rule only matches while `S3_KEY_PREFIX` is empty; `trash/` always matches because
   the trash key is `trash/` plus the full original key.)
@@ -128,11 +142,52 @@ Downloads go to a temp file that is then renamed, so a partial download never lo
 > originals are not recoverable from the bucket. They come from your database backups. A restored
 > gallery without its rows will not show up in the app.
 
+## Originals (stage 1: mirror and restore)
+
+Originals can also be kept in the bucket. It is opt-in: set `S3_ORIGINALS=1` (default off). It
+needs `STORAGE_BACKEND=s3`, and the gallery must be in `S3_GALLERIES` when that is set.
+
+What it does:
+
+- **Mirror:** after a new original is written to disk, a copy goes to
+  `<S3_KEY_PREFIX><galleryId>/originals/<filename>` in the background. The upload does not wait
+  for it, and a failed copy does not fail the upload.
+- **Direct uploads:** the browser stages the file in the bucket, and the app copies it to the
+  originals key inside the bucket. The mini's uplink is not used. If that copy fails, the app
+  uploads from local disk instead.
+- **Local copies are kept.** Nothing is pruned.
+- **Restore on read:** if a local original is missing, the app fetches it back from the bucket.
+- **Delete:** deleting a photo or gallery moves its originals to `trash/`, like the derivatives.
+  The 30-day lifecycle rule removes them.
+
+To migrate originals that already exist on disk:
+
+```sh
+# Dry run. Add --gallery <id> to limit it to one gallery.
+node --env-file=.env scripts/migrate-derivatives.mjs --to s3 --originals --dry-run
+
+# Upload. Local originals are kept. Objects already in the bucket at the same size are skipped.
+node --env-file=.env scripts/migrate-derivatives.mjs --to s3 --originals
+
+# Download originals that are missing locally (for example after a disk failure).
+node --env-file=.env scripts/migrate-derivatives.mjs --restore-originals [--gallery <id>] [--dry-run]
+```
+
+Files up to 16 MiB go up in one request. Larger files use multipart upload in 16 MiB parts, and
+each part is retried up to three times. Files are handled one at a time, and each upload is checked
+by HEAD size. The script exits non-zero if any file failed. Restores stream to a temp file and
+rename it, so a partial download never looks complete.
+
+Cost: Cloudflare R2 Standard storage is about $0.015 per GB-month after the first 10 GB, and
+downloads have no egress fee. Check the current price on Cloudflare's R2 pricing page before you
+rely on this. Originals are much larger than derivatives: 10,000 photos of about 10 MB each is
+roughly 100 GB, or about $1.35 a month. Per-request charges are small.
+
 ## Rollback
 
 Set `STORAGE_BACKEND=local` and restart. The app serves from local disk again. Anything still
 local keeps working; anything pruned locally must be fetched back first with `--to local`.
-Originals were never moved, so they are unaffected.
+Local originals are kept, so they are unaffected.
 
 Use `S3_KEEP_LOCAL=0` only when you are happy to depend on the bucket for every image.
 
@@ -149,6 +204,7 @@ Use `S3_KEEP_LOCAL=0` only when you are happy to depend on the bucket for every 
 
 ## Not included yet
 
-- Direct browser uploads of originals (uploads still go through the app's disk).
+- Pruning local originals. Local copies are always kept.
+- Presigned downloads straight from the bucket. Originals are still served through the app.
 - Per-gallery backend choice (one backend for the whole install).
 - Settings-page UI. Configuration is environment variables only.

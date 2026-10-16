@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { getDb, schema } from '@/db';
 import { thumbPath, mdPath, resolveWatermarkPath, webPath, originalPath, workingJpegPath } from './paths';
 import { generatePlaceholder } from './photo-media';
-import { offloadDerivatives } from './object-store';
+import { ensureLocalOriginal, offloadDerivatives } from './object-store';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -157,6 +157,7 @@ async function generateDerivatives(photoId: string): Promise<void> {
     .get();
   if (!gallery) return;
 
+  await ensureLocalOriginal(photo.galleryId, photo.filename);
   const src = derivativeSource(photo);
   const webOut = webPath(photo.galleryId, photo.filename);
   const mdOut = mdPath(photo.galleryId, photo.filename);

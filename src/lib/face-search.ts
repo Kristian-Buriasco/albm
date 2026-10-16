@@ -6,7 +6,7 @@ import PQueue from 'p-queue';
 import sharp from 'sharp';
 import { getDb, schema } from '@/db';
 import { originalPath, thumbPath, webPath, workingJpegPath } from '@/lib/paths';
-import { ensureLocalDerivative } from '@/lib/object-store';
+import { ensureLocalDerivative, ensureLocalOriginal } from '@/lib/object-store';
 import { logAdmin } from '@/lib/audit-log';
 
 /**
@@ -89,11 +89,11 @@ async function loadFaceApi(): Promise<FaceApiModule> {
   return globalFace.__faceApiReady;
 }
 
-function photoSource(photo: {
+async function photoSource(photo: {
   galleryId: string;
   filename: string;
   isRaw: boolean;
-}): string {
+}): Promise<string> {
   const web = webPath(photo.galleryId, photo.filename);
   if (fs.existsSync(web)) return web;
   if (photo.isRaw) {
@@ -102,6 +102,8 @@ function photoSource(photo: {
   }
   const thumb = thumbPath(photo.galleryId, photo.filename);
   if (fs.existsSync(thumb)) return thumb;
+  // Only the last-resort fallback reads the original, so only fetch it here.
+  await ensureLocalOriginal(photo.galleryId, photo.filename);
   return originalPath(photo.galleryId, photo.filename);
 }
 
@@ -232,7 +234,7 @@ async function embedPhoto(photo: {
 }): Promise<number> {
   await ensureLocalDerivative(photo.galleryId, 'web', photo.filename);
   await ensureLocalDerivative(photo.galleryId, 'thumb', photo.filename);
-  const src = photoSource(photo);
+  const src = await photoSource(photo);
   if (!fs.existsSync(src)) return 0;
   const buf = await fs.promises.readFile(src);
   const faces = await detectFacesFromBuffer(buf);

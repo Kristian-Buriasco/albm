@@ -9,6 +9,7 @@ import { detectImageType, detectUploadKind, resolveCollision, sanitizeFilename }
 import { originalPath, workingJpegPath } from '@/lib/paths';
 import { extractExif } from '@/lib/exif';
 import { enqueueDerivatives } from '@/lib/queue';
+import { mirrorOriginal } from '@/lib/object-store';
 import {
   decodeRawToJpeg,
   isRawFilename,
@@ -30,6 +31,8 @@ export type IngestOptions = {
   uploadedBy?: string | null;
   /** Overrides the per-format size limit (direct uploads allow up to MAX_DIRECT_UPLOAD_BYTES). */
   maxBytes?: number;
+  /** Set by callers that copy the original to the bucket themselves (direct uploads). */
+  skipMirror?: boolean;
 };
 
 /** Shared ingest pipeline for admin + external publish API. */
@@ -163,6 +166,7 @@ export async function ingestGalleryPhoto(
     fs.mkdirSync(path.dirname(wp), { recursive: true });
     fs.writeFileSync(wp, workingJpeg);
   }
+  if (!opts.skipMirror) void mirrorOriginal(galleryId, filename);
 
   const maxOrder =
     db

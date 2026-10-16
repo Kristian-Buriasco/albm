@@ -19,6 +19,10 @@ All notable changes to Albm are documented here. Format follows
   `MAX_DIRECT_UPLOAD_MB`). The server checks the declared size, ingests the file and deletes the
   staging object. Falls back to the normal upload path when the bucket is off or blocked.
 - Maintenance integrity scan counts derivatives that live only in the bucket.
+- **Originals can be mirrored to the bucket** (opt-in `S3_ORIGINALS=1`): every new original is
+  copied there, local copies are kept, missing local originals are restored from the bucket on
+  read, and deletes move them to `trash/` for 30 days. `scripts/migrate-derivatives.mjs --originals`
+  and `--restore-originals` move existing ones. See `docs/OBJECT-STORAGE.md`.
 
 ### Changed
 - **Deleting a photo or gallery moves its bucket derivatives to `trash/` for 30 days** instead of

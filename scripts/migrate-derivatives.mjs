@@ -1,20 +1,28 @@
 #!/usr/bin/env node
 // Move photo derivatives (thumb / md / web .webp) between local disk and the S3-compatible
-// bucket. Originals are never touched. Idempotent and resumable: an object or file already
-// present with the same byte size is skipped, so re-running after an interruption is safe.
+// bucket. Idempotent and resumable: an object or file already present with the same byte size
+// is skipped, so re-running after an interruption is safe. Originals move only with --originals
+// or --restore-originals.
 //
 // Usage (env from .env, e.g. node --env-file=.env ...):
 //   node scripts/migrate-derivatives.mjs --to s3    [--gallery <id>] [--dry-run] [--prune]
 //   node scripts/migrate-derivatives.mjs --to local [--gallery <id>] [--dry-run]
+//   node scripts/migrate-derivatives.mjs --to s3 --originals [--gallery <id>] [--dry-run]
+//   node scripts/migrate-derivatives.mjs --restore-originals [--gallery <id>] [--dry-run]
 //   node scripts/migrate-derivatives.mjs --restore-trash <id> [--dry-run]
 //
 // --prune (s3 only) deletes a local file once its upload is verified by HEAD size.
-// --restore-trash copies a gallery's derivatives back from trash/ (written when a photo or
+// --originals uploads photos/<id>/originals/* to <prefix><id>/originals/ (files over 16 MiB
+// go up as multipart). Local originals are never deleted.
+// --restore-originals downloads bucket originals that are missing locally.
+// --restore-trash copies a gallery's derivatives and originals back from trash/ (written when a photo or
 // gallery is deleted) to their original keys, then deletes the trash copy.
-// Exits 1 if any file failed.
+// Exits 1 if any file failed, 2 on bad arguments.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { AwsClient } from 'aws4fetch';
 
 const args = process.argv.slice(2);
@@ -28,18 +36,32 @@ const ONLY = value('--gallery');
 const DRY = flag('--dry-run');
 const PRUNE = flag('--prune');
 const RESTORE = value('--restore-trash');
+const ORIGINALS = flag('--originals');
+const RESTORE_ORIGINALS = flag('--restore-originals');
 const VARIANTS = ['thumb', 'md', 'web'];
+const PART_BYTES = 16 * 1024 * 1024; // single PUT up to this size, multipart above
+const PART_ATTEMPTS = 3;
 
 function die(msg) {
   console.error(msg);
   console.error('Usage: node scripts/migrate-derivatives.mjs --to s3|local [--gallery <id>] [--dry-run] [--prune]');
+  console.error('       node scripts/migrate-derivatives.mjs --to s3 --originals [--gallery <id>] [--dry-run]');
+  console.error('       node scripts/migrate-derivatives.mjs --restore-originals [--gallery <id>] [--dry-run]');
   console.error('       node scripts/migrate-derivatives.mjs --restore-trash <galleryId> [--dry-run]');
   process.exit(2);
 }
 
 if (flag('--restore-trash')) {
   if (RESTORE === undefined || !/^[\w-]+$/.test(RESTORE)) die(`invalid --restore-trash gallery id: ${RESTORE ?? '(missing)'}`);
-  if (TO !== undefined || ONLY !== undefined || PRUNE) die('--restore-trash cannot be combined with --to, --gallery or --prune');
+  if (TO !== undefined || ONLY !== undefined || PRUNE || ORIGINALS || RESTORE_ORIGINALS) {
+    die('--restore-trash cannot be combined with --to, --gallery, --prune or the originals flags');
+  }
+} else if (ORIGINALS || RESTORE_ORIGINALS) {
+  if (ORIGINALS && RESTORE_ORIGINALS) die('--originals and --restore-originals cannot be combined');
+  if (ORIGINALS && TO !== 's3') die('--originals requires --to s3');
+  if (RESTORE_ORIGINALS && TO !== undefined) die('--restore-originals downloads from the bucket and cannot be combined with --to');
+  if (PRUNE) die('--prune only applies to derivatives, not to originals');
+  if (ONLY !== undefined && !/^[\w-]+$/.test(ONLY)) die(`invalid --gallery id: ${ONLY}`);
 } else {
   if (TO !== 's3' && TO !== 'local') die('--to must be "s3" or "local"');
   if (PRUNE && TO !== 's3') die('--prune only applies to --to s3');
@@ -204,7 +226,7 @@ async function restoreOne(trashKey) {
   return 'restored';
 }
 
-/** List trash/<prefix><galleryId>/ and restore each derivative, one at a time. */
+/** List trash/<prefix><galleryId>/ and restore each derivative and original, one at a time. */
 async function restoreTrash(galleryId) {
   const trashPrefix = `trash/${prefix}${galleryId}/`;
   const trashKeys = [];
@@ -218,7 +240,7 @@ async function restoreTrash(galleryId) {
     const xml = await res.text();
     for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
       const key = /<Key>([^<]*)<\/Key>/.exec(m[1])?.[1] ?? '';
-      if (/^(thumb|md|web)\/[\w.-]+\.webp$/.test(key.slice(trashPrefix.length))) trashKeys.push(key);
+      if (/^((thumb|md|web)\/[\w.-]+\.webp|originals\/[^/]+)$/.test(key.slice(trashPrefix.length))) trashKeys.push(key);
     }
     const next = /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml);
     token = /<IsTruncated>true<\/IsTruncated>/.test(xml) && next ? next[1] : '';
@@ -239,6 +261,131 @@ async function restoreTrash(galleryId) {
   process.exitCode = c.failed ? 1 : 0;
 }
 
+/** Local original files of one gallery. Leftover .tmp files from an interrupted restore are skipped. */
+function localOriginals(galleryId) {
+  const dir = path.join(PHOTOS, galleryId, 'originals');
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => !name.endsWith('.tmp') && fs.statSync(path.join(dir, name)).isFile())
+    .map((name) => ({
+      galleryId,
+      name,
+      file: path.join(dir, name),
+      key: `${prefix}${galleryId}/originals/${name}`,
+    }));
+}
+
+/** One multipart part: retried PART_ATTEMPTS times, returns the ETag. */
+async function putPart(url, body) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await s3.fetch(url, { method: 'PUT', body });
+      const etag = res.headers.get('etag');
+      if (!res.ok || !etag) throw new Error(`UploadPart -> ${res.status}`);
+      return etag;
+    } catch (err) {
+      if (attempt >= PART_ATTEMPTS) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+}
+
+/** Multipart upload of one file. Parts are read from disk one at a time; aborted on failure. */
+async function uploadMultipart(key, file, size) {
+  const url = objectUrl(key);
+  const created = await s3.fetch(`${url}?uploads`, { method: 'POST' });
+  const uploadId = /<UploadId>([^<]+)<\/UploadId>/.exec(await created.text())?.[1];
+  if (!created.ok || !uploadId) throw new Error(`CreateMultipartUpload -> ${created.status}`);
+  const idQuery = `uploadId=${encodeURIComponent(uploadId)}`;
+  const fd = fs.openSync(file, 'r');
+  const buf = Buffer.allocUnsafe(PART_BYTES);
+  try {
+    const parts = [];
+    for (let offset = 0, partNumber = 1; offset < size; offset += PART_BYTES, partNumber++) {
+      const len = Math.min(PART_BYTES, size - offset);
+      if (fs.readSync(fd, buf, 0, len, offset) !== len) throw new Error(`short read at byte ${offset}`);
+      const etag = await putPart(`${url}?partNumber=${partNumber}&${idQuery}`, buf.subarray(0, len));
+      parts.push(`<Part><PartNumber>${partNumber}</PartNumber><ETag>${etag}</ETag></Part>`);
+    }
+    const done = await s3.fetch(`${url}?${idQuery}`, {
+      method: 'POST',
+      body: `<CompleteMultipartUpload>${parts.join('')}</CompleteMultipartUpload>`,
+    });
+    // CompleteMultipartUpload can answer 200 with an <Error> body, so the body is checked too.
+    const text = await done.text();
+    if (!done.ok || text.includes('<Error>')) throw new Error(`CompleteMultipartUpload -> ${done.status}`);
+  } catch (err) {
+    await s3.fetch(`${url}?${idQuery}`, { method: 'DELETE' }).catch(() => {});
+    throw err;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** Upload one local original unless the bucket already has it at the same size. */
+async function uploadOriginal(item) {
+  const url = objectUrl(item.key);
+  const size = fs.statSync(item.file).size;
+  if ((await headSize(url)) === size) return 'skipped';
+  if (DRY) return 'done';
+  if (size <= PART_BYTES) {
+    const res = await s3.fetch(url, { method: 'PUT', body: fs.readFileSync(item.file) });
+    if (!res.ok) throw new Error(`PUT -> ${res.status}`);
+  } else {
+    await uploadMultipart(item.key, item.file, size);
+  }
+  const remote = await headSize(url);
+  if (remote !== size) throw new Error(`verify failed: remote ${remote} bytes, local ${size}`);
+  return 'done';
+}
+
+/** Bucket originals (<prefix><galleryId>/originals/<name>) for --restore-originals. */
+async function listOriginals() {
+  const listPrefix = `${prefix}${ONLY ? `${ONLY}/` : ''}`;
+  const out = [];
+  let token = '';
+  do {
+    const query =
+      `list-type=2&prefix=${encodeURIComponent(listPrefix)}` +
+      (token ? `&continuation-token=${encodeURIComponent(token)}` : '');
+    const res = await s3.fetch(`${endpoint}/${bucket}?${query}`, { method: 'GET' });
+    if (!res.ok) throw new Error(`LIST -> ${res.status}`);
+    const xml = await res.text();
+    for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+      const key = /<Key>([^<]*)<\/Key>/.exec(m[1])?.[1] ?? '';
+      const size = Number(/<Size>(\d+)<\/Size>/.exec(m[1])?.[1]);
+      const parsed = /^([\w-]+)\/originals\/([^/]+)$/.exec(key.slice(prefix.length));
+      const name = parsed?.[2];
+      if (!name || name === '.' || name === '..' || name.endsWith('.tmp')) continue;
+      out.push({ galleryId: parsed[1], name, key, size, file: path.join(PHOTOS, parsed[1], 'originals', name) });
+    }
+    const next = /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml);
+    token = /<IsTruncated>true<\/IsTruncated>/.test(xml) && next ? next[1] : '';
+  } while (token);
+  return out;
+}
+
+/** Download one original that is missing locally: stream to a temp file, then rename. */
+async function downloadOriginal(obj) {
+  if (fs.existsSync(obj.file) && fs.statSync(obj.file).size === obj.size) return 'skipped';
+  if (DRY) return 'done';
+  const res = await s3.fetch(objectUrl(obj.key), { method: 'GET' });
+  if (!res.ok || !res.body) throw new Error(`GET -> ${res.status}`);
+  fs.mkdirSync(path.dirname(obj.file), { recursive: true });
+  const tmp = `${obj.file}.${process.pid}.tmp`;
+  try {
+    await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(tmp));
+    const got = fs.statSync(tmp).size;
+    if (got !== obj.size) throw new Error(`got ${got} bytes, listed ${obj.size}`);
+    fs.renameSync(tmp, obj.file);
+  } catch (err) {
+    fs.rmSync(tmp, { force: true });
+    throw err;
+  }
+  return 'done';
+}
+
 async function main() {
   if (RESTORE !== undefined) {
     try {
@@ -250,7 +397,24 @@ async function main() {
     return;
   }
   let galleries = 0;
-  if (TO === 's3') {
+  if (ORIGINALS) {
+    for (const galleryId of localGalleryIds()) {
+      const items = localOriginals(galleryId);
+      if (!items.length) continue;
+      galleries++;
+      await runGallery(galleryId, items, uploadOriginal);
+    }
+  } else if (RESTORE_ORIGINALS) {
+    const groups = new Map();
+    for (const obj of await listOriginals()) {
+      if (!groups.has(obj.galleryId)) groups.set(obj.galleryId, []);
+      groups.get(obj.galleryId).push(obj);
+    }
+    for (const galleryId of [...groups.keys()].sort()) {
+      galleries++;
+      await runGallery(galleryId, groups.get(galleryId), downloadOriginal);
+    }
+  } else if (TO === 's3') {
     for (const galleryId of localGalleryIds()) {
       const items = localDerivatives(galleryId);
       if (!items.length) continue;

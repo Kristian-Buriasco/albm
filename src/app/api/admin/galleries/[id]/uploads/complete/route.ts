@@ -1,6 +1,12 @@
 import { errorJson, json, requireGalleryCapability } from '@/lib/api';
 import { sanitizeFilename } from '@/lib/files';
-import { getS3 } from '@/lib/object-store';
+import {
+  copyStagingToOriginal,
+  getS3,
+  galleryUsesObjectStore,
+  mirrorOriginal,
+  originalsEnabled,
+} from '@/lib/object-store';
 import { getPrincipal } from '@/lib/session';
 import { ingestGalleryPhoto } from '@/lib/photo-upload';
 import {
@@ -84,7 +90,13 @@ export async function POST(req: Request, { params }: Params) {
     result = await ingestGalleryPhoto(id, file, sectionId, {
       uploadedBy,
       maxBytes: MAX_DIRECT_UPLOAD_BYTES,
+      skipMirror: true,
     });
+    // Before the finally block discards the staging object: copy it server-side, or mirror from disk.
+    if (result.ok && result.created && originalsEnabled() && galleryUsesObjectStore(id)) {
+      const copied = await copyStagingToOriginal(key, id, result.photo.filename);
+      if (!copied) void mirrorOriginal(id, result.photo.filename);
+    }
   } catch (err) {
     console.error('[direct-upload] complete failed', key, err);
     if (uploadId) await abortMultipart(s, key, uploadId);

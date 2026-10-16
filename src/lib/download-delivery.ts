@@ -15,6 +15,7 @@ import {
 import { stripGpsFromJpeg } from '@/lib/exif-strip';
 import { injectXmpRights } from '@/lib/xmp';
 import { creditNamesByUploader, embeddedCopyright, photoCredit } from '@/lib/credits';
+import { ensureLocalOriginal } from '@/lib/object-store';
 
 export type DownloadSize = 'web' | 'print' | 'original';
 
@@ -56,6 +57,7 @@ export function downloadFilename(photo: Photo, size: DownloadSize, asJpeg: boole
 async function ensurePrintDerivative(photo: Photo): Promise<string> {
   const out = printPath(photo.galleryId, photo.filename);
   if (fs.existsSync(out)) return out;
+  if (!photo.isRaw) await ensureLocalOriginal(photo.galleryId, photo.filename);
   const src = photo.isRaw
     ? workingJpegPath(photo.galleryId, photo.filename)
     : originalPath(photo.galleryId, photo.filename);
@@ -225,6 +227,7 @@ async function prepareDownloadBytes(opts: PrepareDownloadOpts): Promise<Prepared
       ? workingJpegPath(photo.galleryId, photo.filename)
       : originalPath(photo.galleryId, photo.filename);
 
+  if (deliverRawFile || !photo.isRaw) await ensureLocalOriginal(photo.galleryId, photo.filename);
   if (!fs.existsSync(srcPath)) {
     throw new Error('File missing');
   }

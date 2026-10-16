@@ -7,7 +7,12 @@ import { galleryRequiresAccess } from '@/lib/pin';
 import { thumbPath, mdPath, webPath } from '@/lib/paths';
 import { streamFileResponse } from '@/lib/stream';
 import { isGalleryExpired } from '@/lib/downloads';
-import { fetchDerivative, objectStoreEnabled, uploadDerivative } from '@/lib/object-store';
+import {
+  ensureLocalOriginal,
+  fetchDerivative,
+  objectStoreEnabled,
+  uploadDerivative,
+} from '@/lib/object-store';
 import { derivativeSource, renderWebpVariant, watermarkOptsFor } from '@/lib/queue';
 
 type Params = { params: Promise<{ photoId: string; variant: string }> };
@@ -103,14 +108,19 @@ export async function GET(req: Request, { params }: Params) {
     try {
       let job = mdInflight.get(filePath);
       if (!job) {
-        job = renderWebpVariant(
-          derivativeSource(photo),
-          1280,
-          82,
-          filePath,
-          photo.galleryId,
-          watermarkOptsFor(gallery),
-        ).finally(() => mdInflight.delete(filePath));
+        // Restore the original first (no-op unless mirroring is on and it is missing).
+        job = ensureLocalOriginal(photo.galleryId, photo.filename)
+          .then(() =>
+            renderWebpVariant(
+              derivativeSource(photo),
+              1280,
+              82,
+              filePath,
+              photo.galleryId,
+              watermarkOptsFor(gallery),
+            ),
+          )
+          .finally(() => mdInflight.delete(filePath));
         mdInflight.set(filePath, job);
       }
       await job;
