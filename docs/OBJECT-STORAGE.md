@@ -107,8 +107,6 @@ Downloads go to a temp file that is then renamed, so a partial download never lo
       "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2592000 } }
     }
   ]
-    }
-  ]
   ```
 
   Optional, not enabled by default: a fourth rule with `storageClassTransitions` to `InfrequentAccess` after
