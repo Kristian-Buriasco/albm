@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
+import { eq } from 'drizzle-orm';
+import { getDb, schema } from '@/db';
 import type { Gallery, Photo } from '@/db/schema';
 import {
   createDownloadMark,
@@ -13,7 +15,7 @@ import {
   workingJpegPath,
 } from '@/lib/paths';
 import { stripGpsFromJpeg } from '@/lib/exif-strip';
-import { injectXmpRights } from '@/lib/xmp';
+import { injectXmpRights, type XmpExtras } from '@/lib/xmp';
 import { creditNamesByUploader, embeddedCopyright, photoCredit } from '@/lib/credits';
 import { ensureLocalOriginal } from '@/lib/object-store';
 
@@ -148,19 +150,43 @@ export async function preparePhotoDownload(
   return embedRights(prepared, opts);
 }
 
+/** Tag names and `bib N` keywords for the XMP dc:subject (one query each). */
+function photoXmpExtras(photo: Photo): XmpExtras {
+  const db = getDb();
+  const tagNames = db
+    .select({ name: schema.tags.name })
+    .from(schema.photoTags)
+    .innerJoin(schema.tags, eq(schema.photoTags.tagId, schema.tags.id))
+    .where(eq(schema.photoTags.photoId, photo.id))
+    .all()
+    .map((r) => r.name);
+  const bibs = db
+    .select({ number: schema.photoBibs.number })
+    .from(schema.photoBibs)
+    .where(eq(schema.photoBibs.photoId, photo.id))
+    .all()
+    .map((r) => `bib ${r.number}`);
+  return { keywords: [...tagNames, ...bibs], description: photo.altText };
+}
+
 /**
- * Last step: write the photographer's copyright + the artist's name into a JPEG's XMP
- * (lossless — pixels are never re-encoded). The EXIF/forensic steps above rewrite or
- * strip metadata, so this must run after them. Non-JPEG (WebP previews, RAW) is skipped.
+ * Last step: write the photographer's copyright + the artist's name, plus keywords and
+ * alt text, into a JPEG's XMP (lossless — pixels are never re-encoded). The EXIF/forensic
+ * steps above rewrite or strip metadata, so this must run after them. Non-JPEG (WebP
+ * previews, RAW) is skipped.
  */
 function embedRights(prepared: PreparedDownload, opts: PrepareDownloadOpts): PreparedDownload {
   if (prepared.contentType !== 'image/jpeg') return prepared;
   const source = prepared.body ?? (prepared.filePath ? fs.readFileSync(prepared.filePath) : null);
   if (!source) return prepared;
-  const body = injectXmpRights(source, {
-    copyright: embeddedCopyright(opts.gallery),
-    artist: photoCredit(opts.photo, creditNamesByUploader()),
-  });
+  const body = injectXmpRights(
+    source,
+    {
+      copyright: embeddedCopyright(opts.gallery),
+      artist: photoCredit(opts.photo, creditNamesByUploader()),
+    },
+    photoXmpExtras(opts.photo),
+  );
   return { ...prepared, body, filePath: null, streamFile: false };
 }
 
