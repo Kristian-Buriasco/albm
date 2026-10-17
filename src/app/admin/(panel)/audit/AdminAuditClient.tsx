@@ -108,10 +108,10 @@ export default function AdminAuditClient({
       ) : (
         <ul className="divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
           {visible.map((r) => (
-            <li key={r.id} className="py-3">
+            <li key={r.id} className="py-3 [overflow-wrap:anywhere]">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-xs text-neutral-500">{r.action}</span>
+                  <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{r.action}</span>
                   {r.actorType && (
                     <span className="text-xs text-neutral-400">{r.actorType}</span>
                   )}

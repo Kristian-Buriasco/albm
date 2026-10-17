@@ -385,6 +385,7 @@ export function AdminGalleryTags({
             }
           }}
           placeholder="Add tag…"
+          aria-label="Add a tag"
           maxLength={40}
           className="w-full max-w-xs border-b border-neutral-300 bg-transparent py-1 text-sm dark:border-neutral-700"
         />
@@ -1144,6 +1145,7 @@ export function AdminSectionsPanel({
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
           placeholder="Add tag to selected…"
+          aria-label="Add a tag to the selected photos"
           maxLength={40}
           className="border-b border-neutral-300 bg-transparent py-1 dark:border-neutral-700"
         />

@@ -1476,6 +1476,7 @@ function PasswordField({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="New password"
+          aria-label="New gallery password"
           className="flex-1 border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
         />
         <button

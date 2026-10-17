@@ -145,3 +145,24 @@ test('a gallery password works in composed and decomposed Unicode forms', async 
     await visitor.dispose();
   }
 });
+
+test('wrong guesses on one locked gallery do not lock the visitor out of another', async ({ playwright }) => {
+  const a = await createGallery(admin, env.baseUrl, { title: `E2E lock A ${Date.now()}`, type: 'client', published: true });
+  const b = await createGallery(admin, env.baseUrl, { title: `E2E lock B ${Date.now()}`, type: 'client', published: true });
+  for (const g of [a, b]) {
+    const set = await admin.patch(`${env.baseUrl}/api/admin/galleries/${g.id}`, { data: { password: 'right-password' } });
+    expect(set.status()).toBe(200);
+  }
+  const visitor = await playwright.request.newContext();
+  try {
+    for (let i = 0; i < 11; i++) {
+      await visitor.post(`${env.baseUrl}/api/g/${a.slug}/unlock`, { data: { password: `wrong-${i}` } });
+    }
+    const blocked = await visitor.post(`${env.baseUrl}/api/g/${a.slug}/unlock`, { data: { password: 'right-password' } });
+    expect(blocked.status()).toBe(429); // gallery A is rate limited
+    const other = await visitor.post(`${env.baseUrl}/api/g/${b.slug}/unlock`, { data: { password: 'right-password' } });
+    expect(other.status()).toBe(200); // gallery B is not
+  } finally {
+    await visitor.dispose();
+  }
+});

@@ -82,6 +82,7 @@ export async function GET(req: Request, { params }: Params) {
   const hasSections = sections.length > 0;
 
   const entries = async function* () {
+    let added = 0;
     for (const photo of photos) {
       try {
         const prepared = await preparePhotoDownload({
@@ -97,14 +98,18 @@ export async function GET(req: Request, { params }: Params) {
           zipName = `${folder}/${prepared.downloadName}`;
         }
         if (prepared.streamFile && prepared.filePath && fs.existsSync(prepared.filePath)) {
+          added++;
           yield { name: zipName, file: prepared.filePath };
         } else if (prepared.body) {
+          added++;
           yield { name: zipName, body: prepared.body };
         }
       } catch (err) {
         console.warn('[zip] skip photo', photo.id, err);
       }
     }
+    // Every photo failed: end the download with an error instead of a valid-looking empty zip.
+    if (photos.length > 0 && added === 0) throw new Error('no files could be prepared');
   };
 
   logDownloadEvent(gallery, 'zip', null, null);

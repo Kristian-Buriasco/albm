@@ -66,6 +66,7 @@ export default function Lightbox({
 }: Props) {
   const photo = photos[index];
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const reducedMotion =
@@ -99,11 +100,40 @@ export default function Lightbox({
     return () => clearInterval(t);
   }, [playing, reducedMotion, next]);
 
+  // Move focus into the dialog on open and give it back to the thumbnail on close (WCAG 2.4.3).
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus({ preventScroll: true });
+    return () => opener?.focus?.({ preventScroll: true });
+  }, []);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowLeft') prev();
       else if (e.key === 'ArrowRight') next();
+      else if (e.key === 'Tab' && dialogRef.current) {
+        // Keep Tab inside the dialog (it is aria-modal).
+        const items = [
+          ...dialogRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ].filter((el) => el.getClientRects().length > 0);
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || active === dialogRef.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        } else if (!dialogRef.current.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -119,9 +149,12 @@ export default function Lightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#050505] text-neutral-200"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-[#050505] text-neutral-200 outline-none"
       role="dialog"
       aria-modal="true"
+      aria-label="Photo viewer"
       onClick={() => setPlaying(false)}
       onTouchStart={(e) => {
         if ((e.target as HTMLElement).closest('input, textarea')) return;

@@ -121,6 +121,7 @@ export default function WorkSection({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t(lang, 'workSearchPlaceholder')}
+          aria-label={t(lang, 'workSearchPlaceholder')}
           className="w-full max-w-md border-b border-line bg-transparent py-2 text-sm outline-none focus:border-accent dark:border-line-dark dark:focus:border-accent-dark"
         />
         <div className="flex flex-wrap items-center gap-2">

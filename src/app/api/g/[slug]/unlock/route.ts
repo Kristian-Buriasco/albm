@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const usePin = galleryUsesPin(gallery);
-  const scope = usePin ? `gallery-pin:${slug}` : 'gallery-unlock';
+  const scope = usePin ? `gallery-pin:${slug}` : `gallery-unlock:${slug}`;
   const rlOpts = usePin ? pinRateLimitOpts(slug) : AUTH_RL;
 
   if (isRateLimited(scope, ip, { ...rlOpts, logLabel: scope })) {

@@ -165,6 +165,7 @@ export default function AdminGalleryList({
           value={q}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search galleries…"
+          aria-label="Search galleries"
           className="min-w-[12rem] border-b border-neutral-300 bg-transparent py-1 text-sm outline-none dark:border-neutral-700"
         />
         <div className="flex flex-wrap gap-1.5">
@@ -190,6 +191,7 @@ export default function AdminGalleryList({
           value={newFolderName}
           onChange={(e) => setNewFolderName(e.target.value)}
           placeholder="New folder name"
+          aria-label="New folder name"
           className="border-b border-neutral-300 bg-transparent py-1 dark:border-neutral-700"
         />
         <button type="button" onClick={createFolder} className="underline">

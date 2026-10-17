@@ -223,13 +223,6 @@ export default function GalleryClient({
     if (params.get('linked') === '1') setLinkedEmail(accountEmail);
   }, [accountEmail]);
 
-  useEffect(() => {
-    if (!commentsEnabled) return;
-    fetch(`/api/g/${slug}/comments?photoId=_`)
-      .catch(() => null);
-    // Counts loaded per-photo in lightbox; badge counts from initial server could be added later.
-  }, [slug, commentsEnabled]);
-
   const ensureVisitor = useCallback(async (): Promise<boolean> => {
     if (visitorReady) return true;
     const res = await fetch(`/api/g/${slug}/visitor`, {
