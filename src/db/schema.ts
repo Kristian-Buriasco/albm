@@ -2,6 +2,7 @@ import {
   sqliteTable,
   text,
   integer,
+  real,
   primaryKey,
   unique,
   blob,
@@ -241,6 +242,8 @@ export const photos = sqliteTable(
     capturedAt: integer('captured_at'),
     placeholder: text('placeholder'),
     altText: text('alt_text'),
+    /** Who wrote altText: 'human' (admin edit, never overwritten by the worker) or 'ai'. */
+    altSource: text('alt_source', { enum: ['human', 'ai'] }),
     contentHash: text('content_hash'),
     isRaw: integer('is_raw', { mode: 'boolean' }).notNull().default(false),
     format: text('format'),
@@ -408,6 +411,9 @@ export const photoBibs = sqliteTable(
       .notNull()
       .references(() => galleries.id, { onDelete: 'cascade' }),
     number: text('number').notNull(),
+    /** 0..1 from the analysis worker; null for the built-in OCR. */
+    confidence: real('confidence'),
+    engine: text('engine'),
     createdAt: integer('created_at')
       .notNull()
       .$defaultFn(() => Date.now()),
@@ -627,6 +633,42 @@ export const uploadTokens = sqliteTable('upload_tokens', {
   lastUsedAt: integer('last_used_at'),
   revokedAt: integer('revoked_at'),
 });
+
+/** Bearer tokens for the analysis worker (OCR / alt text on another machine). Cannot upload or delete photos. */
+export const workerTokens = sqliteTable('worker_tokens', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  lastUsedAt: integer('last_used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
+/** Per-photo, per-task state for the analysis worker (lease, engine, version, errors). */
+export const photoAnalysis = sqliteTable(
+  'photo_analysis',
+  {
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => photos.id, { onDelete: 'cascade' }),
+    task: text('task', { enum: ['alt', 'bibs'] }).notNull(),
+    engine: text('engine'),
+    version: integer('version').notNull().default(0),
+    status: text('status', { enum: ['pending', 'leased', 'done', 'error'] })
+      .notNull()
+      .default('pending'),
+    leasedUntil: integer('leased_until'),
+    attempts: integer('attempts').notNull().default(0),
+    error: text('error'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.photoId, t.task] }),
+    index('photo_analysis_task_status_idx').on(t.task, t.status),
+  ],
+);
 
 export const clientAccounts = sqliteTable(
   'client_accounts',
