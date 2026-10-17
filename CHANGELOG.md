@@ -4,7 +4,12 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
-## [1.23.2] — 2026-10-16
+## [2.0.0] — 2026-10-17
+
+Albm 2.0 adds optional cloud object storage, direct uploads of large files, safe backups and an analysis worker
+for better bib-number OCR and alt text. **Nothing is switched on by default:** an upgrade changes nothing until you set
+`STORAGE_BACKEND=s3`, `S3_ORIGINALS=1`, the nightly backup job or a worker token. Two database migrations (0027 and 0028)
+run automatically at start-up and make an automatic backup first.
 
 ### Added
 - **Optional S3-compatible object storage** (`STORAGE_BACKEND=s3`): thumb, md and web images can
@@ -50,6 +55,20 @@ All notable changes to Albm are documented here. Format follows
 ### Fixed
 - Larger derivatives failed to upload to R2 with `411 Length Required` inside the Next.js server;
   uploads are now signed and sent with an explicit no-store fetch, with retries.
+- Found by a ten-agent QA round (admin, visitor, worker, storage, accessibility and security testers):
+  - Worker tokens could not be revoked from the admin panel; JPEG "web" downloads returned 404 when images
+    live only in the bucket; the worker's dry run no longer leases photos, `--redo` visits each photo once,
+    expired leases stop after 3 attempts and a cleared alt text is generated again.
+  - Very long filenames are shortened instead of failing; malformed JSON bodies return 400 instead of 500;
+    a blank gallery title is rejected; gallery passwords match in composed and decomposed Unicode forms.
+  - The password-unlock rate limit is per gallery (one locked gallery no longer locks the visitor out of
+    the others) and the lockout message says how long to wait; a zip where every photo fails is an error
+    instead of an empty zip.
+  - Admin: "Add section" ignores double clicks, submits on Enter and reports a lost session or network;
+    upload summaries no longer count duplicates as uploaded and errors use plain language; gallery list
+    sizes no longer show "0 B"; delete confirmations mention the 30-day cloud copy.
+  - Lightbox keeps keyboard focus inside the dialog and its caption no longer sits under the mobile
+    action bar; the audit log wraps long text; inputs that only had a placeholder got accessible names.
 
 ## [1.23.1] — 2026-10-15
 
