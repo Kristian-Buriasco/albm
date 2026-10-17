@@ -35,6 +35,8 @@ COPY --from=build --chown=gallery:gallery /app/.next/standalone ./
 COPY --from=build --chown=gallery:gallery /app/.next/static ./.next/static
 COPY --from=build --chown=gallery:gallery /app/public ./public
 COPY --from=build --chown=gallery:gallery /app/scripts ./scripts
+# scripts/migrate-derivatives and backup-db-to-r2 import it; standalone tracing only keeps what the app bundles
+COPY --from=build --chown=gallery:gallery /app/node_modules/aws4fetch ./node_modules/aws4fetch
 
 USER gallery
 EXPOSE 3200
