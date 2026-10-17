@@ -32,6 +32,8 @@ export async function PATCH(req: Request, { params }: Params) {
   };
   if (typeof body.altText === 'string') {
     updates.altText = body.altText.trim().slice(0, 300) || null;
+    // A human edit is never overwritten by the analysis worker.
+    updates.altSource = updates.altText ? 'human' : null;
   }
 
   db.update(schema.photos).set(updates).where(eq(schema.photos.id, id)).run();

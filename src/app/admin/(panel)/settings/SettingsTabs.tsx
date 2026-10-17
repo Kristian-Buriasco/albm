@@ -5,6 +5,7 @@ import SecuritySettings from './SecuritySettings';
 import AdminSessionsPanel from './AdminSessionsPanel';
 import GalleryDefaultsForm from './GalleryDefaultsForm';
 import UploadTokensPanel from './UploadTokensPanel';
+import WorkerTokensPanel from './WorkerTokensPanel';
 import SettingsForm from './SettingsForm';
 import EmailSettings from './EmailSettings';
 import type { GalleryDefaultsStore } from '@/lib/gallery-defaults';
@@ -45,6 +46,9 @@ export default function SettingsTabs({
           </div>
           <div hidden={active !== 'sharing'} className="max-w-2xl">
             <UploadTokensPanel />
+            <div className="mt-12">
+              <WorkerTokensPanel />
+            </div>
           </div>
         </>
       )}
