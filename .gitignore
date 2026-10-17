@@ -48,3 +48,6 @@ demo-data/
 # ftp-ingest runtime files (hold tokens/passwords and spooled photos)
 tools/ftp-ingest/config.json
 tools/ftp-ingest/spool/
+
+# analysis worker: compiled Apple Vision helper (rebuild with bash worker/build-vision.sh)
+/worker/bin/

@@ -75,6 +75,7 @@ Full walkthrough: [**Wiki → Quick Start**](https://github.com/Kristian-Buriasc
 | [docs/DIRECT-PUBLISHING.md](docs/DIRECT-PUBLISHING.md) | Step-by-step guide: publish from Lightroom and live from a Canon R5 Mark II (FTP) |
 | [docs/EXPORT.md](docs/EXPORT.md) | Lightroom / Capture One publish API |
 | [docs/OBJECT-STORAGE.md](docs/OBJECT-STORAGE.md) | Optional S3 / Cloudflare R2 storage for derivatives: setup, migration, rollback |
+| [docs/ANALYSIS-WORKER.md](docs/ANALYSIS-WORKER.md) | Analysis worker on another computer: bib / jersey number OCR and alt text, worker tokens, setup |
 | [SECURITY.md](SECURITY.md) | Threat model & vulnerability reporting |
 | [**Releases**](https://github.com/Kristian-Buriasco/albm/releases) | Changelog & version tags |
 | [**GHCR**](https://github.com/Kristian-Buriasco/albm/pkgs/container/albm) | Container images |

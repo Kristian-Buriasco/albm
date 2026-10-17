@@ -27,6 +27,17 @@ All notable changes to Albm are documented here. Format follows
   SQLite snapshot, checks it, gzips and encrypts it (AES-256-GCM, key from `BACKUP_ENCRYPTION_KEY`)
   and uploads it with a size check. `scripts/restore-db-from-r2.mjs` lists, restores and verifies
   backups and never overwrites the live database. See `docs/DB-BACKUP.md`.
+- **Analysis worker API** (`/api/worker/jobs`, `image`, `results`, `status`) so slow photo analysis
+  can run on another computer. Bib / jersey number OCR and alt text results are stored in the database.
+- **Worker tokens**: bearer tokens for the analysis worker, managed in Settings, Sharing. They can read
+  photos and write analysis results only; they cannot upload or delete. Separate from upload tokens.
+- **`worker/albm-worker.mjs`**: zero-dependency Node worker. Bib numbers use Apple Vision (macOS)
+  over overlapping tiles; alt text uses Ollama by default or the Claude API (explicit opt-in, photos
+  leave the machine). See `docs/ANALYSIS-WORKER.md`.
+- **Keywords and description in JPEG downloads**: photo tags, bib numbers and alt text are written
+  into the JPEG's XMP as `dc:subject` and `dc:description`, next to the existing copyright data.
+- **`BUILTIN_BIB_OCR=0`** disables the built-in tesseract bib OCR, so the analysis worker's results
+  are the only source.
 
 ### Changed
 - **Deleting a photo or gallery moves its bucket derivatives to `trash/` for 30 days** instead of
