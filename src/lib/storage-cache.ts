@@ -1,6 +1,5 @@
 import { DATA_DIR } from './env';
 import { dirSizeBytes, formatBytes, volumeUsage, type DiskUsage } from './disk';
-import { galleryDir } from './paths';
 import { getDb, schema } from '@/db';
 import { and, asc, eq, sql } from 'drizzle-orm';
 
@@ -29,11 +28,14 @@ const globalCache = globalThis as unknown as {
 
 export function getStorageSnapshot(force = false): StorageSnapshot {
   const cached = globalCache.__storageSnapshot;
-  if (!force && cached && Date.now() - cached.computedAt < CACHE_TTL_MS) {
+  const db = getDb();
+  // A gallery created after the snapshot is not in it (it would show 0 B): refresh in that case.
+  const known = cached ? new Set(cached.galleries.map((g) => g.id)) : null;
+  const stale = !!known && db.select({ id: schema.galleries.id }).from(schema.galleries).all().some((g) => !known.has(g.id));
+  if (!force && cached && !stale && Date.now() - cached.computedAt < CACHE_TTL_MS) {
     return cached;
   }
 
-  const db = getDb();
   const galleries = db
     .select()
     .from(schema.galleries)
@@ -47,6 +49,13 @@ export function getStorageSnapshot(force = false): StorageSnapshot {
         .from(schema.photos)
         .where(eq(schema.photos.galleryId, g.id))
         .get()?.c ?? 0;
+    // Photo bytes come from the database, so photos kept only in the bucket still count.
+    const total =
+      db
+        .select({ bytes: sql<number>`coalesce(sum(${schema.photos.sizeBytes}), 0)` })
+        .from(schema.photos)
+        .where(eq(schema.photos.galleryId, g.id))
+        .get()?.bytes ?? 0;
     const raw = db
       .select({
         c: sql<number>`count(*)`,
@@ -60,7 +69,7 @@ export function getStorageSnapshot(force = false): StorageSnapshot {
       title: g.title,
       type: g.type,
       photoCount,
-      sizeBytes: dirSizeBytes(galleryDir(g.id)),
+      sizeBytes: total,
       rawCount: raw?.c ?? 0,
       rawBytes: raw?.bytes ?? 0,
     };

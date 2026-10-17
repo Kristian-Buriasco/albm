@@ -13,7 +13,16 @@ export function sanitizeFilename(name: string): string | null {
   if (!cleaned || cleaned === '.' || cleaned === '..' || cleaned.startsWith('.')) {
     return null;
   }
-  return cleaned;
+  return capFilenameLength(cleaned);
+}
+
+/** Longest stored filename: derivative and temp names add a suffix and file systems cap names at 255 bytes. */
+const MAX_FILENAME = 120;
+
+function capFilenameLength(name: string): string {
+  if (name.length <= MAX_FILENAME) return name;
+  const ext = path.extname(name).slice(0, 12);
+  return name.slice(0, MAX_FILENAME - ext.length) + ext;
 }
 
 export type ImageType = 'jpeg' | 'png';

@@ -1,4 +1,4 @@
-import { json, errorJson } from '@/lib/api';
+import { json, errorJson, readJsonObject } from '@/lib/api';
 import { ipFromRequest, writeAllowed } from '@/lib/rate-limit';
 import { hashToken } from '@/lib/token-hash';
 import { createInquiry, isEventType } from '@/lib/inquiries';
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }

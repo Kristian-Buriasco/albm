@@ -524,7 +524,9 @@ export function AdminExtraSettings({
             onChange={(v) => patchGallery({ autoExpire: v })}
           />
           <label className="block text-sm">
-            <span className="mb-1 block text-xs text-neutral-500">Expires at</span>
+            <span className="mb-1 block text-xs text-neutral-500">
+              Expires at{!gallery.autoExpire && gallery.expiresAt ? ' (not enforced: turn on Auto-expire above)' : ''}
+            </span>
             <input
               type="datetime-local"
               defaultValue={
@@ -763,6 +765,8 @@ export function AdminSectionsPanel({
 }) {
   const [sections, setSections] = useState<Section[]>([]);
   const [newTitle, setNewTitle] = useState('');
+  const [sectionBusy, setSectionBusy] = useState(false);
+  const [sectionError, setSectionError] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [photoTags, setPhotoTags] = useState<Record<string, Tag[]>>({});
   const [galleryTags, setGalleryTags] = useState<Tag[]>([]);
@@ -814,14 +818,31 @@ export function AdminSectionsPanel({
   }, [filteredPhotos, sections]);
 
   async function createSection() {
-    if (!newTitle.trim()) return;
-    await fetch(`/api/admin/galleries/${galleryId}/sections`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTitle.trim() }),
-    });
-    setNewTitle('');
-    await load();
+    const title = newTitle.trim();
+    if (!title || sectionBusy) return; // a double click must not create two sections
+    setSectionBusy(true);
+    setSectionError('');
+    try {
+      const res = await fetch(`/api/admin/galleries/${galleryId}/sections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) {
+        setSectionError(
+          res.status === 401
+            ? 'Your session expired. Log in again, then add the section (your text is kept).'
+            : 'Could not add the section. Try again.',
+        );
+        return;
+      }
+      setNewTitle('');
+      await load();
+    } catch {
+      setSectionError('No connection. Check your network and try again (your text is kept).');
+    } finally {
+      setSectionBusy(false);
+    }
   }
 
   async function renameSection(id: string, current: string) {
@@ -1013,13 +1034,29 @@ export function AdminSectionsPanel({
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void createSection();
+            }
+          }}
           placeholder="New section title"
           className="border-b border-neutral-300 bg-transparent py-1 text-sm dark:border-neutral-700"
         />
-        <button type="button" onClick={createSection} className="border px-2 py-1 text-xs">
+        <button
+          type="button"
+          onClick={createSection}
+          disabled={sectionBusy}
+          className="border px-2 py-1 text-xs disabled:opacity-50"
+        >
           Add section
         </button>
       </div>
+      {sectionError && (
+        <p role="alert" className="text-xs text-red-700 dark:text-red-400">
+          {sectionError}
+        </p>
+      )}
 
       <ul className="space-y-2 text-xs">
         {sections.map((s, i) => (

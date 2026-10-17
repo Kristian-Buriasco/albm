@@ -48,11 +48,15 @@ export default function WorkerTokensPanel() {
 
   async function revoke(id: string) {
     if (!confirm('Revoke this token? The worker using it will stop working.')) return;
-    await fetch('/api/admin/worker-tokens', {
+    const res = await fetch('/api/admin/worker-tokens', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
+    if (!res.ok) {
+      alert(res.status === 401 ? 'Your session expired. Log in again.' : 'Could not revoke this token.');
+      return;
+    }
     load();
   }
 

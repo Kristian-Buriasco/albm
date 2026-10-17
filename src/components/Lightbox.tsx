@@ -268,7 +268,7 @@ export default function Lightbox({
       </div>
 
       {(showFilename || photo.exifLine || photo.credit || copyrightLine) && (
-        <div className="space-y-1 pb-2 max-sm:pb-16 text-center text-[11px] tracking-wide text-neutral-500">
+        <div className="space-y-1 pb-2 max-sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-center text-[11px] tracking-wide text-neutral-400">
           {showFilename && <div>{photo.filename}</div>}
           {photo.exifLine && <div>{photo.exifLine}</div>}
           {(photo.credit || copyrightLine) && (

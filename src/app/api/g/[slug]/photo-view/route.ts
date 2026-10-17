@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json } from '@/lib/api';
+import { errorJson, json, readJsonObject } from '@/lib/api';
 import { writeAllowed, ipFromRequest } from '@/lib/rate-limit';
 import { canViewGallery } from '@/lib/gallery-auth';
 import { recordPhotoView } from '@/lib/views';
@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: Params) {
 
   let body: unknown;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }

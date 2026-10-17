@@ -80,6 +80,8 @@ async function main(argv, env) {
         limit: cfg.limit,
         gallery: cfg.gallery,
         redo: cfg.redo,
+        since: started,
+        lease: !cfg.dryRun,
       });
       if (!jobs.length) return total;
       console.log(`${task}: leased ${jobs.length} photo(s), ${remaining ?? '?'} more eligible after this batch`);
@@ -93,7 +95,7 @@ async function main(argv, env) {
       }
       if (pending.length) await flush(task, engine, pending);
       total += jobs.length;
-      if (cfg.dryRun) return total; // a second fetch would lease other photos
+      if (cfg.dryRun) return total; // a peek returns the same photos again
     }
   }
 
@@ -118,7 +120,7 @@ async function main(argv, env) {
     const secs = ((Date.now() - started) / 1000).toFixed(1);
     console.log(`done: analysed=${stats.analysed} errors=${stats.errors} seconds=${secs}`);
     if (cfg.dryRun) {
-      console.log('dry-run: nothing was posted; the jobs stay leased for 15 min on the server, then are offered again');
+      console.log('dry-run: nothing was posted and nothing was leased on the server');
     }
   }
   return code;

@@ -46,7 +46,16 @@ export async function DELETE(req: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
 
-  const id = new URL(req.url).searchParams.get('id') ?? '';
+  // The panel sends {id} in the body (like upload tokens); `?id=` is accepted too.
+  let id = new URL(req.url).searchParams.get('id') ?? '';
+  if (!id) {
+    try {
+      const body = await req.json();
+      if (body && typeof body === 'object' && typeof body.id === 'string') id = body.id;
+    } catch {
+      /* no body */
+    }
+  }
   if (!id) return errorJson('id required', 400);
 
   const ok = revokeWorkerToken(id);

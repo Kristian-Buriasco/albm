@@ -1,4 +1,4 @@
-import { errorJson, json, requireOwner } from '@/lib/api';
+import { errorJson, json, requireOwner, readJsonObject } from '@/lib/api';
 import { createClient, listClients } from '@/lib/clients';
 import { logAdmin } from '@/lib/audit-log';
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }

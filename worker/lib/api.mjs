@@ -19,10 +19,12 @@ export function createApi({ url, token }) {
   }
 
   return {
-    async fetchJobs({ task, limit, gallery, redo }) {
+    async fetchJobs({ task, limit, gallery, redo, since, lease = true }) {
       const q = new URLSearchParams({ task, limit: String(limit) });
       if (gallery) q.set('gallery', gallery);
       if (redo) q.set('redo', '1');
+      if (redo && since) q.set('since', String(since)); // one --redo run visits each photo once
+      if (!lease) q.set('lease', '0'); // dry run: peek without leasing
       const res = await request(`/api/worker/jobs?${q}`);
       if (!res.ok) throw new Error(`jobs: HTTP ${res.status} ${await snippet(res)}`);
       return res.json();

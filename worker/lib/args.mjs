@@ -4,11 +4,11 @@ import { UsageError } from './errors.mjs';
 export const USAGE = `usage: node worker/albm-worker.mjs --url <albm> --token <worker token> [options]
   --tasks bibs,alt       tasks to run (default bibs,alt)
   --gallery <id>         only this gallery
-  --limit <1..50>        photos per request (default 10)
+  --limit <1..50>        photos per batch (default 10; the run continues until none are left)
   --loop                 keep polling (every 30 s when idle)
   --redo                 also re-offer finished and exhausted photos
-  --dry-run              fetch, download and analyse, print what would be posted; post nothing
-                         (jobs stay leased for 15 min on the server)
+  --dry-run              look at the next batch, analyse it and print what would be posted; post
+                         nothing and lease nothing
   --allow-cloud          required for the anthropic alt engine (photos leave this machine)
 env: ALBM_URL, ALBM_WORKER_TOKEN, ALT_ENGINE (ollama|anthropic), ALT_MODEL, ALT_ANTHROPIC_MODEL,
      ALT_LANG, OLLAMA_HOST, ANTHROPIC_API_KEY, ALT_ALLOW_CLOUD=1, WORKER_FAKE_ENGINES=1 (tests)`;

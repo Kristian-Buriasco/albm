@@ -42,12 +42,14 @@ so Lightroom, Photo Mechanic and Finder can search them. Face embeddings are not
    The first Vision call after a boot takes about 60 seconds (the model compiles once); later photos take about 4
    seconds each on an M1 Pro. Add `--loop` to keep running: it sleeps 30 seconds when there is no work.
 
-Flags: `--gallery <id>`, `--limit <n>` (default 10), `--redo`, `--dry-run`, `--allow-cloud`. `ALBM_URL` and
+Flags: `--gallery <id>` (the id is the last part of the gallery's admin URL, `/admin/galleries/<id>`), `--limit <n>` (photos per
+batch, default 10; the run continues until nothing is left), `--redo` (visit every photo once more), `--dry-run` (analyse the next
+batch and print the result; nothing is posted or leased), `--allow-cloud`. `ALBM_URL` and
 `ALBM_WORKER_TOKEN` replace `--url` and `--token`.
 
 ## How results behave
 
-- Alt text written by a human is never overwritten. Clearing the field makes the photo eligible again.
+- Alt text written by a human is never overwritten. If you clear the field, the next run generates it again.
 - Bib results replace the built-in OCR numbers for that photo.
 - Results are versioned per engine. A photo is offered again only when the engine version goes up, or with `--redo`.
 - A failing photo is retried up to three attempts, then left alone unless you pass `--redo`.

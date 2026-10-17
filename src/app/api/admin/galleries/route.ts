@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { eq, sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json, requireAdmin } from '@/lib/api';
+import { errorJson, json, requireAdmin, readJsonObject } from '@/lib/api';
 import { applyCreateFields } from '@/lib/gallery-fields';
 import { applyGalleryDefaults } from '@/lib/gallery-defaults';
 import { normalizeSlug } from '@/lib/slug';
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }

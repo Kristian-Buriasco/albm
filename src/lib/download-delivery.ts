@@ -17,7 +17,7 @@ import {
 import { stripGpsFromJpeg } from '@/lib/exif-strip';
 import { injectXmpRights, type XmpExtras } from '@/lib/xmp';
 import { creditNamesByUploader, embeddedCopyright, photoCredit } from '@/lib/credits';
-import { ensureLocalOriginal } from '@/lib/object-store';
+import { ensureLocalDerivative, ensureLocalOriginal } from '@/lib/object-store';
 
 export type DownloadSize = 'web' | 'print' | 'original';
 
@@ -194,6 +194,8 @@ async function prepareDownloadBytes(opts: PrepareDownloadOpts): Promise<Prepared
   const { gallery, photo, size, visitorId, accountId } = opts;
 
   if (size === 'web') {
+    // With object storage the web copy may live only in the bucket; restore it before reading.
+    await ensureLocalDerivative(photo.galleryId, 'web', photo.filename);
     const wp = webPath(photo.galleryId, photo.filename);
     let buf: Buffer = fs.readFileSync(wp);
     // Web is WebP — convert to JPEG if forensic needed (stego is JPEG-oriented)

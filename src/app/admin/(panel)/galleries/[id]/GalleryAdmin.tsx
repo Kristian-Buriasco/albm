@@ -91,6 +91,26 @@ function visitorLabel(v: VisitorInfo, anonIndex: number): string {
   return `Anonymous #${anonIndex}`;
 }
 
+/** Plain-language version of an upload failure reason (server errors arrive as "HTTP 415: ..."). */
+function friendlyUploadError(reason: string): string {
+  const m = /^HTTP (\d{3})/.exec(reason);
+  if (!m) return reason;
+  switch (m[1]) {
+    case '400':
+      return 'empty or damaged file';
+    case '401':
+      return 'your session expired, log in again';
+    case '413':
+      return 'file too large';
+    case '415':
+      return 'not a supported photo (use JPEG, PNG or camera RAW)';
+    case '429':
+      return 'too many uploads at once, wait a moment';
+    default:
+      return 'server error, try again';
+  }
+}
+
 export default function GalleryAdmin({
   gallery,
   initialPhotos,
@@ -247,7 +267,7 @@ export default function GalleryAdmin({
         // CORS block, retries exhausted, or a failed complete: release the upload, then fall back.
         await abortDirectUpload(gallery.id, plan);
         if (file.size > PROXY_MAX_BYTES) {
-          throw new Error('Direct upload failed: check the bucket CORS settings');
+          throw new Error('could not reach cloud storage and the file is too large for the fallback route; check your connection (if it keeps failing, check the bucket CORS settings)');
         }
       }
       if (direct) {
@@ -446,7 +466,7 @@ export default function GalleryAdmin({
 
   // ---- delete photo / set cover ----
   async function deletePhoto(photo: Photo) {
-    if (!confirm(`Delete ${photo.filename}? This removes the files on disk.`)) return;
+    if (!confirm(`Delete ${photo.filename}? This removes it from the gallery and from this server. If cloud storage is on, copies are kept there for 30 days.`)) return;
     const res = await fetch(`/api/admin/photos/${photo.id}`, { method: 'DELETE' });
     if (res.ok) {
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
@@ -474,7 +494,7 @@ export default function GalleryAdmin({
   async function deleteGallery() {
     if (
       !confirm(
-        `Delete "${gallery.title}"?\n\nThis permanently removes ${photos.length} photo(s) (${formatBytes(sizeBytes)}) from disk. This cannot be undone.`,
+        `Delete "${gallery.title}"?\n\nThis removes ${photos.length} photo(s) (${formatBytes(sizeBytes)}) from the gallery and from this server and cannot be undone here. If cloud storage is on, copies are kept there for 30 days.`,
       )
     ) {
       return;
@@ -924,7 +944,7 @@ export default function GalleryAdmin({
             <span className="shrink-0 tabular-nums" aria-live="polite">
               {uploading
                 ? `Uploading ${Math.min(uploadState.done + 1, uploadState.total)} of ${uploadState.total}…`
-                : `Uploaded ${uploadState.total - uploadState.failures.length} of ${uploadState.total}`}
+                : `Uploaded ${uploadState.total - uploadState.failures.length - uploadState.duplicates.length} of ${uploadState.total}${uploadState.duplicates.length ? ` (${uploadState.duplicates.length} already here)` : ''}`}
               {!uploading && uploadState.failures.length > 0 && (
                 <span className="ml-2 text-red-600 dark:text-red-400">
                   {uploadState.failures.length} failed
@@ -1055,7 +1075,7 @@ export default function GalleryAdmin({
             <p>
               {uploading
                 ? `Uploading ${uploadState.done + 1} of ${uploadState.total}: ${uploadState.currentName ?? ''} (${uploadState.currentPct}%)`
-                : `Uploaded ${uploadState.total - uploadState.failures.length} of ${uploadState.total} files.`}
+                : `Uploaded ${uploadState.total - uploadState.failures.length - uploadState.duplicates.length} of ${uploadState.total} files${uploadState.duplicates.length ? `; ${uploadState.duplicates.length} already in this gallery` : ''}.`}
             </p>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
               <div
@@ -1067,9 +1087,9 @@ export default function GalleryAdmin({
             </div>
             {!uploading && uploadState.duplicates.length > 0 && (
               <p className="text-amber-700 dark:text-amber-300">
-                Skipped duplicates:{' '}
+                Already in this gallery, skipped:{' '}
                 {uploadState.duplicates
-                  .map((d) => `${d.file} (duplicate of ${d.existing})`)
+                  .map((d) => (d.existing && d.existing !== d.file ? `${d.file} (same photo as ${d.existing})` : d.file))
                   .join(', ')}
               </p>
             )}
@@ -1077,7 +1097,7 @@ export default function GalleryAdmin({
               <div className="text-red-600 dark:text-red-400">
                 Failed:{' '}
                 {uploadState.failures
-                  .map((f) => `${f.file.name} (${f.reason})`)
+                  .map((f) => `${f.file.name} (${friendlyUploadError(f.reason)})`)
                   .join(', ')}{' '}
                 {uploadState.failures.some((f) => f.reason !== 'unsupported type') && (
                   <button

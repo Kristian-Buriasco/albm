@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json, requireAdmin } from '@/lib/api';
+import { errorJson, json, requireAdmin, readJsonObject } from '@/lib/api';
 import { parseGalleryUpdates } from '@/lib/gallery-fields';
 import { galleryDir } from '@/lib/paths';
 import { trashGalleryDerivatives } from '@/lib/object-store';
@@ -42,9 +42,13 @@ export async function PATCH(req: Request, { params }: Params) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
+  }
+
+  if ('title' in body && (typeof body.title !== 'string' || !body.title.trim())) {
+    return errorJson('Title cannot be empty', 400);
   }
 
   const updates = parseGalleryUpdates(body);

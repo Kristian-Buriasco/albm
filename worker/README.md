@@ -43,7 +43,7 @@ Alt text language: `ALT_LANG` (default English).
   and the run continues. Results are posted in batches of up to 20.
 - Exit codes: `0` success, `1` the server rejected the token (401) or a fatal engine problem (for example the Ollama
   model is missing, so the photo is not marked as failed), `2` bad arguments.
-- `--dry-run` runs one batch only and posts nothing. Those jobs stay leased for 15 min on the server.
+- `--dry-run` looks at one batch and posts nothing. It does not lease anything on the server, so a real run right after still sees the same photos.
 
 ## Tests
 

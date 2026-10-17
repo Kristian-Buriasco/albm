@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json } from '@/lib/api';
+import { errorJson, json, readJsonObject } from '@/lib/api';
 import { canViewGallery } from '@/lib/gallery-auth';
 import { logAdmin } from '@/lib/audit-log';
 import { findOrCreateAccount, issueMagicLink, normalizeEmail } from '@/lib/magic-links';
@@ -46,7 +46,7 @@ export async function POST(req: Request, { params }: Params) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }

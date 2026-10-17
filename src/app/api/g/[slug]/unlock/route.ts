@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
-import { errorJson, json } from '@/lib/api';
+import { errorJson, json, readJsonObject } from '@/lib/api';
 import {
   AUTH_RL,
   clearFailures,
@@ -48,7 +48,7 @@ export async function POST(req: Request, { params }: Params) {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = await readJsonObject(req);
   } catch {
     return errorJson('Invalid request', 400);
   }
@@ -61,6 +61,10 @@ export async function POST(req: Request, { params }: Params) {
     const password = typeof body.password === 'string' ? body.password : '';
     if (password && gallery.passwordHash) {
       ok = await bcrypt.compare(password, gallery.passwordHash);
+      // Some keyboards send the composed (NFC) form and others the decomposed (NFD) one; accept both.
+      for (const variant of [password.normalize('NFC'), password.normalize('NFD')]) {
+        if (!ok && variant !== password) ok = await bcrypt.compare(variant, gallery.passwordHash);
+      }
     }
   }
 

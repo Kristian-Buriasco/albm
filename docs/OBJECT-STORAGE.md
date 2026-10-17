@@ -185,8 +185,9 @@ Use `S3_KEEP_LOCAL=0` only when you are happy to depend on the bucket for every 
 
 ## Caching
 
-- Derivatives are sent with `Cache-Control: public, max-age=31536000, immutable`. URLs carry a
-  `?v=` stamp, so a changed image gets a new URL.
+- Portfolio images are sent with `Cache-Control: public` and client-gallery images with `private`. When the URL carries a
+  `?v=` stamp (the site always adds it) the header is also `max-age=31536000, immutable`, so a changed image gets a new URL;
+  without `?v=` it is `public, max-age=86400` (portfolio) or `private, max-age=3600` (client galleries).
 - Private galleries are sent with `Cache-Control: private` and must never be cached at the edge.
 - For public portfolio images, add a Cloudflare **Cache Rule** for `/img/*` set to *Eligible for
   cache* with the edge TTL taken from the origin. Add a bypass rule for requests that carry a
@@ -200,3 +201,10 @@ Use `S3_KEEP_LOCAL=0` only when you are happy to depend on the bucket for every 
 - Presigned downloads straight from the bucket. Originals are still served through the app.
 - Per-gallery backend choice (one backend for the whole install).
 - Settings-page UI. Configuration is environment variables only.
+
+## Interrupted uploads
+
+If a browser tab is closed in the middle of a large upload, the unfinished multipart upload stays in the bucket (it does
+not appear in a normal object listing, but parts already sent are billed). The `abort-incomplete-multipart` lifecycle
+rule removes it after one day, and the `incoming/` expiry rule removes finished-but-never-completed staging objects after
+one day, so make sure those two rules exist.

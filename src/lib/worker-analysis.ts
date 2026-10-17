@@ -31,6 +31,10 @@ export type LeaseOptions = {
   galleryId: string | null;
   minVersion: number;
   redo: boolean;
+  /** redo only re-offers rows last touched before this time (ms epoch), so one --redo run visits each photo once. */
+  since: number | null;
+  /** false = peek (dry run): nothing is leased or changed. */
+  lease: boolean;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -101,6 +105,10 @@ export function parseJobsQuery(q: URLSearchParams): { value: LeaseOptions } | { 
     return { error: 'minVersion must be an integer >= 1' };
   }
   if (redo !== '0' && redo !== '1') return { error: 'redo must be 0 or 1' };
+  const since = q.get('since');
+  if (since !== null && !/^\d{1,15}$/.test(since)) return { error: 'since must be a ms timestamp' };
+  const lease = q.get('lease') ?? '1';
+  if (lease !== '0' && lease !== '1') return { error: 'lease must be 0 or 1' };
   return {
     value: {
       task,
@@ -108,6 +116,8 @@ export function parseJobsQuery(q: URLSearchParams): { value: LeaseOptions } | { 
       galleryId: q.get('gallery') || null,
       minVersion: Number(minVersion),
       redo: redo === '1',
+      since: since === null ? null : Number(since),
+      lease: lease === '1',
     },
   };
 }
@@ -116,19 +126,25 @@ export function parseJobsQuery(q: URLSearchParams): { value: LeaseOptions } | { 
 export function leaseJobs(opts: LeaseOptions) {
   const pa = schema.photoAnalysis;
   const now = Date.now();
+  const untouchedSince = opts.since === null ? undefined : lt(pa.updatedAt, opts.since);
   const doneOk = opts.redo
-    ? eq(pa.status, 'done')
+    ? and(eq(pa.status, 'done'), untouchedSince)
     : and(eq(pa.status, 'done'), lt(pa.version, opts.minVersion));
   const errorOk = opts.redo
-    ? eq(pa.status, 'error')
+    ? and(eq(pa.status, 'error'), untouchedSince)
     : and(eq(pa.status, 'error'), lt(pa.attempts, MAX_ATTEMPTS));
-  const offerable = or(
-    isNull(pa.photoId),
-    eq(pa.status, 'pending'),
-    doneOk,
-    errorOk,
-    and(eq(pa.status, 'leased'), lte(pa.leasedUntil, now)),
+  // A lease that expired without a result counts as an attempt: stop offering it after MAX_ATTEMPTS.
+  const expiredLease = and(
+    eq(pa.status, 'leased'),
+    lte(pa.leasedUntil, now),
+    opts.redo ? untouchedSince : lt(pa.attempts, MAX_ATTEMPTS),
   );
+  // Alt text that was cleared (for example a human edit removed) is worth generating again.
+  const clearedAlt =
+    opts.task === 'alt'
+      ? and(eq(pa.status, 'done'), or(isNull(schema.photos.altText), eq(schema.photos.altText, '')))
+      : undefined;
+  const offerable = or(isNull(pa.photoId), eq(pa.status, 'pending'), doneOk, errorOk, expiredLease, clearedAlt);
 
   return getDb().transaction(
     (tx) => {
@@ -149,7 +165,7 @@ export function leaseJobs(opts: LeaseOptions) {
         .limit(opts.limit)
         .all();
 
-      for (const c of candidates) {
+      for (const c of opts.lease ? candidates : []) {
         const lease: Analysis = {
           photoId: c.id,
           task: opts.task,
@@ -172,7 +188,7 @@ export function leaseJobs(opts: LeaseOptions) {
           .run();
       }
 
-      // Counted after the leases above, so leased photos are not "remaining".
+      // Counted after the leases above, so leased photos are not "remaining" (a peek counts the unleased rest).
       const remaining =
         tx
           .select({ n: sql<number>`count(*)` })

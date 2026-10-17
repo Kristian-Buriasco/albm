@@ -64,3 +64,12 @@ export function json(data: unknown, status = 200): NextResponse {
 export function errorJson(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status });
 }
+
+/** Parse a JSON request body that must be an object; throws otherwise (callers already map a throw to 400). */
+export async function readJsonObject(req: Request): Promise<Record<string, unknown>> {
+  const value: unknown = await req.json();
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('JSON object required');
+  }
+  return value as Record<string, unknown>;
+}

@@ -69,11 +69,13 @@ Same variables as the app's object storage, plus the backup key:
 | `BACKUP_ENCRYPTION_KEY` | **yes, always** | 64 hex characters. The tools refuse to run without it. It is never logged. |
 | `BACKUP_PREFIX` | no (default `db-backups/`) | Folder inside the bucket |
 
-Run from the repo root with the same `.env` as the app:
+Run from the repo root. The variables must be in the environment: put `STORAGE`-style values (`S3_ENDPOINT`, `S3_BUCKET`,
+`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `BACKUP_ENCRYPTION_KEY`, `DATA_DIR`) in a file such as `~/albm-backup.env`
+(mode 600) and pass it with `--env-file`. A dev `.env` usually does not have them. Example:
 
 ```sh
-node --env-file=.env scripts/backup-db-to-r2.mjs --dry-run   # snapshot, check, encrypt; no upload, no network
-node --env-file=.env scripts/backup-db-to-r2.mjs             # the real backup
+node --env-file=$HOME/albm-backup.env scripts/backup-db-to-r2.mjs --dry-run   # snapshot, check, encrypt; no upload, no network
+node --env-file=$HOME/albm-backup.env scripts/backup-db-to-r2.mjs             # the real backup
 ```
 
 `--dry-run` does not need the S3 variables. It prints the sizes and leaves nothing behind. Temp
@@ -151,7 +153,7 @@ same way.
 Run one backup by hand before every deploy:
 
 ```sh
-node --env-file=.env scripts/backup-db-to-r2.mjs
+node --env-file=$HOME/albm-backup.env scripts/backup-db-to-r2.mjs
 ```
 
 ## Restore
@@ -159,16 +161,16 @@ node --env-file=.env scripts/backup-db-to-r2.mjs
 List backups, newest first:
 
 ```sh
-node --env-file=.env scripts/restore-db-from-r2.mjs --list
+node --env-file=$HOME/albm-backup.env scripts/restore-db-from-r2.mjs --list
 ```
 
 Restore the latest backup to a **new** file (the tool refuses to overwrite an existing file or the
 live database):
 
 ```sh
-node --env-file=.env scripts/restore-db-from-r2.mjs --latest --out /tmp/restored.db
+node --env-file=$HOME/albm-backup.env scripts/restore-db-from-r2.mjs --latest --out /tmp/restored.db
 # or a specific backup:
-node --env-file=.env scripts/restore-db-from-r2.mjs --key db-backups/2026/10/gallery-<...>.db.gz.enc --out /tmp/restored.db
+node --env-file=$HOME/albm-backup.env scripts/restore-db-from-r2.mjs --key db-backups/2026/10/gallery-<...>.db.gz.enc --out /tmp/restored.db
 ```
 
 The tool downloads the file, checks its size (and its sha256 for `--latest`), decrypts it, gunzips it,
