@@ -8,6 +8,10 @@ export async function register() {
     const { ensureAdminPassword } = await import('@/lib/first-run');
     ensureAdminPassword();
 
+    // Object storage settings saved in the admin UI take over from the S3_* env vars.
+    const { registerStorageSettings } = await import('@/lib/storage-settings');
+    registerStorageSettings();
+
     // Opens the DB (applying migrations) and re-enqueues photos stuck
     // in 'processing' from a previous run.
     const { recoverStuckJobs } = await import('@/lib/queue');

@@ -4,6 +4,8 @@ import { getGalleryDefaults } from '@/lib/gallery-defaults';
 import { getSetting } from '@/lib/settings';
 import { watermarkPath } from '@/lib/paths';
 import { isAdmin } from '@/lib/session';
+import { getDb, schema } from '@/db';
+import { storageView } from '@/lib/storage-settings';
 import SettingsTabs from './SettingsTabs';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +38,10 @@ export default async function AdminSettingsPage() {
         initialFrom: getSetting('smtpFrom') ?? '',
         initialTo: getSetting('smtpTo') ?? '',
         passSet: Boolean(getSetting('smtpPass')),
+      }}
+      storageProps={{
+        initial: storageView(),
+        galleries: getDb().select({ id: schema.galleries.id, title: schema.galleries.title }).from(schema.galleries).all(),
       }}
     />
   );

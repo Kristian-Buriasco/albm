@@ -33,13 +33,41 @@ export interface ObjectStoreConfig {
   keepLocal: boolean;
 }
 
+/** Settings saved from the admin UI; when present they replace the S3_* env vars entirely. */
+export interface StorageOverride {
+  config: ObjectStoreConfig | null;
+  galleries: string[];
+  originals: boolean;
+}
+
 const g = globalThis as unknown as {
   __s3?: { cfgKey: string; client: AwsClient; cfg: ObjectStoreConfig } | null;
   __s3Warned?: boolean;
+  __storageOverride?: (() => StorageOverride | null) | null;
 };
+
+/** Registered once at boot (src/instrumentation.ts); kept out of here so this file has no DB import. */
+export function setStorageOverride(fn: (() => StorageOverride | null) | null): void {
+  g.__storageOverride = fn;
+}
+
+function override(): StorageOverride | null {
+  try {
+    return g.__storageOverride?.() ?? null;
+  } catch (err) {
+    console.error('[object-store] reading saved storage settings failed, using env:', err);
+    return null;
+  }
+}
 
 /** Parsed config, or null when object storage is off or incompletely configured (fail-safe to local). */
 export function objectStoreConfig(): ObjectStoreConfig | null {
+  const o = override();
+  return o ? o.config : envObjectStoreConfig();
+}
+
+/** The env-only configuration (what applies until settings are saved in the admin UI). */
+export function envObjectStoreConfig(): ObjectStoreConfig | null {
   if ((process.env.STORAGE_BACKEND ?? 'local').toLowerCase() !== 's3') return null;
   const endpoint = (process.env.S3_ENDPOINT ?? '').replace(/\/+$/, '');
   const bucket = process.env.S3_BUCKET ?? '';
@@ -78,7 +106,8 @@ export function objectStoreEnabled(): boolean {
  */
 export function galleryUsesObjectStore(galleryId: string): boolean {
   if (!objectStoreEnabled()) return false;
-  const only = (process.env.S3_GALLERIES ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  const o = override();
+  const only = o ? o.galleries : (process.env.S3_GALLERIES ?? '').split(',').map((x) => x.trim()).filter(Boolean);
   return only.length === 0 || only.includes(galleryId);
 }
 
@@ -341,7 +370,9 @@ export { objectUrl };
 
 /** Originals are mirrored only when object storage is on and S3_ORIGINALS is 1/true/yes. */
 export function originalsEnabled(): boolean {
-  return objectStoreEnabled() && ['1', 'true', 'yes'].includes((process.env.S3_ORIGINALS ?? '').toLowerCase());
+  if (!objectStoreEnabled()) return false;
+  const o = override();
+  return o ? o.originals : ['1', 'true', 'yes'].includes((process.env.S3_ORIGINALS ?? '').toLowerCase());
 }
 
 export function originalKey(cfg: Pick<ObjectStoreConfig, 'prefix'>, galleryId: string, filename: string): string {

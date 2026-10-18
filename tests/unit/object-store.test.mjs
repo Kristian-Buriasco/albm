@@ -138,6 +138,32 @@ const put = (key, body, contentType = 'image/webp') => objects.set(key, { body: 
 
 // ---- local file layout ----------------------------------------------------
 
+test('saved admin settings replace the env vars; a throwing or cleared override falls back to env', () => {
+  const { galleryUsesObjectStore, originalsEnabled, setStorageOverride } = store;
+  const cfg = { endpoint: 'https://ui.example', bucket: 'ui-bucket', region: 'auto', accessKeyId: 'k', secretAccessKey: 's', prefix: '', keepLocal: false };
+  const saved = { ...process.env };
+  try {
+    Object.assign(process.env, { STORAGE_BACKEND: 's3', S3_ENDPOINT: 'http://127.0.0.1:1', S3_BUCKET: 'env-bucket', S3_ACCESS_KEY_ID: 'k', S3_SECRET_ACCESS_KEY: 's', S3_ORIGINALS: '1' });
+    delete process.env.S3_GALLERIES;
+    setStorageOverride(() => ({ config: cfg, galleries: ['g1'], originals: false }));
+    assert.equal(objectStoreConfig().bucket, 'ui-bucket');
+    assert.equal(galleryUsesObjectStore('g1'), true);
+    assert.equal(galleryUsesObjectStore('g2'), false);
+    assert.equal(originalsEnabled(), false); // env says 1, saved settings say off
+    setStorageOverride(() => ({ config: null, galleries: [], originals: false }));
+    assert.equal(objectStoreConfig(), null); // saved "off" beats env "on"
+    mock.method(console, 'error', () => {});
+    setStorageOverride(() => { throw new Error('db gone'); });
+    assert.equal(objectStoreConfig().bucket, 'env-bucket');
+    setStorageOverride(null);
+    assert.equal(originalsEnabled(), true);
+  } finally {
+    setStorageOverride(null);
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  }
+});
+
 function writeLocal(galleryId, variant, stem, body = `${variant}:${stem}`) {
   const dir = path.join(DATA_DIR, 'photos', galleryId, variant);
   fs.mkdirSync(dir, { recursive: true });

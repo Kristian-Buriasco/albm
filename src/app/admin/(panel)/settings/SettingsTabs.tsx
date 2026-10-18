@@ -8,6 +8,7 @@ import UploadTokensPanel from './UploadTokensPanel';
 import WorkerTokensPanel from './WorkerTokensPanel';
 import SettingsForm from './SettingsForm';
 import EmailSettings from './EmailSettings';
+import StorageSettings from './StorageSettings';
 import type { GalleryDefaultsStore } from '@/lib/gallery-defaults';
 
 const tabs = [
@@ -16,16 +17,19 @@ const tabs = [
   { id: 'security', label: 'Security' },
   { id: 'defaults', label: 'Gallery defaults' },
   { id: 'sharing', label: 'Sharing' },
+  { id: 'storage', label: 'Storage' },
 ];
 
 export default function SettingsTabs({
   defaults,
   settingsFormProps,
   emailProps,
+  storageProps,
 }: {
   defaults: GalleryDefaultsStore;
   settingsFormProps: React.ComponentProps<typeof SettingsForm>;
   emailProps: React.ComponentProps<typeof EmailSettings>;
+  storageProps: React.ComponentProps<typeof StorageSettings>;
 }) {
   return (
     <Tabs tabs={tabs}>
@@ -49,6 +53,9 @@ export default function SettingsTabs({
             <div className="mt-12">
               <WorkerTokensPanel />
             </div>
+          </div>
+          <div hidden={active !== 'storage'} className="max-w-2xl">
+            <StorageSettings {...storageProps} />
           </div>
         </>
       )}

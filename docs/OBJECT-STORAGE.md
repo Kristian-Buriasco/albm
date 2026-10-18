@@ -4,6 +4,14 @@ Optional. Albm can keep its generated image derivatives (`thumb`, `md`, `web`, a
 S3-compatible bucket instead of only on local disk. Cloudflare R2 is the first target; B2, MinIO,
 IONOS and AWS use the same settings.
 
+## Settings page
+
+Settings > Storage configures everything below without editing env vars: endpoint, bucket, region, keys, key prefix, originals, keep-local and which galleries use the bucket. **Test connection** writes, reads and deletes a small file; enabling is refused when the test fails. The secret key is stored encrypted (AES-256-GCM, key derived from `SESSION_SECRET`) and is never shown again. Saved settings **replace** the `S3_*` variables entirely, and unticking "Use object storage" turns the bucket off even if env has it on. **Reset to environment** forgets them. They apply immediately, with no restart.
+
+The `scripts/` tools (migrate, backup) read only the environment variables, not the saved settings. Keep `S3_*` in the environment equal to what you saved before running `migrate-derivatives.mjs`, especially with `--prune`.
+
+If `SESSION_SECRET` is changed, the saved secret becomes unreadable: Albm logs it, falls back to the environment settings, and the tab asks you to enter the secret again.
+
 ## What it does and does not do
 
 - **Does:** after a photo is processed, uploads its three derivatives to the bucket. Reads go
@@ -200,7 +208,7 @@ Use `S3_KEEP_LOCAL=0` only when you are happy to depend on the bucket for every 
 - Pruning local originals. Local copies are always kept.
 - Presigned downloads straight from the bucket. Originals are still served through the app.
 - Per-gallery backend choice (one backend for the whole install).
-- Settings-page UI. Configuration is environment variables only.
+- Settings-page UI: done, see "Settings page" above.
 
 ## Interrupted uploads
 
