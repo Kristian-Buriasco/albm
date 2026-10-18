@@ -4,6 +4,23 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-10-18
+
+### Added
+- **Settings > Storage:** configure object storage (Cloudflare R2, B2, MinIO, AWS) from the admin instead of environment
+  variables: endpoint, bucket, keys, prefix, store originals, keep local copies, and which galleries use the bucket.
+  **Test connection** writes, reads and deletes a small file, and enabling is refused when it fails. The secret key is
+  stored encrypted and is never shown again. Saved settings replace the `S3_*` variables and apply without a restart;
+  **Reset to environment** goes back. If `SESSION_SECRET` changes the saved secret becomes unreadable: Albm logs it, uses the
+  environment settings and asks for the secret again.
+
+### Fixed
+- The Docker image now includes `aws4fetch`, so `scripts/migrate-derivatives.mjs` and `scripts/backup-db-to-r2.mjs` run
+  inside the container (they crashed with "Cannot find package 'aws4fetch'").
+
+### Notes
+- The migrate and backup scripts still read only the environment variables, not the saved settings.
+
 ## [2.0.0] — 2026-10-17
 
 Albm 2.0 adds optional cloud object storage, direct uploads of large files, safe backups and an analysis worker
