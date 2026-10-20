@@ -4,6 +4,12 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] — 2026-10-20
+
+### Fixed
+- Inviting a collaborator who already has a passkey to another gallery no longer sends them through passkey setup again
+  (their device refused it, so it failed). The invite page now tells them to sign in; the new gallery is already on their account.
+
 ## [2.1.0] — 2026-10-18
 
 ### Added

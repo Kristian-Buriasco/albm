@@ -44,7 +44,10 @@ export async function POST(req: Request) {
     return errorJson('Invite is invalid, expired, or already used', 400);
   }
 
+  // Same email invited to another gallery: the grant is already added, and the device's existing
+  // passkey would make registration fail (excludeCredentials), so send them to sign in instead.
   const existing = listPasskeysForCollaborator(invite.collaboratorId);
+  if (existing.length > 0) return json({ alreadyRegistered: true }, 409);
   const options = await generateRegistrationOptions({
     rpName: rpName(),
     rpID: rpId(),

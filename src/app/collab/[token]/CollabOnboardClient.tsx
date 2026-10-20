@@ -19,6 +19,7 @@ export default function CollabOnboardClient({
   const router = useRouter();
   const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [hasPasskey, setHasPasskey] = useState(false);
 
   async function setUp() {
     setStatus('busy');
@@ -29,6 +30,13 @@ export default function CollabOnboardClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
+      if (optRes.status === 409) {
+        setStatus('done');
+        setTimeout(() => router.push('/admin/login'), 2500);
+        setError(null);
+        setHasPasskey(true);
+        return;
+      }
       if (!optRes.ok) {
         const data = await optRes.json().catch(() => null);
         setError(data?.error ?? t(lang, 'somethingWrong'));
@@ -80,7 +88,9 @@ export default function CollabOnboardClient({
         </p>
       </div>
       {status === 'done' ? (
-        <p className="text-sm text-green-600 dark:text-green-400">{t(lang, 'collabSetupDone')}</p>
+        <p className="text-sm text-green-600 dark:text-green-400">
+          {t(lang, hasPasskey ? 'collabAlreadyHasPasskey' : 'collabSetupDone')}
+        </p>
       ) : (
         <button
           type="button"

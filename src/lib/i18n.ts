@@ -90,6 +90,7 @@ export type I18nDict = {
   collabSetupButton: string;
   collabSetupBusy: string;
   collabSetupDone: string;
+  collabAlreadyHasPasskey: string;
 };
 
 const en: I18nDict = {
@@ -181,6 +182,7 @@ const en: I18nDict = {
   collabSetupButton: 'Set up passkey',
   collabSetupBusy: 'Setting up…',
   collabSetupDone: "You're all set. Redirecting…",
+  collabAlreadyHasPasskey: 'You already have a passkey. Sign in with it; the new gallery is on your account.',
   findNearbyHint: 'OCR can miss numbers — try nearby bibs if nothing shows up.',
 };
 
@@ -273,6 +275,7 @@ const nl: I18nDict = {
   collabSetupButton: 'Passkey instellen',
   collabSetupBusy: 'Bezig met instellen…',
   collabSetupDone: 'Je bent klaar. Doorverwijzen…',
+  collabAlreadyHasPasskey: 'Je hebt al een passkey. Log ermee in; de nieuwe galerij staat op je account.',
   findNearbyHint: 'OCR kan nummers missen — probeer een dichtbijgelegen nummer.',
 };
 
@@ -365,6 +368,7 @@ const it: I18nDict = {
   collabSetupButton: 'Configura passkey',
   collabSetupBusy: 'Configurazione in corso…',
   collabSetupDone: 'Tutto pronto. Reindirizzamento…',
+  collabAlreadyHasPasskey: 'Hai già una passkey. Accedi con quella; la nuova galleria è nel tuo account.',
   findNearbyHint: 'L’OCR può sbagliare — prova un numero vicino se non trovi nulla.',
 };
 
@@ -457,6 +461,7 @@ const fr: I18nDict = {
   collabSetupButton: "Configurer la clé d'accès",
   collabSetupBusy: 'Configuration en cours…',
   collabSetupDone: 'Tout est prêt. Redirection…',
+  collabAlreadyHasPasskey: 'Vous avez déjà une passkey. Connectez-vous avec; la nouvelle galerie est sur votre compte.',
   findNearbyHint: 'La reconnaissance de numéros peut manquer certains dossards — essayez un numéro proche si rien ne s\'affiche.',
 };
 
@@ -549,6 +554,7 @@ const de: I18nDict = {
   collabSetupButton: 'Passkey einrichten',
   collabSetupBusy: 'Wird eingerichtet…',
   collabSetupDone: 'Fertig. Weiterleitung…',
+  collabAlreadyHasPasskey: 'Du hast bereits einen Passkey. Melde dich damit an; die neue Galerie ist in deinem Konto.',
   findNearbyHint: 'Die Nummernerkennung kann Startnummern übersehen — probiere eine nahegelegene Nummer, falls nichts erscheint.',
 };
 
@@ -641,6 +647,7 @@ const es: I18nDict = {
   collabSetupButton: 'Configurar clave de acceso',
   collabSetupBusy: 'Configurando…',
   collabSetupDone: 'Todo listo. Redirigiendo…',
+  collabAlreadyHasPasskey: 'Ya tienes una passkey. Inicia sesión con ella; la nueva galería está en tu cuenta.',
   findNearbyHint: 'El reconocimiento de dorsales puede fallar — prueba con un número cercano si no aparece nada.',
 };
 
@@ -733,6 +740,7 @@ const pt: I18nDict = {
   collabSetupButton: 'Configurar passkey',
   collabSetupBusy: 'A configurar…',
   collabSetupDone: 'Tudo pronto. A redirecionar…',
+  collabAlreadyHasPasskey: 'Já tens uma passkey. Inicia sessão com ela; a nova galeria está na tua conta.',
   findNearbyHint: 'O reconhecimento de números pode falhar — experimente um número próximo se nada aparecer.',
 };
 
@@ -825,6 +833,7 @@ const ja: I18nDict = {
   collabSetupButton: 'パスキーを設定',
   collabSetupBusy: '設定中…',
   collabSetupDone: '設定完了です。リダイレクトしています…',
+  collabAlreadyHasPasskey: 'すでにパスキーがあります。それでサインインしてください。新しいギャラリーはアカウントに追加済みです。',
   findNearbyHint: '番号認識が読み取れないことがあります — 見つからない場合は近い番号もお試しください。',
 };
 
@@ -917,6 +926,7 @@ const pl: I18nDict = {
   collabSetupButton: 'Skonfiguruj klucz dostępu',
   collabSetupBusy: 'Konfigurowanie…',
   collabSetupDone: 'Gotowe. Przekierowywanie…',
+  collabAlreadyHasPasskey: 'Masz już klucz dostępu. Zaloguj się nim; nowa galeria jest na Twoim koncie.',
   findNearbyHint: 'Rozpoznawanie numerów może czasem zawieść — jeśli nic się nie pojawia, spróbuj pobliskiego numeru.',
 };
 
@@ -1009,6 +1019,7 @@ const zh: I18nDict = {
   collabSetupButton: '设置通行密钥',
   collabSetupBusy: '正在设置…',
   collabSetupDone: '设置完成，正在跳转…',
+  collabAlreadyHasPasskey: '你已有通行密钥。请用它登录，新图库已在你的账户中。',
   findNearbyHint: '号码识别可能会遗漏部分参赛号——如果没有结果，请尝试相近的号码。',
 };
 
