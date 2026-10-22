@@ -33,6 +33,9 @@ export default async function AdminSettingsPage() {
         initialContactInstagram: getSetting('contactInstagram') ?? '',
         initialContactWhatsapp: getSetting('contactWhatsapp') ?? '',
         initialFooterContent: getSetting('footerContent') ?? '',
+        initialMainSiteEnabled: getSetting('mainSiteEnabled') === 'true',
+        initialMainSiteUrl: getSetting('mainSiteUrl') ?? '',
+        initialMainSiteLabel: getSetting('mainSiteLabel') ?? '',
         initialDefaultLanguage: getSetting('defaultLanguage') ?? 'en',
         hasWatermark: fs.existsSync(watermarkPath()),
       }}

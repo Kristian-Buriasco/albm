@@ -45,7 +45,10 @@ test('dark mode sets the -dark tokens the app actually reads, and the wrapper pa
 const siteColors = GALLERY_THEME_PRESETS[0].theme.colors;
 test('site theme round-trips; bad hex / non-Google font URL rejected; mode defaults to auto', () => {
   const t = { colors: siteColors, font: null, mode: 'auto' };
-  assert.deepEqual(sanitizeSiteTheme(JSON.parse(JSON.stringify(t))), t);
+  const full = sanitizeSiteTheme(t);
+  assert.equal(full.headingWeight, null);
+  assert.equal(full.header.work.show, true);
+  assert.deepEqual(sanitizeSiteTheme(JSON.parse(JSON.stringify(full))), full);
   assert.equal(sanitizeSiteTheme({ ...t, mode: 'bogus' }).mode, 'auto');
   const bad = { ...siteColors, light: { ...siteColors.light, ink: 'red' } };
   assert.equal(sanitizeSiteTheme({ ...t, colors: bad }), null);
@@ -60,4 +63,21 @@ test('siteThemeToCss sets plain + -dark tokens and the font', () => {
   assert.match(css, /--color-paper-dark: #0d0f12/);
   assert.match(css, /--font-sans: B/);
   assert.doesNotMatch(siteThemeToCss({ colors: siteColors, font: null, mode: 'auto' }, null), /--font-sans/);
+});
+
+test('site theme extras: clamps typography, drops unsafe logo, strips <style from custom css', () => {
+  const t = sanitizeSiteTheme({
+    colors: siteColors, font: null, headingWeight: 5000, baseSize: 3, uppercaseHeadings: true,
+    header: { logoUrl: 'javascript:alert(1)', about: { show: false, label: ' Info ' } },
+    customCss: 'a{}</style><script>x</script>',
+  });
+  assert.equal(t.headingWeight, 900);
+  assert.equal(t.baseSize, 14);
+  assert.equal(t.header.logoUrl, '');
+  assert.deepEqual(t.header.about, { show: false, label: 'Info' });
+  assert.ok(!/<\/?style/i.test(t.customCss));
+  assert.equal(sanitizeSiteTheme({ colors: siteColors, header: { logoUrl: 'https://x.test/l.svg' } }).header.logoUrl, 'https://x.test/l.svg');
+  const css = siteThemeToCss(t, null);
+  assert.match(css, /html \{ font-size: 14px; \}/);
+  assert.match(css, /font-weight: 900; text-transform: uppercase;/);
 });

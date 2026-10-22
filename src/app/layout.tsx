@@ -65,6 +65,9 @@ export default async function RootLayout({
         {siteTheme && (
           <style dangerouslySetInnerHTML={{ __html: siteThemeToCss(siteTheme, siteFont ? resolveFontVars(siteFont) : null) }} />
         )}
+        {isPublicPage && siteTheme?.customCss && (
+          <style dangerouslySetInnerHTML={{ __html: siteTheme.customCss }} />
+        )}
         {siteFont?.kind === 'custom' && (
           <>
             <link rel="stylesheet" href={siteFont.headingUrl} />

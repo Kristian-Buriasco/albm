@@ -5,6 +5,7 @@ import { watermarkPath } from '@/lib/paths';
 import { getSetting, setSetting } from '@/lib/settings';
 import { logAdmin } from '@/lib/audit-log';
 import { parseSiteTheme, sanitizeSiteTheme } from '@/lib/gallery-theme';
+import { cleanMainSiteUrl } from '@/lib/main-site';
 import { parseLang } from '@/lib/i18n';
 import fs from 'node:fs';
 
@@ -42,6 +43,9 @@ export async function GET() {
     smtpTo: getSetting('smtpTo') ?? '',
     // Never return the stored password; just whether one is set.
     smtpPassSet: Boolean(getSetting('smtpPass')),
+    mainSiteEnabled: getSetting('mainSiteEnabled') === 'true',
+    mainSiteUrl: getSetting('mainSiteUrl') ?? '',
+    mainSiteLabel: getSetting('mainSiteLabel') ?? '',
     siteTheme: parseSiteTheme(getSetting('siteTheme')),
     galleryDefaults: getGalleryDefaults(),
     hasWatermark: fs.existsSync(watermarkPath()),
@@ -133,6 +137,17 @@ export async function POST(req: Request) {
     setSetting('smtpPass', '');
   } else if (typeof body.smtpPass === 'string' && body.smtpPass !== '') {
     setSetting('smtpPass', body.smtpPass.slice(0, SHORT_MAX));
+  }
+  if (typeof body.mainSiteEnabled === 'boolean') {
+    setSetting('mainSiteEnabled', body.mainSiteEnabled ? 'true' : 'false');
+  }
+  if (typeof body.mainSiteUrl === 'string') {
+    const url = body.mainSiteUrl.trim();
+    if (url && !cleanMainSiteUrl(url)) return errorJson('Main website must be a valid http(s) URL', 400);
+    setCapped('mainSiteUrl', url, 500);
+  }
+  if (typeof body.mainSiteLabel === 'string') {
+    setCapped('mainSiteLabel', body.mainSiteLabel.trim(), SHORT_MAX);
   }
   if (body.siteTheme !== undefined) {
     if (body.siteTheme === null) {
