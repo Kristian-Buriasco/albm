@@ -4,6 +4,7 @@ import { getGalleryDefaults, parseGalleryDefaults, saveGalleryDefaults } from '@
 import { watermarkPath } from '@/lib/paths';
 import { getSetting, setSetting } from '@/lib/settings';
 import { logAdmin } from '@/lib/audit-log';
+import { parseSiteTheme, sanitizeSiteTheme } from '@/lib/gallery-theme';
 import { parseLang } from '@/lib/i18n';
 import fs from 'node:fs';
 
@@ -41,6 +42,7 @@ export async function GET() {
     smtpTo: getSetting('smtpTo') ?? '',
     // Never return the stored password; just whether one is set.
     smtpPassSet: Boolean(getSetting('smtpPass')),
+    siteTheme: parseSiteTheme(getSetting('siteTheme')),
     galleryDefaults: getGalleryDefaults(),
     hasWatermark: fs.existsSync(watermarkPath()),
   });
@@ -131,6 +133,15 @@ export async function POST(req: Request) {
     setSetting('smtpPass', '');
   } else if (typeof body.smtpPass === 'string' && body.smtpPass !== '') {
     setSetting('smtpPass', body.smtpPass.slice(0, SHORT_MAX));
+  }
+  if (body.siteTheme !== undefined) {
+    if (body.siteTheme === null) {
+      setSetting('siteTheme', '');
+    } else {
+      const theme = sanitizeSiteTheme(body.siteTheme);
+      if (!theme) return errorJson('Invalid site theme', 400);
+      setSetting('siteTheme', JSON.stringify(theme));
+    }
   }
   if (body.galleryDefaults !== undefined) {
     const store = parseGalleryDefaults(JSON.stringify(body.galleryDefaults));

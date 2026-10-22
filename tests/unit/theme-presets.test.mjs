@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GALLERY_THEME_PRESETS, sanitizeGalleryTheme, themeToCss } from '../../src/lib/gallery-theme.ts';
+import { GALLERY_THEME_PRESETS, sanitizeGalleryTheme, themeToCss, sanitizeSiteTheme, siteThemeToCss } from '../../src/lib/gallery-theme.ts';
 
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
@@ -40,4 +40,24 @@ test('dark mode sets the -dark tokens the app actually reads, and the wrapper pa
     assert.ok(dark.includes(`--color-${token}-dark: ${ku.theme.colors.dark[token]}`), `--color-${token}-dark`);
   }
   assert.match(css, /\[data-gallery-theme\] \{[\s\S]*background-color: var\(--color-paper\)/);
+});
+
+const siteColors = GALLERY_THEME_PRESETS[0].theme.colors;
+test('site theme round-trips; bad hex / non-Google font URL rejected; mode defaults to auto', () => {
+  const t = { colors: siteColors, font: null, mode: 'auto' };
+  assert.deepEqual(sanitizeSiteTheme(JSON.parse(JSON.stringify(t))), t);
+  assert.equal(sanitizeSiteTheme({ ...t, mode: 'bogus' }).mode, 'auto');
+  const bad = { ...siteColors, light: { ...siteColors.light, ink: 'red' } };
+  assert.equal(sanitizeSiteTheme({ ...t, colors: bad }), null);
+  const font = { kind: 'custom', headingUrl: 'https://evil.example/x.css', bodyUrl: 'https://fonts.googleapis.com/css2?family=A', headingFamily: 'A', bodyFamily: 'A' };
+  assert.equal(sanitizeSiteTheme({ ...t, font }), null);
+  assert.equal(sanitizeSiteTheme({ ...t, font: { ...font, headingUrl: font.bodyUrl, headingFamily: 'A};x{' } }), null);
+});
+
+test('siteThemeToCss sets plain + -dark tokens and the font', () => {
+  const css = siteThemeToCss({ colors: siteColors, font: null, mode: 'dark' }, { heading: 'H', body: 'B' });
+  assert.match(css, /--color-paper: #f3f4f6/);
+  assert.match(css, /--color-paper-dark: #0d0f12/);
+  assert.match(css, /--font-sans: B/);
+  assert.doesNotMatch(siteThemeToCss({ colors: siteColors, font: null, mode: 'auto' }, null), /--font-sans/);
 });

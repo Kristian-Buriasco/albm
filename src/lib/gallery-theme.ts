@@ -77,7 +77,7 @@ function isHexColor(v: unknown): v is string {
   return typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v);
 }
 
-function sanitizeColors(v: unknown): GalleryThemeColors | null {
+export function sanitizeColors(v: unknown): GalleryThemeColors | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
   if (!isHexColor(o.paper) || !isHexColor(o.ink) || !isHexColor(o.muted) || !isHexColor(o.line) || !isHexColor(o.accent)) {
@@ -86,7 +86,10 @@ function sanitizeColors(v: unknown): GalleryThemeColors | null {
   return { paper: o.paper, ink: o.ink, muted: o.muted, line: o.line, accent: o.accent };
 }
 
-function sanitizeFont(v: unknown): GalleryThemeFont | null {
+// Family names end up in a <style> on every page, so no quotes/semicolons/braces.
+const FAMILY_RE = /^[\w\s-]+$/;
+
+export function sanitizeFont(v: unknown): GalleryThemeFont | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
   if (o.kind === 'preset' && typeof o.pairId === 'string' && o.pairId) {
@@ -97,9 +100,9 @@ function sanitizeFont(v: unknown): GalleryThemeFont | null {
     typeof o.headingUrl === 'string' &&
     typeof o.bodyUrl === 'string' &&
     typeof o.headingFamily === 'string' &&
-    o.headingFamily.trim() &&
+    FAMILY_RE.test(o.headingFamily.trim()) &&
     typeof o.bodyFamily === 'string' &&
-    o.bodyFamily.trim()
+    FAMILY_RE.test(o.bodyFamily.trim())
   ) {
     // Only ever allow Google Fonts stylesheet URLs — this is the one place
     // the app makes a deliberate third-party request, so keep it pinned to
@@ -216,4 +219,51 @@ export function themeToCss(theme: GalleryTheme, fontVars: { heading: string; bod
 }
 :where(.dark) [data-gallery-theme] {${block(theme.colors.dark, darkTokens(theme.colors.dark))}
 }`;
+}
+
+export type SiteThemeMode = 'auto' | 'light' | 'dark';
+
+/** Site-wide look. `font: null` keeps the built-in system stack. */
+export type SiteTheme = {
+  colors: { light: GalleryThemeColors; dark: GalleryThemeColors };
+  font: GalleryThemeFont | null;
+  mode: SiteThemeMode;
+};
+
+export function sanitizeSiteTheme(v: unknown): SiteTheme | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const colorsObj = o.colors as Record<string, unknown> | undefined;
+  const light = sanitizeColors(colorsObj?.light);
+  const dark = sanitizeColors(colorsObj?.dark);
+  if (!light || !dark) return null;
+  let font: GalleryThemeFont | null = null;
+  if (o.font != null) {
+    font = sanitizeFont(o.font);
+    if (!font) return null;
+  }
+  const mode = o.mode === 'light' || o.mode === 'dark' ? o.mode : 'auto';
+  return { colors: { light, dark }, font, mode };
+}
+
+/** Empty/malformed -> null (built-in look). */
+export function parseSiteTheme(raw: string | null | undefined): SiteTheme | null {
+  if (!raw) return null;
+  try {
+    return sanitizeSiteTheme(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+/** Unlayered :root override; beats Tailwind's layered @theme vars. */
+export function siteThemeToCss(theme: SiteTheme, fontVars: { heading: string; body: string } | null): string {
+  const { light: l, dark: d } = theme.colors;
+  const font = fontVars ? `\n  --font-sans: ${fontVars.body};` : '';
+  return `:root {
+  --color-paper: ${l.paper}; --color-surface: ${l.paper}; --color-ink: ${l.ink}; --color-muted: ${l.muted};
+  --color-line: ${l.line}; --color-accent: ${l.accent};
+  --color-paper-dark: ${d.paper}; --color-surface-dark: ${d.paper}; --color-ink-dark: ${d.ink}; --color-muted-dark: ${d.muted};
+  --color-line-dark: ${d.line}; --color-accent-dark: ${d.accent};${font}
+}${fontVars ? `\n.display { font-family: ${fontVars.heading}; }` : ''}`;
 }

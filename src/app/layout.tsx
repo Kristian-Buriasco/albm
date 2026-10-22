@@ -9,6 +9,9 @@ import { BASE_URL } from '@/lib/env';
 import { parseLang } from '@/lib/i18n';
 import { siteName } from '@/lib/site-name';
 import { SiteNameProvider } from '@/components/SiteNameContext';
+import { ThemeLockProvider } from '@/components/ThemeToggle';
+import { parseSiteTheme, siteThemeToCss } from '@/lib/gallery-theme';
+import { resolveFontVars } from '@/lib/gallery-fonts';
 
 export function generateMetadata(): Metadata {
   const name = siteName();
@@ -40,12 +43,34 @@ export default async function RootLayout({
   const consentDefaultScript = rawAnalyticsHtml
     ? `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'${analyticsStorage}'});window.__gaCustomEventsEnabled=${gaCustomEventsEnabled};`
     : '';
+  const siteTheme = parseSiteTheme(getSetting('siteTheme'));
+  const lock = siteTheme && siteTheme.mode !== 'auto' ? siteTheme.mode : null;
+  const forceMode = isPublicPage ? lock : null;
+  const siteFont = siteTheme?.font ?? null;
   const htmlLang = parseLang(getSetting('defaultLanguage'));
 
   return (
-    <html lang={htmlLang} suppressHydrationWarning className={cookieStore.get('theme')?.value === 'dark' ? 'dark' : undefined}>
+    <html lang={htmlLang} suppressHydrationWarning className={
+        forceMode
+          ? forceMode === 'dark'
+            ? 'dark'
+            : undefined
+          : cookieStore.get('theme')?.value === 'dark'
+            ? 'dark'
+            : undefined
+      }
+    >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {!forceMode && <script dangerouslySetInnerHTML={{ __html: themeScript }} />}
+        {siteTheme && (
+          <style dangerouslySetInnerHTML={{ __html: siteThemeToCss(siteTheme, siteFont ? resolveFontVars(siteFont) : null) }} />
+        )}
+        {siteFont?.kind === 'custom' && (
+          <>
+            <link rel="stylesheet" href={siteFont.headingUrl} />
+            {siteFont.bodyUrl !== siteFont.headingUrl && <link rel="stylesheet" href={siteFont.bodyUrl} />}
+          </>
+        )}
         <link rel="manifest" href="/manifest.json" />
         {isPublicPage && (
           <>
@@ -65,7 +90,9 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
-        <SiteNameProvider name={siteName()}>{children}</SiteNameProvider>
+        <SiteNameProvider name={siteName()}>
+          <ThemeLockProvider value={lock}>{children}</ThemeLockProvider>
+        </SiteNameProvider>
         {isPublicPage ? <CookieConsent lang={htmlLang} /> : null}
       </body>
     </html>

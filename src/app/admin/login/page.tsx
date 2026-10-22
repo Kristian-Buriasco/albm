@@ -121,7 +121,7 @@ export default function AdminLoginPage() {
         aria-hidden
       />
       <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
+        <ThemeToggle ignoreLock />
       </div>
 
       <div className="relative z-10 w-full max-w-sm rounded-xl border border-neutral-200 bg-white/80 p-8 shadow-xl ring-1 ring-black/5 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/70 dark:ring-white/10">

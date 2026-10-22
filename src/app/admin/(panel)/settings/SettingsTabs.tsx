@@ -10,10 +10,13 @@ import WorkerTokensPanel from './WorkerTokensPanel';
 import SettingsForm from './SettingsForm';
 import EmailSettings from './EmailSettings';
 import StorageSettings from './StorageSettings';
+import SiteThemeForm from './SiteThemeForm';
+import type { SiteTheme } from '@/lib/gallery-theme';
 import type { GalleryDefaultsStore } from '@/lib/gallery-defaults';
 
 const tabs = [
   { id: 'general', label: 'General' },
+  { id: 'appearance', label: 'Appearance' },
   { id: 'email', label: 'Email' },
   { id: 'security', label: 'Security' },
   { id: 'defaults', label: 'Gallery defaults' },
@@ -26,11 +29,13 @@ export default function SettingsTabs({
   settingsFormProps,
   emailProps,
   storageProps,
+  initialSiteTheme,
 }: {
   defaults: GalleryDefaultsStore;
   settingsFormProps: React.ComponentProps<typeof SettingsForm>;
   emailProps: React.ComponentProps<typeof EmailSettings>;
   storageProps: React.ComponentProps<typeof StorageSettings>;
+  initialSiteTheme: SiteTheme | null;
 }) {
   return (
     <Tabs tabs={tabs}>
@@ -38,6 +43,9 @@ export default function SettingsTabs({
         <>
           <div hidden={active !== 'general'}>
             <SettingsForm {...settingsFormProps} />
+          </div>
+          <div hidden={active !== 'appearance'} className="max-w-2xl">
+            <SiteThemeForm initialSiteTheme={initialSiteTheme} />
           </div>
           <div hidden={active !== 'email'}>
             <EmailSettings {...emailProps} />

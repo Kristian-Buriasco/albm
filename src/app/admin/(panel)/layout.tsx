@@ -37,7 +37,7 @@ export default async function AdminLayout({
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {isOwner && <UpdateBadge />}
-            <ThemeToggle />
+            <ThemeToggle ignoreLock />
             <LogoutButton />
           </div>
         </div>

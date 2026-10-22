@@ -7,6 +7,7 @@ import { watermarkPath } from '@/lib/paths';
 import { isAdmin } from '@/lib/session';
 import { getDb, schema } from '@/db';
 import { storageView } from '@/lib/storage-settings';
+import { parseSiteTheme } from '@/lib/gallery-theme';
 import SettingsTabs from './SettingsTabs';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,7 @@ export default async function AdminSettingsPage() {
   return (
     <SettingsTabs
       defaults={getGalleryDefaults()}
+      initialSiteTheme={parseSiteTheme(getSetting('siteTheme'))}
       settingsFormProps={{
         initialAbout: getSetting('aboutContent') ?? '',
         initialContact: getSetting('contactContent') ?? '',
