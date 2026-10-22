@@ -1,24 +1,24 @@
-import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
-import SiteFooter from '@/components/SiteFooter';
-import AdminEditLink from '@/components/AdminEditLink';
-import JsonLd from '@/components/JsonLd';
-import WorkSection, { type WorkItem } from '@/components/WorkSection';
-import Testimonials from '@/components/Testimonials';
-import { getApprovedTestimonials } from '@/lib/testimonials';
-import { getSetting } from '@/lib/settings';
+import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
+import AdminEditLink from "@/components/AdminEditLink";
+import JsonLd from "@/components/JsonLd";
+import WorkSection, { type WorkItem } from "@/components/WorkSection";
+import Testimonials from "@/components/Testimonials";
+import { getApprovedTestimonials } from "@/lib/testimonials";
+import { getSetting } from "@/lib/settings";
 import {
   coverPhotoId,
   getFeaturedClientGalleries,
   getPublishedPortfolioGalleries,
-} from '@/lib/public-data';
-import { getGalleryTags } from '@/lib/tags';
-import { sitePersonName } from '@/lib/feed-data';
-import { BASE_URL } from '@/lib/env';
-import { parseLang } from '@/lib/i18n';
-import type { Gallery } from '@/db/schema';
+} from "@/lib/public-data";
+import { getGalleryTags } from "@/lib/tags";
+import { sitePersonName } from "@/lib/feed-data";
+import { BASE_URL } from "@/lib/env";
+import { parseLang } from "@/lib/i18n";
+import type { Gallery } from "@/db/schema";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 function toWorkItems(gs: Gallery[]): WorkItem[] {
   return gs.map((g) => ({
@@ -36,93 +36,97 @@ export default function HomePage() {
   const workItems = toWorkItems([...featured, ...getFeaturedClientGalleries()]);
   const otherItems = toWorkItems(allPortfolios.filter((g) => !g.featured));
   const heroItem =
-    toWorkItems(allPortfolios).find((g) => g.cover) ?? workItems.find((g) => g.cover) ?? null;
+    toWorkItems(allPortfolios).find((g) => g.cover) ??
+    workItems.find((g) => g.cover) ??
+    null;
 
-  const eyebrow = getSetting('homeEyebrow') || 'Photographer';
-  const headline = getSetting('homeHeadline') || 'The moment, kept.';
+  const eyebrow = getSetting("homeEyebrow") || "Photographer";
+  const headline = getSetting("homeHeadline") || "The moment, kept.";
   const intro =
-    getSetting('homeIntro') ||
-    'Editorial, event, and portrait photography — with private, proof-ready galleries for clients.';
+    getSetting("homeIntro") ||
+    "Editorial, event, and portrait photography — with private, proof-ready galleries for clients.";
 
   const allTags = [
     ...new Set([...workItems, ...otherItems].flatMap((i) => i.tags)),
   ].sort();
-  const lang = parseLang(getSetting('defaultLanguage'));
+  const lang = parseLang(getSetting("defaultLanguage"));
 
   return (
-    <div>
+    <div className="flex min-h-svh flex-col">
       <JsonLd
         data={{
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
+          "@context": "https://schema.org",
+          "@type": "WebSite",
           name: sitePersonName(),
           url: BASE_URL,
         }}
       />
       <JsonLd
         data={{
-          '@context': 'https://schema.org',
-          '@type': 'Person',
+          "@context": "https://schema.org",
+          "@type": "Person",
           name: sitePersonName(),
           url: BASE_URL,
         }}
       />
       <SiteHeader />
 
-      <section
-        className={`mx-auto grid max-w-6xl grid-cols-1 items-stretch gap-px overflow-hidden border-y border-line dark:border-line-dark ${
-          heroItem?.cover ? 'md:grid-cols-2' : ''
-        }`}
-      >
-        <div className="flex flex-col justify-center px-6 py-10 md:py-24">
-          <p className="mb-5 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
-            {eyebrow}
-          </p>
-          <h1 className="display text-4xl leading-[1.02] font-semibold text-balance sm:text-5xl">
-            {headline}
-          </h1>
-          <p className="mt-6 max-w-[36ch] text-[15px] leading-relaxed text-muted dark:text-muted-dark">
-            {intro}
-          </p>
-          <div className="mt-7 flex items-center gap-6 text-[13px] md:mt-9">
-            <Link
-              href="#work"
-              className="border-b border-ink pb-0.5 transition-colors max-sm:-my-3 max-sm:py-3 hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
-            >
-              View work
-            </Link>
-            <Link
-              href="/contact"
-              className="text-muted transition-colors max-sm:-my-3 max-sm:py-3 hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark"
-            >
-              Get in touch
-            </Link>
+      <div className="flex-1">
+        <section
+          className={`mx-auto grid max-w-6xl grid-cols-1 items-stretch gap-px overflow-hidden border-y border-line dark:border-line-dark ${
+            heroItem?.cover ? "md:grid-cols-2" : ""
+          }`}
+        >
+          <div className="flex flex-col justify-center px-6 py-10 md:py-24">
+            <p className="mb-5 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
+              {eyebrow}
+            </p>
+            <h1 className="display text-4xl leading-[1.02] font-semibold text-balance sm:text-5xl">
+              {headline}
+            </h1>
+            <p className="mt-6 max-w-[36ch] text-[15px] leading-relaxed text-muted dark:text-muted-dark">
+              {intro}
+            </p>
+            <div className="mt-7 flex items-center gap-6 text-[13px] md:mt-9">
+              <Link
+                href="#work"
+                className="border-b border-ink pb-0.5 transition-colors max-sm:-my-3 max-sm:py-3 hover:border-accent hover:text-accent dark:border-ink-dark dark:hover:border-accent-dark dark:hover:text-accent-dark"
+              >
+                View work
+              </Link>
+              <Link
+                href="/contact"
+                className="text-muted transition-colors max-sm:-my-3 max-sm:py-3 hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark"
+              >
+                Get in touch
+              </Link>
+            </div>
           </div>
-        </div>
-        {heroItem?.cover && (
-          <div className="relative min-h-[32vh] md:min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/img/${heroItem.cover}/web`}
-              srcSet={`/img/${heroItem.cover}/md 1280w, /img/${heroItem.cover}/web 2048w`}
-              sizes="(max-width: 768px) 100vw, 50vw"
-              alt={heroItem.gallery.title}
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{
-                objectPosition: `${heroItem.gallery.coverFocusX}% ${heroItem.gallery.coverFocusY}%`,
-              }}
-            />
-          </div>
-        )}
-      </section>
+          {heroItem?.cover && (
+            <div className="relative min-h-[32vh] md:min-h-[46vh] bg-line/50 md:min-h-full dark:bg-line-dark/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/img/${heroItem.cover}/web`}
+                srcSet={`/img/${heroItem.cover}/md 1280w, /img/${heroItem.cover}/web 2048w`}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                alt={heroItem.gallery.title}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{
+                  objectPosition: `${heroItem.gallery.coverFocusX}% ${heroItem.gallery.coverFocusY}%`,
+                }}
+              />
+            </div>
+          )}
+        </section>
 
-      <WorkSection
-        featuredItems={workItems}
-        otherItems={otherItems}
-        allTags={allTags}
-        lang={lang}
-      />
-      <Testimonials testimonials={getApprovedTestimonials()} />
+        <WorkSection
+          featuredItems={workItems}
+          otherItems={otherItems}
+          allTags={allTags}
+          lang={lang}
+        />
+        <Testimonials testimonials={getApprovedTestimonials()} />
+      </div>
       <SiteFooter />
       <AdminEditLink href="/admin" label="Admin" />
     </div>

@@ -4,6 +4,16 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.3.2] — 2026-10-22
+
+### Changed
+- The footer sits at the bottom of the screen on the homepage, About, Contact and portfolio pages even when the page is short.
+- The Contact page is more compact and fits on one screen on desktop.
+- "Powered by Albm" moved onto the main footer row.
+
+### Docs
+- `CONTRIBUTING.md` now covers the branch and PR workflow, tests, release and deploy steps, and a map of the code for new contributors.
+
 ## [2.3.1] — 2026-10-22
 
 ### Changed

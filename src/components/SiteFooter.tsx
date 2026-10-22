@@ -23,18 +23,16 @@ export default function SiteFooter() {
           <p className="tabular-nums">
             © {year} {siteName()}
           </p>
+          <a
+            href="https://github.com/Kristian-Buriasco/albm"
+            target="_blank"
+            rel="noopener"
+            className="text-[11px] opacity-70 underline-offset-2 hover:underline hover:opacity-100"
+          >
+            Powered by Albm
+          </a>
         </div>
       </div>
-      <p className="mx-auto max-w-6xl px-6 pb-8 text-[11px] text-muted/70 dark:text-muted-dark/70">
-        <a
-          href="https://github.com/Kristian-Buriasco/albm"
-          target="_blank"
-          rel="noopener"
-          className="underline-offset-2 hover:underline"
-        >
-          Powered by Albm
-        </a>
-      </p>
     </footer>
   );
 }

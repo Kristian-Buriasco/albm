@@ -120,7 +120,7 @@ export default async function PortfolioGalleryPage({
   } as const;
 
   return (
-    <div data-gallery-theme={theme ? '' : undefined}>
+    <div data-gallery-theme={theme ? '' : undefined} className="flex min-h-svh flex-col">
       {theme && <GalleryThemeStyle theme={theme} />}
       <JsonLd
         data={{
@@ -164,7 +164,7 @@ export default async function PortfolioGalleryPage({
       )}
       <AdminEditLink href={`/admin/galleries/${gallery.id}`} label="Edit gallery" />
       <GalleryViewPing gallery={{ id: gallery.id, type: 'portfolio', title: gallery.title }} />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-0.5 pb-24 sm:px-6">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-0.5 pb-24 sm:px-6">
         <h1 className="display pt-14 pb-3 text-center text-3xl font-semibold md:text-4xl">
           {gallery.title}
         </h1>

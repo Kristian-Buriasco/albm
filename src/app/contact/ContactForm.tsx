@@ -91,7 +91,7 @@ export default function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {/* Honeypot: hidden from humans, tempting to bots. */}
       <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label>
@@ -100,7 +100,7 @@ export default function ContactForm() {
         </label>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="c-name">
             Name
@@ -117,7 +117,7 @@ export default function ContactForm() {
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="c-type">
             Type
@@ -146,7 +146,7 @@ export default function ContactForm() {
           id="c-message"
           name="message"
           required
-          rows={5}
+          rows={4}
           maxLength={4000}
           className={`${fieldClass} resize-y ${fieldErrors.message ? errClass : ''}`}
           aria-invalid={!!fieldErrors.message}

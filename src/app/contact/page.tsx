@@ -21,13 +21,13 @@ export default function ContactPage() {
   return (
     <div className="flex min-h-svh flex-col">
       <SiteHeader />
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-6 py-20 md:py-28">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 md:py-14">
         <h1 className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
           Contact
         </h1>
         <p className="display max-w-[46ch] text-2xl leading-snug font-medium">{intro}</p>
 
-        <div className="mt-14 grid gap-14 md:grid-cols-[1.4fr_1fr] md:gap-16">
+        <div className="mt-8 grid gap-8 md:grid-cols-[1.4fr_1fr] md:gap-12">
           {/* Inquiry form */}
           <div>
             <ContactForm />
