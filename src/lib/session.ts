@@ -1,9 +1,11 @@
 import { getIronSession, type IronSession, type SessionOptions } from 'iron-session';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { sessionSecret } from './env';
+import { tokenMayCall, verifyApiToken, verifyGate } from './api-tokens';
+import { logAdmin } from './audit-log';
 import {
   createAdminSession,
   revokeAdminSession,
@@ -64,12 +66,37 @@ export async function getAdminSession(): Promise<IronSession<AdminSessionData>> 
  */
 export async function getPrincipal(): Promise<Principal | null> {
   const session = await getAdminSession();
-  if (!session.isAdmin || !session.sessionId) return null;
+  if (!session.isAdmin || !session.sessionId) return tokenPrincipal();
   const row = touchAdminSession(session.sessionId);
   if (!row) return null;
   return row.collaboratorId
     ? { role: 'collaborator', collaboratorId: row.collaboratorId }
     : { role: 'owner' };
+}
+
+/**
+ * An API token (Authorization: Bearer albm_...) acts as the owner, but only for the method and path the
+ * middleware signed and only where its scope allows (see tokenMayCall). Writes are audit-logged by token name.
+ */
+const tokenWriteLog = new Map<string, number>();
+
+async function tokenPrincipal(): Promise<Principal | null> {
+  const h = await headers();
+  const auth = h.get('authorization') ?? '';
+  const method = h.get('x-albm-method') ?? '';
+  const path = h.get('x-albm-path') ?? '';
+  if (!auth.startsWith('Bearer albm_') || !verifyGate(method, path, h.get('x-albm-gate') ?? '')) return null;
+  const token = verifyApiToken(auth.slice(7).trim());
+  if (!token || !tokenMayCall(token.scope, method, path)) return null;
+  // A request calls this several times (route guard, grant checks); log each write once.
+  const key = `${token.id}|${method}|${path}`;
+  const last = tokenWriteLog.get(key) ?? 0;
+  if (method !== 'GET' && method !== 'HEAD' && Date.now() - last > 2000) {
+    tokenWriteLog.set(key, Date.now());
+    if (tokenWriteLog.size > 500) tokenWriteLog.clear();
+    logAdmin('api_token.write', { targetType: 'api_token', targetId: token.id, summary: `${token.name}: ${method} ${path}` });
+  }
+  return { role: 'owner' };
 }
 
 /** True only for the OWNER. Collaborators are never "admin". */

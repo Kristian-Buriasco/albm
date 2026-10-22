@@ -646,6 +646,19 @@ export const workerTokens = sqliteTable('worker_tokens', {
   revokedAt: integer('revoked_at'),
 });
 
+/** Bearer tokens for scripts and MCP clients. scope 'read' = GET only; 'write' = create/update, never delete. Session-only routes reject them. */
+export const apiTokens = sqliteTable('api_tokens', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  scope: text('scope', { enum: ['read', 'write'] }).notNull(),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: integer('created_at')
+    .notNull()
+    .$defaultFn(() => Date.now()),
+  lastUsedAt: integer('last_used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
 /** Per-photo, per-task state for the analysis worker (lease, engine, version, errors). */
 export const photoAnalysis = sqliteTable(
   'photo_analysis',

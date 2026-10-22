@@ -98,6 +98,17 @@ npm run build && npm run test:e2e   # Playwright, boots its own server on port 3
 - User-visible text goes through `src/lib/i18n.ts` and needs all languages there.
 - Match the code around you: naming, comment density, idiom.
 
+## Working in parallel
+
+Several people may branch from `master` at once. To keep merges small:
+
+- Rebase onto the latest `master` before you open the PR (`git fetch origin && git rebase origin/master`).
+- **Do not bump the version or edit `CHANGELOG.md` in a feature PR** unless a maintainer asks; the maintainer does that at release time. Those files conflict constantly.
+- If two branches both add a database migration they will collide on the number. Whoever merges second deletes their
+  migration file and its entry in `drizzle/meta/_journal.json`, rebases, and runs `npm run db:generate` again.
+- Tell the others when you touch shared layout files (`src/app/layout.tsx`, `src/app/page.tsx`, `src/components/SiteHeader.tsx`,
+  `SiteFooter.tsx`, `SettingsForm.tsx`).
+
 ## Releases (maintainers)
 
 Releases are cut from `master`. The image is built by CI from the tag, so do not build or push images by hand.
