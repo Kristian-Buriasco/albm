@@ -4,6 +4,13 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] — 2026-10-22
+
+### Added
+- **Update from the admin.** With a host-side updater configured (`docs/UPDATER.md`), the update badge becomes an **Update to vX.Y.Z**
+  button. The updater pulls the pinned image, backs up the database, swaps the tag in `compose.yaml`, restarts and rolls back
+  if the new version never gets healthy. Albm never gets access to Docker.
+
 ## [2.2.0] — 2026-10-22
 
 ### Added

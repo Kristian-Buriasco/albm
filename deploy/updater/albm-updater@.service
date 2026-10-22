@@ -1,0 +1,15 @@
+# One instance per Albm: /etc/albm-updater/<name>.env holds UPDATER_TOKEN, COMPOSE_DIR, SERVICE, IMAGE, LISTEN_PORT.
+# systemctl enable --now albm-updater@prod
+[Unit]
+Description=Albm updater (%i)
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/albm-updater/%i.env
+ExecStart=/usr/bin/python3 /opt/albm-updater/albm-updater.py
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
