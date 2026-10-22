@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import type { Gallery, Photo } from '@/db/schema';
-import { SITE_NAME } from '@/lib/env';
+import { siteName } from '@/lib/site-name';
 
 /** The site owner's name — the default copyright holder and the credit for photos the owner uploaded. */
 export function ownerName(): string {
-  return SITE_NAME;
+  return siteName();
 }
 
 /** Public copyright holder for a gallery: its own setting, else the site owner. */

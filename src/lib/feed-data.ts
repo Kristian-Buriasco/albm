@@ -1,3 +1,4 @@
+import { siteName } from './site-name';
 import { BASE_URL } from '@/lib/env';
 import { getSetting } from '@/lib/settings';
 import { coverPhotoId, getPublishedPortfolioGalleries } from '@/lib/public-data';
@@ -18,5 +19,5 @@ export function portfolioFeedItems() {
 }
 
 export function sitePersonName(): string {
-  return getSetting('homeHeadline')?.trim() || process.env.NEXT_PUBLIC_SITE_NAME || 'Albm';
+  return siteName();
 }

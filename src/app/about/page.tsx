@@ -1,19 +1,18 @@
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { getSetting } from '@/lib/settings';
+import { siteName } from '@/lib/site-name';
 
 export const dynamic = 'force-dynamic';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
-
-const DEFAULT_ABOUT = `I'm ${SITE_NAME}, a photographer working across editorial, event, and portrait work.
+const defaultAbout = () => `I'm ${siteName()}, a photographer working across editorial, event, and portrait work.
 
 I care about the unscripted moment — the half-second before or after the one everyone expects. My approach is quiet on set and deliberate in the edit: I'd rather make a few images that hold up than a hundred that don't.
 
 Available for commissions, events, and collaborations. Clients receive a private online gallery to review, favorite, and download their photos.`;
 
 export default function AboutPage() {
-  const content = getSetting('aboutContent')?.trim() || DEFAULT_ABOUT;
+  const content = getSetting('aboutContent')?.trim() || defaultAbout();
   return (
     <div>
       <SiteHeader />

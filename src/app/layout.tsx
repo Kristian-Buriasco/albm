@@ -7,13 +7,13 @@ import { hasAnalyticsConsent, CONSENT_COOKIE } from '@/lib/consent';
 import { getSetting } from '@/lib/settings';
 import { BASE_URL } from '@/lib/env';
 import { parseLang } from '@/lib/i18n';
+import { siteName } from '@/lib/site-name';
+import { SiteNameProvider } from '@/components/SiteNameContext';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Albm';
-
-export const metadata: Metadata = {
-  title: SITE_NAME,
-  description: `${SITE_NAME} — photography`,
-};
+export function generateMetadata(): Metadata {
+  const name = siteName();
+  return { title: name, description: `${name} — photography` };
+}
 
 // Applied before paint to avoid a flash of the wrong theme.
 // Order of precedence: the server-set `theme` cookie (survives Safari's storage purges), then
@@ -65,7 +65,7 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
-        {children}
+        <SiteNameProvider name={siteName()}>{children}</SiteNameProvider>
         {isPublicPage ? <CookieConsent lang={htmlLang} /> : null}
       </body>
     </html>

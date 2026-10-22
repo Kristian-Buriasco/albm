@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { startAuthentication } from '@simplewebauthn/browser';
 import ThemeToggle from '@/components/ThemeToggle';
+import { useSiteName } from '@/components/SiteNameContext';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 type LoginConfig = {
   passwordLoginEnabled: boolean;
@@ -15,6 +15,7 @@ type LoginConfig = {
 type View = 'passkey' | 'password' | 'recovery';
 
 export default function AdminLoginPage() {
+  const siteName = useSiteName();
   const router = useRouter();
   const [config, setConfig] = useState<LoginConfig | null>(null);
   const [view, setView] = useState<View>('passkey');
@@ -135,7 +136,7 @@ export default function AdminLoginPage() {
             </svg>
           </span>
           <p className="text-[10px] tracking-[0.3em] text-neutral-400 uppercase dark:text-neutral-500">
-            {SITE_NAME}
+            {siteName}
           </p>
           <h1 className="mt-2 text-sm font-light tracking-[0.25em] uppercase">Admin</h1>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">

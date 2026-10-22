@@ -4,6 +4,19 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] — 2026-10-22
+
+### Added
+- **Site name** in Settings > General: the name shown in the menu bar, footer, page titles, login and locked-gallery pages and as the
+  default copyright holder. Empty keeps `NEXT_PUBLIC_SITE_NAME` (or the built-in default).
+- A small "Powered by Albm" credit in the public footer.
+
+### Fixed
+- `robots.txt` pointed its Sitemap at `http://localhost:3200` (it was built statically); it now uses `BASE_URL` at runtime.
+- The homepage hero fills the first screen instead of varying from 280 to 600 px with its content, so short pages no longer
+  float the footer mid-screen.
+- Structured data (`schema.org` name) and the JSON feed used the homepage headline as the site's name; they now use the site name.
+
 ## [2.1.1] — 2026-10-20
 
 ### Fixed

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { redirect } from 'next/navigation';
 import { getGalleryDefaults } from '@/lib/gallery-defaults';
+import { siteName } from '@/lib/site-name';
 import { getSetting } from '@/lib/settings';
 import { watermarkPath } from '@/lib/paths';
 import { isAdmin } from '@/lib/session';
@@ -21,6 +22,8 @@ export default async function AdminSettingsPage() {
         initialContact: getSetting('contactContent') ?? '',
         initialAnalyticsHeadHtml: getSetting('analytics_head_html') ?? '',
         initialGaCustomEventsEnabled: getSetting('gaCustomEventsEnabled') === 'true',
+        initialSiteName: getSetting('siteName') ?? '',
+        initialSiteNameDefault: siteName(),
         initialHomeEyebrow: getSetting('homeEyebrow') ?? '',
         initialHomeHeadline: getSetting('homeHeadline') ?? '',
         initialHomeIntro: getSetting('homeIntro') ?? '',

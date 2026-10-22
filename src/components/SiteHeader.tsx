@@ -1,8 +1,8 @@
 import Link from 'next/link';
+import { siteName } from '@/lib/site-name';
 import ThemeToggle from './ThemeToggle';
 import AdminLoginButton from './AdminLoginButton';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 const navLink =
   '-my-3 py-3 text-muted transition-colors hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark';
@@ -14,7 +14,7 @@ export default function SiteHeader() {
         href="/"
         className="-my-3 min-w-0 truncate py-3 text-[15px] leading-none font-semibold tracking-tight"
       >
-        {SITE_NAME}
+        {siteName()}
       </Link>
       <nav className="flex shrink-0 items-center gap-4 text-[13px] tracking-wide sm:gap-7">
         {/* Work = home; the logo already links there, so skip it on phones. */}

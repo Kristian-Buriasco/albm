@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import SettingsCard from '@/components/SettingsCard';
+import { useSiteName } from '@/components/SiteNameContext';
 import ToggleSwitch from '@/components/ToggleSwitch';
 
-const OWNER = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 /**
  * Copyright & credits for one gallery.
@@ -24,6 +24,7 @@ export default function CopyrightFields({
   initialShowCredits: boolean;
   initialXmpCopyright: string | null;
 }) {
+  const OWNER = useSiteName();
   const [holder, setHolder] = useState(initialHolder ?? '');
   const [showCredits, setShowCredits] = useState(initialShowCredits);
   const [xmp, setXmp] = useState(initialXmpCopyright ?? '');

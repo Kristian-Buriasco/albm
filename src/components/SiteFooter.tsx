@@ -1,8 +1,8 @@
 import { getSetting } from '@/lib/settings';
+import { siteName } from '@/lib/site-name';
 import { parseLang } from '@/lib/i18n';
 import CookieSettingsLink from '@/components/CookieSettingsLink';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 /** Public footer. Free-text content editable in admin (settings key `footerContent`). */
 export default function SiteFooter() {
@@ -16,15 +16,25 @@ export default function SiteFooter() {
         {content ? (
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <p>{SITE_NAME}</p>
+          <p>{siteName()}</p>
         )}
         <div className="flex flex-wrap items-center gap-4">
           <CookieSettingsLink lang={lang} />
           <p className="tabular-nums">
-            © {year} {SITE_NAME}
+            © {year} {siteName()}
           </p>
         </div>
       </div>
+      <p className="mx-auto max-w-6xl px-6 pb-8 text-[11px] text-muted/70 dark:text-muted-dark/70">
+        <a
+          href="https://github.com/Kristian-Buriasco/albm"
+          target="_blank"
+          rel="noopener"
+          className="underline-offset-2 hover:underline"
+        >
+          Powered by Albm
+        </a>
+      </p>
     </footer>
   );
 }

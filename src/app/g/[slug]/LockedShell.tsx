@@ -1,8 +1,8 @@
 'use client';
 
 import ThemeToggle from '@/components/ThemeToggle';
+import { useSiteName } from '@/components/SiteNameContext';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Kristian Buriasco';
 
 /**
  * Premium shell for the client-gallery access gates (password / PIN).
@@ -19,6 +19,7 @@ export default function LockedShell({
   coverPlaceholder?: string | null;
   children: React.ReactNode;
 }) {
+  const siteName = useSiteName();
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6">
       {coverPlaceholder ? (
@@ -40,7 +41,7 @@ export default function LockedShell({
 
       <div className="relative z-10 w-full max-w-xs rounded-xl bg-white/85 p-8 text-center shadow-2xl ring-1 ring-black/5 backdrop-blur-md dark:bg-black/70 dark:ring-white/10">
         <p className="text-[10px] tracking-[0.3em] text-neutral-500 uppercase dark:text-neutral-400">
-          {SITE_NAME}
+          {siteName}
         </p>
         <h1 className="mt-2 mb-6 text-sm font-light tracking-[0.25em] uppercase">
           {title}

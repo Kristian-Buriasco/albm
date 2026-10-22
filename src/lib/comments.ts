@@ -3,7 +3,7 @@ import { and, eq, or } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { getDb, schema } from '@/db';
 import type { Comment, Gallery } from '@/db/schema';
-import { SITE_NAME } from './env';
+import { siteName } from './site-name';
 import { galleryCommentsEnabled } from './gallery-auth';
 import { getVisitorSession } from './session';
 
@@ -128,7 +128,7 @@ export function commentCountsForGallery(galleryId: string): Record<string, numbe
 }
 
 export function photographerAuthorName(): string {
-  return SITE_NAME;
+  return siteName();
 }
 
 export function pendingCommentCount(): number {

@@ -11,6 +11,8 @@ export default function SettingsForm({
   initialContact,
   initialAnalyticsHeadHtml,
   initialGaCustomEventsEnabled,
+  initialSiteName,
+  initialSiteNameDefault,
   initialHomeEyebrow,
   initialHomeHeadline,
   initialHomeIntro,
@@ -25,6 +27,8 @@ export default function SettingsForm({
   initialContact: string;
   initialAnalyticsHeadHtml: string;
   initialGaCustomEventsEnabled: boolean;
+  initialSiteName: string;
+  initialSiteNameDefault: string;
   initialHomeEyebrow: string;
   initialHomeHeadline: string;
   initialHomeIntro: string;
@@ -44,6 +48,7 @@ export default function SettingsForm({
   const [gaCustomEventsEnabled, setGaCustomEventsEnabled] = useState(
     initialGaCustomEventsEnabled,
   );
+  const [siteNameValue, setSiteNameValue] = useState(initialSiteName);
   const [homeEyebrow, setHomeEyebrow] = useState(initialHomeEyebrow);
   const [homeHeadline, setHomeHeadline] = useState(initialHomeHeadline);
   const [homeIntro, setHomeIntro] = useState(initialHomeIntro);
@@ -68,6 +73,7 @@ export default function SettingsForm({
         contactContent: contact,
         analyticsHeadHtml,
         gaCustomEventsEnabled,
+        siteName: siteNameValue,
         homeEyebrow,
         homeHeadline,
         homeIntro,
@@ -120,6 +126,19 @@ export default function SettingsForm({
         title="Homepage"
         description="Hero copy shown at the top of the public homepage."
       >
+        <label className="block">
+          <span className={labelClass}>Site name</span>
+          <input
+            value={siteNameValue}
+            onChange={(e) => setSiteNameValue(e.target.value)}
+            maxLength={200}
+            placeholder={initialSiteNameDefault}
+            className={inputClass}
+          />
+          <span className="mt-1 block text-xs text-neutral-500">
+            Shown in the menu bar, footer, page titles and as the default copyright holder.
+          </span>
+        </label>
         <label className="block">
           <span className={labelClass}>Homepage eyebrow</span>
           <input
