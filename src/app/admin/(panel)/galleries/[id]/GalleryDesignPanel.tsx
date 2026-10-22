@@ -14,6 +14,7 @@ import {
   parseGalleryTheme,
   type GalleryTheme,
   type GalleryThemeColors,
+  type GalleryThemeFont,
 } from '@/lib/gallery-theme';
 import { GALLERY_FONT_PAIRS } from '@/lib/gallery-fonts';
 
@@ -25,7 +26,7 @@ const DEFAULT_PAIR_ID =
 const labelClass = 'block text-xs';
 const hintClass = 'mb-1 block text-neutral-500 dark:text-neutral-400';
 
-function ColorRow({
+export function ColorRow({
   title,
   colors,
   onChange,
@@ -63,6 +64,93 @@ function ColorRow({
   );
 }
 
+type CustomFont = Extract<GalleryThemeFont, { kind: 'custom' }>;
+
+const inputClass =
+  'w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100';
+
+/** Font picker. With `allowNone`, `null` means "keep the built-in system font". */
+export function FontFields({
+  font,
+  onChange,
+  allowNone = false,
+}: {
+  font: GalleryThemeFont | null;
+  onChange: (font: GalleryThemeFont | null) => void;
+  allowNone?: boolean;
+}) {
+  const custom = font?.kind === 'custom' ? font : null;
+  const setCustom = (patch: Partial<CustomFont>) =>
+    custom && onChange({ ...custom, ...patch });
+  const customInputs: { label: string; key: keyof Omit<CustomFont, 'kind'>; url: boolean; ph: string }[] = [
+    { label: 'Heading font stylesheet URL (Google Fonts)', key: 'headingUrl', url: true, ph: 'https://fonts.googleapis.com/css2?family=...' },
+    { label: 'Heading font family name', key: 'headingFamily', url: false, ph: 'e.g. Montserrat' },
+    { label: 'Body font stylesheet URL (Google Fonts)', key: 'bodyUrl', url: true, ph: 'https://fonts.googleapis.com/css2?family=...' },
+    { label: 'Body font family name', key: 'bodyFamily', url: false, ph: 'e.g. Source Sans 3' },
+  ];
+  return (
+    <div className="space-y-3">
+      <span className="block text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+        Fonts
+      </span>
+      {allowNone && (
+        <ToggleSwitch
+          label="Site default (system font)"
+          hint="Keep the built-in system font stack."
+          checked={font === null}
+          onChange={(v) => onChange(v ? null : { kind: 'preset', pairId: DEFAULT_PAIR_ID })}
+        />
+      )}
+      {font && (
+        <ToggleSwitch
+          label="Use custom fonts"
+          hint="Link your own Google Fonts stylesheets instead of a curated pair."
+          checked={font.kind === 'custom'}
+          onChange={(v) =>
+            onChange(
+              v
+                ? { kind: 'custom', headingUrl: '', bodyUrl: '', headingFamily: '', bodyFamily: '' }
+                : { kind: 'preset', pairId: DEFAULT_PAIR_ID },
+            )
+          }
+        />
+      )}
+      {font?.kind === 'preset' && (
+        <label className={labelClass}>
+          <span className={hintClass}>Font pairing</span>
+          <Select
+            value={font.pairId}
+            onChange={(e) => onChange({ kind: 'preset', pairId: e.target.value })}
+            className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm dark:border-neutral-700"
+          >
+            {GALLERY_FONT_PAIRS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.vibe}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
+      {custom && (
+        <div className="space-y-3">
+          {customInputs.map(({ label, key, url, ph }) => (
+            <label key={key} className={labelClass}>
+              <span className={hintClass}>{label}</span>
+              <input
+                type={url ? 'url' : 'text'}
+                value={custom[key]}
+                onChange={(e) => setCustom({ [key]: e.target.value })}
+                placeholder={ph}
+                className={inputClass}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GalleryDesignPanel({
   gallery,
   patchGallery,
@@ -73,7 +161,6 @@ export default function GalleryDesignPanel({
   const [theme, setTheme] = useState<GalleryTheme>(
     () => parseGalleryTheme(gallery.themeConfig) ?? DEFAULT_GALLERY_THEME,
   );
-  const [customFonts, setCustomFonts] = useState(theme.font.kind === 'custom');
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -93,7 +180,6 @@ export default function GalleryDesignPanel({
     setSaving(false);
     if (ok) {
       setTheme(DEFAULT_GALLERY_THEME);
-      setCustomFonts(DEFAULT_GALLERY_THEME.font.kind === 'custom');
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
     }
@@ -128,7 +214,6 @@ export default function GalleryDesignPanel({
               const preset = GALLERY_THEME_PRESETS.find((p) => p.id === e.target.value);
               if (!preset) return;
               setTheme(preset.theme);
-              setCustomFonts(preset.theme.font.kind === 'custom');
             }}
             className="w-full border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
           >
@@ -157,117 +242,7 @@ export default function GalleryDesignPanel({
           />
         </div>
 
-        <div className="space-y-3">
-          <span className="block text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
-            Fonts
-          </span>
-          <ToggleSwitch
-            label="Use custom fonts"
-            hint="Link your own Google Fonts stylesheets instead of a curated pair."
-            checked={customFonts}
-            onChange={(v) => {
-              setCustomFonts(v);
-              setTheme((th) => ({
-                ...th,
-                font: v
-                  ? {
-                      kind: 'custom',
-                      headingUrl: th.font.kind === 'custom' ? th.font.headingUrl : '',
-                      bodyUrl: th.font.kind === 'custom' ? th.font.bodyUrl : '',
-                      headingFamily: th.font.kind === 'custom' ? th.font.headingFamily : '',
-                      bodyFamily: th.font.kind === 'custom' ? th.font.bodyFamily : '',
-                    }
-                  : { kind: 'preset', pairId: DEFAULT_PAIR_ID },
-              }));
-            }}
-          />
-          {!customFonts && theme.font.kind === 'preset' && (
-            <label className={labelClass}>
-              <span className={hintClass}>Font pairing</span>
-              <Select
-                value={theme.font.pairId}
-                onChange={(e) =>
-                  setTheme((th) => ({ ...th, font: { kind: 'preset', pairId: e.target.value } }))
-                }
-                className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm dark:border-neutral-700"
-              >
-                {GALLERY_FONT_PAIRS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {p.vibe}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          )}
-          {customFonts && theme.font.kind === 'custom' && (
-            <div className="space-y-3">
-              <label className={labelClass}>
-                <span className={hintClass}>Heading font stylesheet URL (Google Fonts)</span>
-                <input
-                  type="url"
-                  value={theme.font.headingUrl}
-                  onChange={(e) =>
-                    setTheme((th) =>
-                      th.font.kind === 'custom'
-                        ? { ...th, font: { ...th.font, headingUrl: e.target.value } }
-                        : th,
-                    )
-                  }
-                  placeholder="https://fonts.googleapis.com/css2?family=..."
-                  className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
-                />
-              </label>
-              <label className={labelClass}>
-                <span className={hintClass}>Heading font family name</span>
-                <input
-                  type="text"
-                  value={theme.font.headingFamily}
-                  onChange={(e) =>
-                    setTheme((th) =>
-                      th.font.kind === 'custom'
-                        ? { ...th, font: { ...th.font, headingFamily: e.target.value } }
-                        : th,
-                    )
-                  }
-                  placeholder="e.g. Montserrat"
-                  className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
-                />
-              </label>
-              <label className={labelClass}>
-                <span className={hintClass}>Body font stylesheet URL (Google Fonts)</span>
-                <input
-                  type="url"
-                  value={theme.font.bodyUrl}
-                  onChange={(e) =>
-                    setTheme((th) =>
-                      th.font.kind === 'custom'
-                        ? { ...th, font: { ...th.font, bodyUrl: e.target.value } }
-                        : th,
-                    )
-                  }
-                  placeholder="https://fonts.googleapis.com/css2?family=..."
-                  className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
-                />
-              </label>
-              <label className={labelClass}>
-                <span className={hintClass}>Body font family name</span>
-                <input
-                  type="text"
-                  value={theme.font.bodyFamily}
-                  onChange={(e) =>
-                    setTheme((th) =>
-                      th.font.kind === 'custom'
-                        ? { ...th, font: { ...th.font, bodyFamily: e.target.value } }
-                        : th,
-                    )
-                  }
-                  placeholder="e.g. Source Sans 3"
-                  className="w-full border-b border-neutral-300 bg-transparent py-1.5 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-100"
-                />
-              </label>
-            </div>
-          )}
-        </div>
+        <FontFields font={theme.font} onChange={(font) => font && setTheme((th) => ({ ...th, font }))} />
 
         <div className="space-y-4">
           <span className="block text-xs tracking-widest text-neutral-500 uppercase dark:text-neutral-400">

@@ -1,6 +1,7 @@
 import { asc, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '@/db';
+import { verifyApiToken } from '@/lib/api-tokens';
 import { constantTimeEqual, generateBearerToken, hashToken } from '@/lib/token-hash';
 
 export type UploadTokenRow = typeof schema.uploadTokens.$inferSelect;
@@ -44,7 +45,11 @@ export function revokeUploadToken(id: string): boolean {
 /** Resolve active token by bearer value; updates lastUsedAt on success. */
 export function verifyUploadToken(
   bearer: string,
-): typeof schema.uploadTokens.$inferSelect | null {
+): Pick<typeof schema.uploadTokens.$inferSelect, 'id' | 'name'> | null {
+  // A write-scope API token may also publish, so MCP clients need only one credential.
+  const api = verifyApiToken(bearer);
+  if (api) return api.scope === 'write' ? { id: api.id, name: api.name } : null;
+
   const tokenHash = hashToken(bearer);
   const rows = getDb()
     .select()

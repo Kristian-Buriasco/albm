@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 2.3.2
+  version: 2.4.0
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -1295,6 +1295,20 @@ components:
         type: string
 paths:
   /api/admin/galleries:
+    get:
+      operationId: listGalleries
+      summary: List galleries
+      description: >-
+        All galleries, newest first, with `photoCount` and `hasPassword` (never the hash). Owner session, or an API token
+        of either scope.
+      tags:
+        - Galleries
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gallery list.
     post:
       operationId: createGallery
       summary: Create a gallery
@@ -1331,6 +1345,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/admin/inquiries:
+    get:
+      operationId: listInquiries
+      summary: List contact inquiries
+      description: Newest first, up to 200. `status` filters (`new`, `read`, `archived`). Owner session, or an API token of either scope.
+      tags:
+        - Inquiries
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [new, read, archived]
+      responses:
+        '200':
+          description: Inquiry list.
+  /api/admin/api-tokens:
+    get:
+      operationId: listApiTokens
+      summary: List API tokens (session only)
+      description: Names, scopes and dates; never the token. Not reachable with a token. `POST {name, scope: read|write}` creates one and returns it once; `DELETE {id}` revokes it.
+      tags:
+        - Settings
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Token list.
   /api/admin/galleries/{id}:
     parameters:
       - name: id

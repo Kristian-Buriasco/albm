@@ -4,6 +4,16 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] — 2026-10-22
+
+### Added
+- **API tokens** (Settings > Sharing): read-only or read-and-write bearer tokens for scripts and AI assistants. They reach a fixed
+  allow-list of admin routes, can never delete through the admin API, and are refused on settings, security, storage credentials,
+  tokens, the updater and the audit log. Writes are audit-logged by token name. See `docs/API-TOKENS.md`. A write token also works on
+  `/api/publish`.
+- `GET /api/admin/galleries` (gallery list, no password hashes) and `GET /api/admin/inquiries`.
+- Migration 0029 (`api_tokens`).
+
 ## [2.3.2] — 2026-10-22
 
 ### Changed

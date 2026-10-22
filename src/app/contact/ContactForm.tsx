@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { trackEvent } from '@/lib/ga-events';
 import Select from '@/components/Select';
+import DatePicker from '@/components/DatePicker';
 
 const EVENT_TYPES = [
   { value: '', label: 'What is the occasion?' },
@@ -134,7 +135,7 @@ export default function ContactForm() {
           <label className={labelClass} htmlFor="c-date">
             Date (if known)
           </label>
-          <input id="c-date" name="eventDate" type="date" className={fieldClass} />
+          <DatePicker id="c-date" name="eventDate" className={fieldClass} />
         </div>
       </div>
 

@@ -1,12 +1,42 @@
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { errorJson, json, requireAdmin, readJsonObject } from '@/lib/api';
 import { applyCreateFields } from '@/lib/gallery-fields';
 import { applyGalleryDefaults } from '@/lib/gallery-defaults';
 import { normalizeSlug } from '@/lib/slug';
 import { logAdmin } from '@/lib/audit-log';
+
+/** Gallery list for scripts and the MCP server; never includes password hashes. */
+export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  const db = getDb();
+  const counts = new Map(
+    db
+      .select({ id: schema.photos.galleryId, n: sql<number>`count(*)` })
+      .from(schema.photos)
+      .groupBy(schema.photos.galleryId)
+      .all()
+      .map((r) => [r.id, r.n]),
+  );
+  const rows = db.select().from(schema.galleries).orderBy(desc(schema.galleries.createdAt)).all();
+  return json({
+    galleries: rows.map((g) => ({
+      id: g.id,
+      slug: g.slug,
+      type: g.type,
+      title: g.title,
+      eventDate: g.eventDate,
+      published: g.published,
+      featured: g.featured,
+      hasPassword: !!g.passwordHash,
+      photoCount: counts.get(g.id) ?? 0,
+      createdAt: g.createdAt,
+    })),
+  });
+}
 
 export async function POST(req: Request) {
   const denied = await requireAdmin();
