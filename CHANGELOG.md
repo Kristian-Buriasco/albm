@@ -4,6 +4,11 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] — 2026-10-22
+
+### Fixed
+- The API reference page showed "Document could not be loaded": `openapi.yaml` had a YAML error from 2.4.0. A unit test now parses it, and CI runs the unit tests.
+
 ## [2.4.0] — 2026-10-22
 
 ### Added
