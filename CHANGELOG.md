@@ -4,6 +4,12 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] — 2026-10-22
+
+### Changed
+- The About and Contact pages fill the screen height, so the footer sits at the bottom even when the page is short. The homepage
+  hero is back to sizing itself to its content (the 2.2.0 full-height hero is reverted).
+
 ## [2.3.0] — 2026-10-22
 
 ### Added

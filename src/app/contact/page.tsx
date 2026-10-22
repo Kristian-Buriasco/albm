@@ -19,9 +19,9 @@ export default function ContactPage() {
   const hasDirect = Boolean(email || instagram || whatsapp);
 
   return (
-    <div>
+    <div className="flex min-h-svh flex-col">
       <SiteHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-4xl px-6 py-20 md:py-28">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-6 py-20 md:py-28">
         <h1 className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
           Contact
         </h1>

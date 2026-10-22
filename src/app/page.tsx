@@ -70,7 +70,7 @@ export default function HomePage() {
       <SiteHeader />
 
       <section
-        className={`mx-auto grid min-h-[calc(100svh-5.5rem)] max-w-6xl grid-cols-1 items-stretch gap-px overflow-hidden border-y border-line dark:border-line-dark ${
+        className={`mx-auto grid max-w-6xl grid-cols-1 items-stretch gap-px overflow-hidden border-y border-line dark:border-line-dark ${
           heroItem?.cover ? 'md:grid-cols-2' : ''
         }`}
       >

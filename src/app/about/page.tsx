@@ -14,9 +14,9 @@ Available for commissions, events, and collaborations. Clients receive a private
 export default function AboutPage() {
   const content = getSetting('aboutContent')?.trim() || defaultAbout();
   return (
-    <div>
+    <div className="flex min-h-svh flex-col">
       <SiteHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-6 py-20 md:py-28">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-2xl flex-1 px-6 py-20 md:py-28">
         <h1 className="mb-4 text-[11px] tracking-[0.16em] text-muted uppercase dark:text-muted-dark">
           About
         </h1>
