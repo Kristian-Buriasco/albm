@@ -18,7 +18,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
-      - run: npm run build
+      - run: for i in 1 2 3; do npm run build && exit 0; echo "build failed (attempt $i), retrying"; sleep 10; done; exit 1
 
   test-e2e:
     runs-on: ubuntu-latest
@@ -29,7 +29,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - run: for i in 1 2 3; do npm run build && exit 0; echo "build failed (attempt $i), retrying"; sleep 10; done; exit 1
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
         env:

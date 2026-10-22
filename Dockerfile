@@ -10,7 +10,8 @@ RUN apt-get update \
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+# next/font downloads Google Fonts at build time; that request fails now and then, so retry before giving up.
+RUN for i in 1 2 3; do npm run build && exit 0; echo "build failed (attempt $i), retrying"; sleep 10; done; exit 1
 
 # ---- runtime stage ----
 FROM node:22-bookworm-slim AS runtime
