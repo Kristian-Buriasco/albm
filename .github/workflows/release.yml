@@ -8,17 +8,29 @@ permissions:
   contents: write
   packages: write
 
+# Each architecture builds on a native runner (no QEMU emulation), in parallel; the merge job then
+# joins the two images under one multi-arch tag.
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - { platform: linux/amd64, runner: ubuntu-latest, arch: amd64 }
+          - { platform: linux/arm64, runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Derive version
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Image names
+        id: meta
+        run: |
+          # GHCR requires a lowercase repository path.
+          repo="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          names="ghcr.io/${repo}"
+          if [ "${{ vars.PUBLISH_DOCKERHUB }}" = "true" ]; then names="${names},${{ secrets.DOCKERHUB_USERNAME }}/albm"; fi
+          echo "names=${names}" >> "$GITHUB_OUTPUT"
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
@@ -37,28 +49,68 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Compute tags
-        id: tags
-        run: |
-          # GHCR requires a lowercase repository path.
-          repo="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
-          ver="${{ steps.ver.outputs.version }}"
-          tags="ghcr.io/${repo}:${ver},ghcr.io/${repo}:latest"
-          if [ "${{ vars.PUBLISH_DOCKERHUB }}" = "true" ]; then
-            dh="${{ secrets.DOCKERHUB_USERNAME }}/albm"
-            tags="${tags},${dh}:${ver},${dh}:latest"
-          fi
-          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push (multi-arch)
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
+          platforms: ${{ matrix.platform }}
           build-args: |
-            APP_VERSION=${{ steps.ver.outputs.version }}
-          tags: ${{ steps.tags.outputs.tags }}
+            APP_VERSION=${{ steps.meta.outputs.version }}
+          outputs: type=image,"name=${{ steps.meta.outputs.names }}",push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.arch }},mode=max
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: vars.PUBLISH_DOCKERHUB == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create the multi-arch tags
+        run: |
+          repo="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          ver="${GITHUB_REF_NAME#v}"
+          names="ghcr.io/${repo}"
+          if [ "${{ vars.PUBLISH_DOCKERHUB }}" = "true" ]; then names="${names} ${{ secrets.DOCKERHUB_USERNAME }}/albm"; fi
+          cd /tmp/digests
+          for name in $names; do
+            docker buildx imagetools create -t "${name}:${ver}" -t "${name}:latest" \
+              $(printf "${name}@sha256:%s " *)
+          done
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
