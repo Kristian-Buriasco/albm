@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Albm API
-  version: 2.4.0
+  version: 2.4.1
   description: >
     Self-hosted photography portfolio + client proofing app. This spec covers every route with a
     legitimate standalone use case — see docs/superpowers/specs/2026-07-26-api-docs-design.md in the
@@ -1349,7 +1349,9 @@ paths:
     get:
       operationId: listInquiries
       summary: List contact inquiries
-      description: Newest first, up to 200. `status` filters (`new`, `read`, `archived`). Owner session, or an API token of either scope.
+      description: >-
+        Newest first, up to 200. The status parameter filters (new, read, archived). Owner session, or an API token of
+        either scope.
       tags:
         - Inquiries
       security:
@@ -1369,7 +1371,9 @@ paths:
     get:
       operationId: listApiTokens
       summary: List API tokens (session only)
-      description: Names, scopes and dates; never the token. Not reachable with a token. `POST {name, scope: read|write}` creates one and returns it once; `DELETE {id}` revokes it.
+      description: >-
+        Names, scopes and dates; never the token. Not reachable with a token. POST with name and scope (read or write)
+        creates one and returns it once; DELETE with an id revokes it.
       tags:
         - Settings
       security:
