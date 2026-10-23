@@ -14,6 +14,7 @@ import {
 import ShareTools from '@/components/ShareTools';
 import MostViewedStrip from '@/components/MostViewedStrip';
 import Select from '@/components/Select';
+import CarouselPanel from './CarouselPanel';
 import CollaboratorsPanel from './CollaboratorsPanel';
 import Tabs, { type TabDef } from '@/components/Tabs';
 import InsightsPanel from './InsightsPanel';
@@ -576,6 +577,7 @@ export default function GalleryAdmin({
           { id: 'insights', label: 'Insights' },
           { id: 'comments', label: 'Comments' },
           { id: 'collaborators', label: 'Collaborators' },
+          { id: 'carousel', label: 'Instagram' },
         ]
       : []),
   ];
@@ -1391,6 +1393,11 @@ export default function GalleryAdmin({
       {isOwner && (
         <div hidden={active !== 'collaborators'}>
           <CollaboratorsPanel galleryId={gallery.id} />
+        </div>
+      )}
+      {isOwner && (
+        <div hidden={active !== 'carousel'}>
+          <CarouselPanel galleryId={gallery.id} />
         </div>
       )}
           </div>
