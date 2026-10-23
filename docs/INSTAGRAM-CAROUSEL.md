@@ -4,7 +4,7 @@ Gallery admin > **Instagram** tab. Picks up to 10 photos and exports them as 108
 
 ## How it picks
 
-1. Local pass, no network: near-duplicates (bursts) collapse to the sharpest frame; the rest is thinned to at most 40 candidates, evenly spread over the shoot, sharpest per slice.
+1. Local pass, no network: blown-out or crushed frames (over 35% pure white/black, or an average brightness far from mid-grey) are dropped, near-duplicates (bursts) collapse to the sharpest frame; the rest is thinned to at most 40 candidates, evenly spread over the shoot, sharpest per slice.
 2. Without AI, the picks are the sharpest frame per even slice of the shoot.
 3. With AI (opt-in per click): small previews (768 px) of the candidates go to Anthropic in one request; the model returns the order and a caption. Model: `CAROUSEL_MODEL` (default `claude-sonnet-5-5`). Roughly 40 images per run, a few cents.
 

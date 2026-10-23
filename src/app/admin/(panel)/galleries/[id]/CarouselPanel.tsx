@@ -7,7 +7,7 @@ type Pick = { id: string; filename: string };
 export default function CarouselPanel({ galleryId }: { galleryId: string }) {
   const [picks, setPicks] = useState<Pick[]>([]);
   const [caption, setCaption] = useState('');
-  const [allowCloud, setAllowCloud] = useState(false);
+  const [engine, setEngine] = useState<'sharp' | 'claude'>('sharp');
   const [fit, setFit] = useState<'crop' | 'pad'>('crop');
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
@@ -21,13 +21,13 @@ export default function CarouselPanel({ galleryId }: { galleryId: string }) {
       const res = await fetch(`/api/admin/galleries/${galleryId}/carousel`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ allowCloud }),
+        body: JSON.stringify({ engine }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed');
       setPicks(data.picks);
       setCaption(data.caption ?? '');
-      setInfo(data.note ?? (data.source === 'ai' ? 'Picked by AI.' : 'Picked by sharpness and spread.'));
+      setInfo(data.note ?? (`Picked by ${{ claude: 'Claude', sharp: 'sharpness and spread' }[data.source as string]}.`));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed');
     } finally {
@@ -52,12 +52,12 @@ export default function CarouselPanel({ galleryId }: { galleryId: string }) {
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         Picks up to 10 of the best photos and exports them as 1080×1350 JPEGs (4:5). Reorder or remove before download.
       </p>
-      <label className="flex items-start gap-2 text-xs">
-        <input type="checkbox" checked={allowCloud} onChange={(e) => setAllowCloud(e.target.checked)} className="mt-0.5" />
-        <span>
-          Rank with AI: sends small previews (768 px) of up to 40 photos to Anthropic. Needs ANTHROPIC_API_KEY on the
-          server. Leave off for client galleries.
-        </span>
+      <label className="block space-y-1 text-xs">
+        <span>Ranking</span>
+        <select value={engine} onChange={(e) => setEngine(e.target.value as typeof engine)} className="block bg-transparent">
+          <option value="sharp">Local: sharpness, exposure and spread (instant, private)</option>
+          <option value="claude">Claude (best taste; sends 768 px previews to Anthropic, not for client galleries)</option>
+        </select>
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={run} disabled={busy} className="border border-neutral-900 px-3 py-1.5 text-xs disabled:opacity-50 dark:border-neutral-100">

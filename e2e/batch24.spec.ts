@@ -35,7 +35,7 @@ test('instagram carousel picks photos and zips 4:5 slides', async ({ playwright 
   const res = await admin.post(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel`, { data: {} });
   expect(res.status()).toBe(200);
   const body = await res.json();
-  expect(body.source).toBe('local');
+  expect(body.source).toBe('sharp');
   expect(body.picks.length).toBe(3);
 
   const zip = await admin.get(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel/zip?fit=pad&ids=${ids.join(',')}`);

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Pick the best photos for an Instagram carousel. Cloud ranking only when the owner opts in and a key is set. */
+/** Pick the best photos for an Instagram carousel. engine: sharp (default, local) or claude (cloud, needs a key). */
 export async function POST(req: Request, { params }: Params) {
   const denied = await requireOwner();
   if (denied) return denied;
@@ -24,18 +24,19 @@ export async function POST(req: Request, { params }: Params) {
 
   let picks = localPicks(cand, count);
   let caption = '';
-  let source: 'ai' | 'local' = 'local';
+  const engine = body.engine === 'claude' ? 'claude' : 'sharp';
+  let source: 'claude' | 'sharp' = 'sharp';
   let note: string | null = null;
-  if (body.allowCloud === true) {
-    if (!apiKey) note = 'ANTHROPIC_API_KEY is not set on the server; used local ranking.';
+  if (engine === 'claude') {
+    if (!apiKey) note = 'ANTHROPIC_API_KEY is not set on the server; used sharpness ranking.';
     else {
       try {
         ({ picks, caption } = await pickWithClaude(cand, id, gallery.title, count, apiKey));
-        source = 'ai';
+        source = 'claude';
         logAdmin('carousel.ai', { targetType: 'gallery', targetId: id, summary: `Sent ${cand.length} previews of "${gallery.title}" to Anthropic for a carousel` });
       } catch (err) {
         console.error('[carousel] AI pick failed:', err);
-        note = 'AI ranking failed; used local ranking.';
+        note = 'AI ranking failed; used sharpness ranking.';
       }
     }
   }

@@ -9,12 +9,16 @@ export const SLIDE_W = 1080;
 export const SLIDE_H = 1350; // Instagram 4:5, the tallest feed crop
 export const MAX_SLIDES = 10;
 const MAX_CANDIDATES = 40;
-const DUPE_BITS = 8; // dHash hamming distance at or under this = same moment
+const CLIP_MAX = 0.35; // more than this share of pure white/black = blown out or crushed
+const MEAN_MIN = 45; // average brightness outside this band = badly over/underexposed
+const MEAN_MAX = 185;
+const DUPE_BITS = 8;
+const DIVERSE_BITS = 16; // picks should differ by at least this much, or the carousel is ten of the same group shot // dHash hamming distance at or under this = same moment
 
-export type Candidate = { id: string; filename: string; sharp: number; hash: bigint; capturedAt: number | null };
+export type Candidate = { id: string; filename: string; sharp: number; hash: bigint; capturedAt: number | null; score?: number; clipped: number; mean: number };
 
 /** 9x8 grayscale -> 64-bit difference hash, plus Laplacian variance as a sharpness score. */
-async function measure(file: string): Promise<{ sharp: number; hash: bigint }> {
+async function measure(file: string): Promise<{ sharp: number; hash: bigint; clipped: number; mean: number }> {
   const small = await sharp(file).rotate().greyscale().resize(9, 8, { fit: 'fill' }).raw().toBuffer();
   let hash = 0n;
   for (let y = 0; y < 8; y++)
@@ -25,6 +29,12 @@ async function measure(file: string): Promise<{ sharp: number; hash: bigint }> {
   let sum = 0;
   let sumSq = 0;
   let n = 0;
+  let clipped = 0;
+  let bright = 0;
+  for (const v of data) {
+    if (v >= 250 || v <= 5) clipped++;
+    bright += v;
+  }
   for (let y = 1; y < h - 1; y++)
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -34,7 +44,7 @@ async function measure(file: string): Promise<{ sharp: number; hash: bigint }> {
       n++;
     }
   const mean = sum / n;
-  return { sharp: sumSq / n - mean * mean, hash };
+  return { sharp: sumSq / n - mean * mean, hash, clipped: clipped / data.length, mean: bright / data.length };
 }
 
 function hamming(a: bigint, b: bigint): number {
@@ -47,7 +57,7 @@ function hamming(a: bigint, b: bigint): number {
   return c;
 }
 
-/** Ready photos, near-duplicates collapsed to the sharpest, thinned to an even spread over time. */
+/** Ready photos, blown-out or crushed ones dropped, near-duplicates collapsed to the sharpest, thinned to an even spread over time. */
 export async function candidates(galleryId: string): Promise<Candidate[]> {
   const rows = getDb()
     .select()
@@ -62,7 +72,8 @@ export async function candidates(galleryId: string): Promise<Candidate[]> {
     const file = mdPath(galleryId, p.filename);
     if (!fs.existsSync(file)) continue;
     try {
-      measured.push({ id: p.id, filename: p.filename, capturedAt: p.capturedAt, ...(await measure(file)) });
+      const m = await measure(file);
+      if (m.clipped <= CLIP_MAX && m.mean >= MEAN_MIN && m.mean <= MEAN_MAX) measured.push({ id: p.id, filename: p.filename, capturedAt: p.capturedAt, ...m });
     } catch {
       /* unreadable derivative: skip it */
     }
@@ -85,12 +96,15 @@ export async function candidates(galleryId: string): Promise<Candidate[]> {
   return out;
 }
 
-/** No-key fallback: sharpest per even time slice, in shoot order. */
+/** Best (model score, else sharpness) per even time slice, preferring frames unlike those already picked. */
 export function localPicks(c: Candidate[], count: number): Candidate[] {
   if (c.length <= count) return c;
+  const rank = (x: Candidate) => x.score ?? x.sharp;
   const out: Candidate[] = [];
-  for (let b = 0; b < count; b++)
-    out.push(c.slice(Math.floor((b * c.length) / count), Math.floor(((b + 1) * c.length) / count)).reduce((a, x) => (x.sharp > a.sharp ? x : a)));
+  for (let b = 0; b < count; b++) {
+    const slice = c.slice(Math.floor((b * c.length) / count), Math.floor(((b + 1) * c.length) / count)).sort((x, y) => rank(y) - rank(x));
+    out.push(slice.find((x) => out.every((o) => hamming(o.hash, x.hash) >= DIVERSE_BITS)) ?? slice[0]);
+  }
   return out;
 }
 
@@ -143,3 +157,4 @@ export async function renderSlide(galleryId: string, filename: string, fit: 'cro
   const fg = await sharp(src).rotate().resize(SLIDE_W, SLIDE_H, { fit: 'inside', withoutEnlargement: false }).toBuffer();
   return sharp(bg).composite([{ input: fg, gravity: 'centre' }]).jpeg({ quality: 90 }).toBuffer();
 }
+
