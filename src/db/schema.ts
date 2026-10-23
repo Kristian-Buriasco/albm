@@ -244,6 +244,8 @@ export const photos = sqliteTable(
     altText: text('alt_text'),
     /** Who wrote altText: 'human' (admin edit, never overwritten by the worker) or 'ai'. */
     altSource: text('alt_source', { enum: ['human', 'ai'] }),
+    /** 1-10 photo quality score from the local worker (task 'score'); null = not scored. */
+    aiScore: real('ai_score'),
     contentHash: text('content_hash'),
     isRaw: integer('is_raw', { mode: 'boolean' }).notNull().default(false),
     format: text('format'),
@@ -666,7 +668,7 @@ export const photoAnalysis = sqliteTable(
     photoId: text('photo_id')
       .notNull()
       .references(() => photos.id, { onDelete: 'cascade' }),
-    task: text('task', { enum: ['alt', 'bibs'] }).notNull(),
+    task: text('task', { enum: ['alt', 'bibs', 'score'] }).notNull(),
     engine: text('engine'),
     version: integer('version').notNull().default(0),
     status: text('status', { enum: ['pending', 'leased', 'done', 'error'] })

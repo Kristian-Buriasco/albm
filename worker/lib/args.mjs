@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 import { UsageError } from './errors.mjs';
 
 export const USAGE = `usage: node worker/albm-worker.mjs --url <albm> --token <worker token> [options]
-  --tasks bibs,alt       tasks to run (default bibs,alt)
+  --tasks bibs,alt       tasks to run (default bibs,alt; score = rate photos for the Instagram carousel, local Ollama)
   --gallery <id>         only this gallery
   --limit <1..50>        photos per batch (default 10; the run continues until none are left)
   --loop                 keep polling (every 30 s when idle)
@@ -11,9 +11,9 @@ export const USAGE = `usage: node worker/albm-worker.mjs --url <albm> --token <w
                          nothing and lease nothing
   --allow-cloud          required for the anthropic alt engine (photos leave this machine)
 env: ALBM_URL, ALBM_WORKER_TOKEN, ALT_ENGINE (ollama|anthropic), ALT_MODEL, ALT_ANTHROPIC_MODEL,
-     ALT_LANG, OLLAMA_HOST, ANTHROPIC_API_KEY, ALT_ALLOW_CLOUD=1, WORKER_FAKE_ENGINES=1 (tests)`;
+     ALT_LANG, SCORE_MODEL, OLLAMA_HOST, ANTHROPIC_API_KEY, ALT_ALLOW_CLOUD=1, WORKER_FAKE_ENGINES=1 (tests)`;
 
-const TASKS = ['alt', 'bibs'];
+const TASKS = ['alt', 'bibs', 'score'];
 
 export function parseConfig(argv, env) {
   let v;
@@ -54,7 +54,7 @@ export function parseConfig(argv, env) {
 
   const tasks = [...new Set(v.tasks.split(',').map((t) => t.trim()).filter(Boolean))];
   if (!tasks.length) throw new UsageError('--tasks is empty');
-  for (const t of tasks) if (!TASKS.includes(t)) throw new UsageError(`unknown task "${t}" (use bibs or alt)`);
+  for (const t of tasks) if (!TASKS.includes(t)) throw new UsageError(`unknown task "${t}" (use bibs, alt or score)`);
 
   const limit = Number(v.limit);
   if (!/^\d+$/.test(v.limit) || limit < 1 || limit > 50) throw new UsageError('--limit must be 1..50');

@@ -6,7 +6,7 @@ import { basename } from 'node:path';
 export function createFakeEngine(task, env = process.env) {
   const failOn = env.WORKER_FAKE_FAIL || null;
   return {
-    id: task === 'bibs' ? 'fake-bibs' : 'fake-alt',
+    id: `fake-${task}`,
     version: 1,
     async run(imagePath) {
       const bytes = await readFile(imagePath);
@@ -15,6 +15,7 @@ export function createFakeEngine(task, env = process.env) {
       if (task === 'bibs') {
         return { bibs: [{ number: '20', confidence: 0.99 }, { number: '7', confidence: 0.8 }] };
       }
+      if (task === 'score') return { score: 7 };
       return { alt: 'A test photo.' };
     },
   };

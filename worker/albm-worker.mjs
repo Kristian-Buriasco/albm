@@ -57,6 +57,11 @@ async function main(argv, env) {
         stats.analysed++;
         return { photoId: job.photoId, bibs: out.bibs };
       }
+      if (task === 'score') {
+        console.log(`${label} ok ${secs}s score=${out.score}`);
+        stats.analysed++;
+        return { photoId: job.photoId, score: out.score };
+      }
       console.log(`${label} ok ${secs}s alt="${out.alt}"`);
       stats.analysed++;
       return { photoId: job.photoId, alt: out.alt };

@@ -8,14 +8,14 @@ import { mdPath, webPath } from './paths';
 export const SLIDE_W = 1080;
 export const SLIDE_H = 1350; // Instagram 4:5, the tallest feed crop
 export const MAX_SLIDES = 10;
-const MAX_CANDIDATES = 40;
+const MAX_CLAUDE_PHOTOS = 40; // previews per Claude request
 const CLIP_MAX = 0.35; // more than this share of pure white/black = blown out or crushed
 const MEAN_MIN = 45; // average brightness outside this band = badly over/underexposed
 const MEAN_MAX = 185;
 const DUPE_BITS = 8;
 const DIVERSE_BITS = 16; // picks should differ by at least this much, or the carousel is ten of the same group shot // dHash hamming distance at or under this = same moment
 
-export type Candidate = { id: string; filename: string; sharp: number; hash: bigint; capturedAt: number | null; score?: number; clipped: number; mean: number };
+export type Candidate = { id: string; filename: string; sharp: number; hash: bigint; capturedAt: number | null; score?: number; sectionId: string | null; clipped: number; mean: number };
 
 /** 9x8 grayscale -> 64-bit difference hash, plus Laplacian variance as a sharpness score. */
 async function measure(file: string): Promise<{ sharp: number; hash: bigint; clipped: number; mean: number }> {
@@ -57,7 +57,7 @@ function hamming(a: bigint, b: bigint): number {
   return c;
 }
 
-/** Ready photos, blown-out or crushed ones dropped, near-duplicates collapsed to the sharpest, thinned to an even spread over time. */
+/** Ready photos in shoot order: blown-out or crushed ones dropped, bursts collapsed to the sharpest frame. */
 export async function candidates(galleryId: string): Promise<Candidate[]> {
   const rows = getDb()
     .select()
@@ -73,7 +73,7 @@ export async function candidates(galleryId: string): Promise<Candidate[]> {
     if (!fs.existsSync(file)) continue;
     try {
       const m = await measure(file);
-      if (m.clipped <= CLIP_MAX && m.mean >= MEAN_MIN && m.mean <= MEAN_MAX) measured.push({ id: p.id, filename: p.filename, capturedAt: p.capturedAt, ...m });
+      if (m.clipped <= CLIP_MAX && m.mean >= MEAN_MIN && m.mean <= MEAN_MAX) measured.push({ id: p.id, filename: p.filename, capturedAt: p.capturedAt, sectionId: p.sectionId, score: p.aiScore ?? undefined, ...m });
     } catch {
       /* unreadable derivative: skip it */
     }
@@ -86,43 +86,80 @@ export async function candidates(galleryId: string): Promise<Candidate[]> {
       if (c.sharp > prev.sharp) kept[kept.length - 1] = c;
     } else kept.push(c);
   }
-  if (kept.length <= MAX_CANDIDATES) return kept;
-  // Over the cap: split into even time buckets and keep the sharpest of each.
+  return kept;
+}
+
+/** At most `max` candidates, evenly spread over time, sharpest of each slice (keeps the Claude request small). */
+export function thin(c: Candidate[], max = MAX_CLAUDE_PHOTOS): Candidate[] {
+  if (c.length <= max) return c;
   const out: Candidate[] = [];
-  for (let b = 0; b < MAX_CANDIDATES; b++) {
-    const slice = kept.slice(Math.floor((b * kept.length) / MAX_CANDIDATES), Math.floor(((b + 1) * kept.length) / MAX_CANDIDATES));
-    out.push(slice.reduce((a, c) => (c.sharp > a.sharp ? c : a)));
+  for (let b = 0; b < max; b++) {
+    const slice = c.slice(Math.floor((b * c.length) / max), Math.floor(((b + 1) * c.length) / max));
+    out.push(slice.reduce((a, x) => (x.sharp > a.sharp ? x : a)));
   }
   return out;
 }
 
-/** Best (model score, else sharpness) per even time slice, preferring frames unlike those already picked. */
-export function localPicks(c: Candidate[], count: number): Candidate[] {
+export type PickMode = 'spread' | 'top' | 'sections';
+
+/**
+ * Rank = stored worker score (1-10, 5 when unscored) plus sharpness percentile (0-1) as the tie-break, so the
+ * score decides and sharpness orders the photos a small model rates alike.
+ */
+function ranked(c: Candidate[]): Map<string, number> {
+  const bySharp = [...c].sort((a, b) => a.sharp - b.sharp);
+  return new Map(bySharp.map((x, i) => [x.id, (x.score ?? 5) + i / Math.max(1, c.length - 1)]));
+}
+
+const inShootOrder = (c: Candidate[]) => c.map((x, i) => [x, i] as const).sort((a, b) => (a[0].capturedAt ?? 0) - (b[0].capturedAt ?? 0) || a[1] - b[1]).map(([x]) => x);
+
+/** Best-ranked first, skipping frames too alike an earlier pick; relaxes only if nothing else is left. */
+function topPicks(pool: Candidate[], rank: Map<string, number>, count: number, chosen: Candidate[] = []): Candidate[] {
+  const out = [...chosen];
+  const sorted = [...pool].filter((x) => !out.includes(x)).sort((a, b) => rank.get(b.id)! - rank.get(a.id)!);
+  for (const x of sorted) if (out.length < count && out.every((o) => hamming(o.hash, x.hash) >= DIVERSE_BITS)) out.push(x);
+  for (const x of sorted) if (out.length < count && !out.includes(x)) out.push(x);
+  return out;
+}
+
+/** Local pick, always returned in shoot order. spread = best per even slice of the shoot; top = best overall;
+ * sections = best of each section (the strongest `count` sections), topped up with the best of the rest. */
+export function pickLocal(c: Candidate[], count: number, mode: PickMode): Candidate[] {
   if (c.length <= count) return c;
-  const rank = (x: Candidate) => x.score ?? x.sharp;
+  const rank = ranked(c);
+  if (mode === 'top') return inShootOrder(topPicks(c, rank, count));
+  if (mode === 'sections') {
+    const groups = new Map<string, Candidate[]>();
+    for (const x of c) groups.set(x.sectionId ?? '', [...(groups.get(x.sectionId ?? '') ?? []), x]);
+    const best = [...groups.values()].map((g) => g.reduce((a, x) => (rank.get(x.id)! > rank.get(a.id)! ? x : a)));
+    const winners = best.sort((a, b) => rank.get(b.id)! - rank.get(a.id)!).slice(0, count);
+    return inShootOrder(topPicks(c, rank, count, winners));
+  }
   const out: Candidate[] = [];
   for (let b = 0; b < count; b++) {
-    const slice = c.slice(Math.floor((b * c.length) / count), Math.floor(((b + 1) * c.length) / count)).sort((x, y) => rank(y) - rank(x));
+    const slice = c.slice(Math.floor((b * c.length) / count), Math.floor(((b + 1) * c.length) / count)).sort((x, y) => rank.get(y.id)! - rank.get(x.id)!);
     out.push(slice.find((x) => out.every((o) => hamming(o.hash, x.hash) >= DIVERSE_BITS)) ?? slice[0]);
   }
   return out;
 }
 
-const PROMPT = (n: number, count: number, title: string) =>
+const PROMPT = (n: number, count: number, title: string, bySection: boolean) =>
   `You are picking an Instagram carousel from a photo shoot called "${title}". Below are ${n} photos numbered 1-${n}, in shoot order.\n` +
   `Choose the ${count} strongest and put them in the best carousel order: a striking opener, then variety (angles, moments, people, details), and a strong closer. ` +
+  (bySection ? `Each photo is labelled with its section: take at most one photo per section, the best of it. ` : '') +
   `Prefer sharp, well-exposed, well-composed images with emotion or action; avoid near-duplicates and awkward expressions. ` +
   `Reply with only JSON: {"picks":[<photo numbers in carousel order>],"caption":"<a short factual caption, no hashtags>"}`;
 
 /** One vision call over small previews. Throws on any API or parse problem. */
-export async function pickWithClaude(c: Candidate[], galleryId: string, title: string, count: number, apiKey: string): Promise<{ picks: Candidate[]; caption: string }> {
+export async function pickWithClaude(c: Candidate[], galleryId: string, title: string, count: number, apiKey: string, sections?: Map<string, string>): Promise<{ picks: Candidate[]; caption: string }> {
   const content: Record<string, unknown>[] = [];
   for (let i = 0; i < c.length; i++) {
     const jpeg = await sharp(mdPath(galleryId, c[i].filename)).rotate().resize(768, 768, { fit: 'inside' }).jpeg({ quality: 70 }).toBuffer();
-    content.push({ type: 'text', text: `Photo ${i + 1}:` });
+    const sec = c[i].sectionId ? sections?.get(c[i].sectionId!) : null;
+    content.push({ type: 'text', text: `Photo ${i + 1}${sec ? ` (section: ${sec})` : ''}:` });
     content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpeg.toString('base64') } });
   }
-  content.push({ type: 'text', text: PROMPT(c.length, count, title) });
+  content.push({ type: 'text', text: PROMPT(c.length, count, title, Boolean(sections)) });
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },

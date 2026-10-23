@@ -14,6 +14,7 @@ export async function loadEngines(cfg, env) {
       const m = await import('../engines/bibs-apple-vision.mjs');
       engines.bibs = m.createEngine(env);
     }
+    if (cfg.tasks.includes('score')) engines.score = (await import('../engines/score-ollama.mjs')).createEngine(env);
     if (cfg.tasks.includes('alt')) {
       const provider = env.ALT_ENGINE || 'ollama';
       if (provider === 'ollama') {

@@ -4,7 +4,7 @@ import { getDb, schema, type Db } from '@/db';
 import { verifyWorkerToken, type WorkerTokenRow } from '@/lib/worker-tokens';
 
 /** Analysis tasks a worker can lease and report. */
-export const ANALYSIS_TASKS = ['alt', 'bibs'] as const;
+export const ANALYSIS_TASKS = ['alt', 'bibs', 'score'] as const;
 export type AnalysisTask = (typeof ANALYSIS_TASKS)[number];
 
 const LEASE_MS = 15 * 60 * 1000;
@@ -22,6 +22,7 @@ export type ResultItem = {
   photoId: string;
   alt?: string;
   bibs?: { number: string; confidence: number | null }[];
+  score?: number;
   error?: string;
 };
 export type ResultsBody = { task: AnalysisTask; engine: string; version: number; results: ResultItem[] };
@@ -42,7 +43,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 export function isAnalysisTask(v: unknown): v is AnalysisTask {
-  return v === 'alt' || v === 'bibs';
+  return v === 'alt' || v === 'bibs' || v === 'score';
 }
 
 /** Resolve the worker bearer token from the request; null = unauthorized. */
@@ -94,7 +95,7 @@ function eligibleConditions(task: AnalysisTask, galleryId: string | null) {
 /** Validate GET /api/worker/jobs query params. */
 export function parseJobsQuery(q: URLSearchParams): { value: LeaseOptions } | { error: string } {
   const task = q.get('task');
-  if (!isAnalysisTask(task)) return { error: 'task must be alt or bibs' };
+  if (!isAnalysisTask(task)) return { error: 'task must be alt, bibs or score' };
   const limit = q.get('limit') ?? '10';
   const minVersion = q.get('minVersion') ?? '1';
   const redo = q.get('redo') ?? '0';
@@ -205,7 +206,8 @@ export function leaseJobs(opts: LeaseOptions) {
           filename: c.filename,
           width: c.width,
           height: c.height,
-          imageUrl: `/api/worker/image/${c.id}?variant=web`,
+          // Scoring runs a vision model per photo, so it gets the smaller derivative.
+          imageUrl: `/api/worker/image/${c.id}?variant=${opts.task === 'score' ? 'md' : 'web'}`,
         })),
         remaining,
       };
@@ -243,7 +245,7 @@ export function taskStatus(task: AnalysisTask, galleryId: string | null) {
 export function parseResultsBody(body: unknown): { value: ResultsBody } | { error: string } {
   if (!isRecord(body)) return { error: 'Body must be a JSON object' };
   const { task, engine, version, results } = body;
-  if (!isAnalysisTask(task)) return { error: 'task must be alt or bibs' };
+  if (!isAnalysisTask(task)) return { error: 'task must be alt, bibs or score' };
   if (typeof engine !== 'string' || !engine.trim() || engine.trim().length > MAX_ENGINE_CHARS) {
     return { error: `engine must be a 1-${MAX_ENGINE_CHARS} character string` };
   }
@@ -264,7 +266,7 @@ export function parseResultsBody(body: unknown): { value: ResultsBody } | { erro
 
 function parseResultItem(task: AnalysisTask, raw: unknown): ResultItem | string {
   if (!isRecord(raw)) return 'must be an object';
-  const { photoId, alt, bibs, error } = raw;
+  const { photoId, alt, bibs, score, error } = raw;
   if (typeof photoId !== 'string' || !photoId || photoId.length > 64) {
     return 'photoId must be a non-empty string';
   }
@@ -275,6 +277,10 @@ function parseResultItem(task: AnalysisTask, raw: unknown): ResultItem | string 
   if (task === 'alt') {
     if (typeof alt !== 'string') return 'alt must be a string (or error)';
     return { photoId, alt };
+  }
+  if (task === 'score') {
+    if (typeof score !== 'number' || !Number.isFinite(score)) return 'score must be a number (or error)';
+    return { photoId, score: Math.min(10, Math.max(1, score)) };
   }
   if (!Array.isArray(bibs)) return 'bibs must be an array (or error)';
   return { photoId, bibs: normalizeBibs(bibs.filter(isRecord)) };
@@ -336,6 +342,9 @@ export function applyResults(body: ResultsBody): {
           .set({ altText: alt, altSource: 'ai', updatedAt: now })
           .where(eq(schema.photos.id, photo.id))
           .run();
+      } else if (body.task === 'score') {
+        // updatedAt is the image cache-buster, so it stays untouched.
+        tx.update(schema.photos).set({ aiScore: item.score ?? null }).where(eq(schema.photos.id, photo.id)).run();
       } else {
         tx.delete(schema.photoBibs).where(eq(schema.photoBibs.photoId, photo.id)).run();
         for (const b of item.bibs ?? []) {

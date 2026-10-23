@@ -35,8 +35,30 @@ test('instagram carousel picks photos and zips 4:5 slides', async ({ playwright 
   const res = await admin.post(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel`, { data: {} });
   expect(res.status()).toBe(200);
   const body = await res.json();
-  expect(body.source).toBe('sharp');
+  expect(body.source).toBe('local');
   expect(body.picks.length).toBe(3);
+
+  const pick = async (data: object) => (await admin.post(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel`, { data })).json();
+  expect((await pick({ count: 2 })).picks.length).toBe(2);
+  for (const mode of ['spread', 'top', 'sections']) expect((await pick({ mode, count: 3 })).picks.length).toBe(3);
+
+  // Local AI scoring: a worker leases `score` jobs (medium image), posts scores, and the picker follows them.
+  const tok = await admin.post(`${env.baseUrl}/api/admin/worker-tokens`, { data: { name: `carousel ${Date.now()}` } });
+  const worker = await playwright.request.newContext({ extraHTTPHeaders: { authorization: `Bearer ${(await tok.json()).token}` } });
+  const jobs = await (await worker.get(`${env.baseUrl}/api/worker/jobs?task=score&gallery=${g.id}&limit=10`)).json();
+  expect(jobs.jobs.length).toBe(3);
+  expect(jobs.jobs[0].imageUrl).toContain('variant=md');
+  const scores: Record<string, number> = { [ids[0]]: 1, [ids[1]]: 10, [ids[2]]: 9 };
+  const posted = await worker.post(`${env.baseUrl}/api/worker/results`, {
+    data: { task: 'score', engine: 'e2e', version: 1, results: ids.map((photoId) => ({ photoId, score: scores[photoId] })) },
+  });
+  expect((await posted.json()).applied).toBe(3);
+  const prog = await (await admin.get(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel`)).json();
+  expect(prog.score.done).toBe(3);
+  const scored = await pick({ mode: 'top', count: 2 });
+  expect(scored.scored).toBe(3);
+  expect(scored.picks.map((x: { id: string }) => x.id).sort()).toEqual([ids[1], ids[2]].sort());
+  await worker.dispose();
 
   const zip = await admin.get(`${env.baseUrl}/api/admin/galleries/${g.id}/carousel/zip?fit=pad&ids=${ids.join(',')}`);
   expect(zip.status()).toBe(200);

@@ -157,3 +157,12 @@ test('cleanAlt keeps one sentence, strips quotes, caps length', () => {
   assert.equal(cleanAlt('x'.repeat(300)).length, 160);
   assert.equal(cleanAlt(''), '');
 });
+
+test('parseScore reads the first number and clamps it to 1-10', async () => {
+  const { parseScore } = await import('../../worker/engines/score-ollama.mjs');
+  assert.equal(parseScore('7'), 7);
+  assert.equal(parseScore('Score: 8.5/10'), 8.5);
+  assert.equal(parseScore('42'), 10);
+  assert.equal(parseScore('0'), 1);
+  assert.equal(parseScore('no idea'), null);
+});
