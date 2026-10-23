@@ -4,6 +4,15 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] — 2026-10-24
+
+### Added
+- **Instagram carousel options:** choose 2 to 10 photos and how to pick them: spread over the shoot, top rated overall, or one per section.
+- **Local AI scoring:** a new `score` task for the analysis worker rates each photo 1-10 with a local Ollama vision model (`--tasks score`, `SCORE_MODEL`). Scores are stored on the photo and the carousel picker uses them, with sharpness as the tie-break. The Instagram tab shows scoring progress. Migration 0030 (`photos.ai_score`).
+
+### Changed
+- Carousel local pick drops blown-out and crushed frames and prefers frames unlike those already picked.
+
 ## [2.5.0] — 2026-10-23
 
 ### Added
