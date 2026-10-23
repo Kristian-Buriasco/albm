@@ -11,7 +11,7 @@ async function pattern(file: string, kind: number) {
   const raw = Buffer.alloc(w * h * 3);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      const v = kind === 0 ? 255 - (x * 255) / w : kind === 1 ? (y * 255) / h : (Math.floor(x / 40) + Math.floor(y / 40)) % 2 ? 255 : 0;
+      const v = kind === 0 ? 255 - (x * 255) / w : kind === 1 ? (y * 255) / h : (Math.floor(x / 40) + Math.floor(y / 40)) % 2 ? 190 : 60;
       raw.fill(v, (y * w + x) * 3, (y * w + x) * 3 + 3);
     }
   await sharp(raw, { raw: { width: w, height: h, channels: 3 } }).jpeg().toFile(file);
