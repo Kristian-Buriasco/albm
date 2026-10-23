@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import SettingsCard from '@/components/SettingsCard';
 import SaveBar from '@/components/SaveBar';
 import Select from '@/components/Select';
+import ToggleSwitch from '@/components/ToggleSwitch';
 
 export default function SettingsForm({
   initialAbout,
@@ -21,6 +22,9 @@ export default function SettingsForm({
   initialContactWhatsapp,
   initialFooterContent,
   initialDefaultLanguage,
+  initialMainSiteEnabled,
+  initialMainSiteUrl,
+  initialMainSiteLabel,
   hasWatermark,
 }: {
   initialAbout: string;
@@ -37,6 +41,9 @@ export default function SettingsForm({
   initialContactWhatsapp: string;
   initialFooterContent: string;
   initialDefaultLanguage: string;
+  initialMainSiteEnabled: boolean;
+  initialMainSiteUrl: string;
+  initialMainSiteLabel: string;
   hasWatermark: boolean;
 }) {
   const router = useRouter();
@@ -57,6 +64,9 @@ export default function SettingsForm({
   const [contactWhatsapp, setContactWhatsapp] = useState(initialContactWhatsapp);
   const [footer, setFooter] = useState(initialFooterContent);
   const [defaultLanguage, setDefaultLanguage] = useState(initialDefaultLanguage);
+  const [mainSiteEnabled, setMainSiteEnabled] = useState(initialMainSiteEnabled);
+  const [mainSiteUrl, setMainSiteUrl] = useState(initialMainSiteUrl);
+  const [mainSiteLabel, setMainSiteLabel] = useState(initialMainSiteLabel);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [wmBusy, setWmBusy] = useState(false);
@@ -82,6 +92,9 @@ export default function SettingsForm({
         contactWhatsapp,
         footerContent: footer,
         defaultLanguage,
+        mainSiteEnabled,
+        mainSiteUrl,
+        mainSiteLabel,
       }),
     });
     setSaving(false);
@@ -185,6 +198,34 @@ export default function SettingsForm({
             <option value="pl">Polski</option>
             <option value="zh">中文</option>
           </Select>
+        </label>
+      </SettingsCard>
+
+      <SettingsCard
+        title="Main website"
+        description="Show a link in the public menu bar that takes visitors back to your main website."
+      >
+        <ToggleSwitch label="Show &ldquo;back to website&rdquo; link" checked={mainSiteEnabled} onChange={setMainSiteEnabled} />
+        <label className="block">
+          <span className={labelClass}>Website URL</span>
+          <input
+            type="url"
+            value={mainSiteUrl}
+            onChange={(e) => setMainSiteUrl(e.target.value)}
+            maxLength={500}
+            placeholder="https://example.com"
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Link label (optional)</span>
+          <input
+            value={mainSiteLabel}
+            onChange={(e) => setMainSiteLabel(e.target.value)}
+            maxLength={200}
+            placeholder="defaults to the website's domain"
+            className={inputClass}
+          />
         </label>
       </SettingsCard>
 

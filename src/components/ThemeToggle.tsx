@@ -1,13 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
-export default function ThemeToggle() {
+const ThemeLockContext = createContext<'light' | 'dark' | null>(null);
+
+export function ThemeLockProvider({ value, children }: { value: 'light' | 'dark' | null; children: React.ReactNode }) {
+  return <ThemeLockContext.Provider value={value}>{children}</ThemeLockContext.Provider>;
+}
+
+export const useThemeLock = () => useContext(ThemeLockContext);
+
+function storedChoice(): 'light' | 'dark' | null {
+  const m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  if (m) return m[1] as 'light' | 'dark';
+  try {
+    const t = localStorage.getItem('theme');
+    return t === 'dark' || t === 'light' ? t : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function ThemeToggle({ ignoreLock = false }: { ignoreLock?: boolean }) {
+  const lock = useThemeLock();
+  const locked = lock !== null && !ignoreLock;
   const [dark, setDark] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains('dark'));
-  }, []);
+    const root = document.documentElement;
+    if (locked) {
+      root.classList.toggle('dark', lock === 'dark');
+      return;
+    }
+    if (lock !== null) {
+      // Admin with a public lock active: client nav may have left the locked class behind.
+      const t = storedChoice() ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      root.classList.toggle('dark', t === 'dark');
+    }
+    setDark(root.classList.contains('dark'));
+  }, [locked, lock]);
+
+  if (locked) return null;
 
   function toggle() {
     const next = !document.documentElement.classList.contains('dark');

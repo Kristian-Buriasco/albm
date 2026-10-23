@@ -39,6 +39,7 @@ import {
   Libre_Baskerville,
   Assistant,
 } from 'next/font/google';
+import type { GalleryThemeFont } from '@/lib/gallery-theme';
 
 // next/font/google downloads + self-hosts these at build time — same-origin
 // at runtime, no third-party request. Each call must stay at module scope
@@ -136,4 +137,18 @@ const FONT_PAIR_MAP = new Map(GALLERY_FONT_PAIRS.map((p) => [p.id, p]));
 
 export function getFontPair(id: string): FontPair | undefined {
   return FONT_PAIR_MAP.get(id);
+}
+
+const FALLBACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+/** Heading/body font-family strings for a theme font (preset registry or quoted custom names). */
+export function resolveFontVars(font: GalleryThemeFont): { heading: string; body: string } {
+  if (font.kind === 'custom') {
+    return {
+      heading: `"${font.headingFamily}", ${FALLBACK}`,
+      body: `"${font.bodyFamily}", ${FALLBACK}`,
+    };
+  }
+  const pair = getFontPair(font.pairId) ?? getFontPair('modern-minimal')!;
+  return { heading: pair.heading.fontFamily, body: pair.body.fontFamily };
 }

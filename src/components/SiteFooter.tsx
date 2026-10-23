@@ -1,12 +1,14 @@
 import { getSetting } from '@/lib/settings';
 import { siteName } from '@/lib/site-name';
 import { parseLang } from '@/lib/i18n';
+import { getMainSite } from '@/lib/main-site';
 import CookieSettingsLink from '@/components/CookieSettingsLink';
 
 
 /** Public footer. Free-text content editable in admin (settings key `footerContent`). */
 export default function SiteFooter() {
   const content = getSetting('footerContent')?.trim();
+  const mainSite = getMainSite();
   const year = new Date().getFullYear();
   const lang = parseLang(getSetting('defaultLanguage'));
 
@@ -19,6 +21,11 @@ export default function SiteFooter() {
           <p>{siteName()}</p>
         )}
         <div className="flex flex-wrap items-center gap-4">
+          {mainSite && (
+            <a href={mainSite.url} className="transition-colors hover:text-ink dark:hover:text-ink-dark">
+              ← {mainSite.label}
+            </a>
+          )}
           <CookieSettingsLink lang={lang} />
           <p className="tabular-nums">
             © {year} {siteName()}
