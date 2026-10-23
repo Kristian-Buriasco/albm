@@ -4,6 +4,11 @@ All notable changes to Albm are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions use
 [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] — 2026-10-23
+
+### Added
+- **Instagram carousel** (gallery admin > Instagram): picks up to 10 of the best photos and exports them as a zip of 1080×1350 JPEGs (4:5), crop-to-fill or whole photo on blurred bars; reorder or remove picks first. The local pick drops blown-out and crushed frames, collapses bursts, and takes the sharpest frame per slice of the shoot, preferring variety. Optional Claude ranking (needs `ANTHROPIC_API_KEY`; sends 768 px previews to Anthropic, audit-logged, off by default) also drafts a caption. See `docs/INSTAGRAM-CAROUSEL.md`.
+
 ## [2.4.1] — 2026-10-22
 
 ### Fixed
